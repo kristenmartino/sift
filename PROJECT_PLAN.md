@@ -1,9 +1,9 @@
-# The Digest — Project Audit & Development Plan
+# Sift — Project Audit & Development Plan
 
 **Date:** February 23, 2026
 **Last Updated:** February 23, 2026 — Next.js scaffold complete
 **Status:** Next.js scaffold ready for `npm install && npm run dev`
-**Stack:** Next.js 15 / TypeScript / Tailwind CSS / Anthropic Messages API
+**Stack:** Next.js 15 / TypeScript / Tailwind CSS / NewsAPI.org
 
 ---
 
@@ -17,7 +17,7 @@ The monolithic 831-line artifact has been decomposed into a proper Next.js proje
 |------|-------------------|-----------------|
 | **Files** | 1 file, 831 LOC | 22 source files, 1,786 LOC |
 | **API key** | Exposed to client via proxy | Server-side only (`process.env`) |
-| **State** | `window.__digestCache` | Custom hooks + localStorage |
+| **State** | `window.__siftCache` | Custom hooks + localStorage |
 | **Styling** | Inline styles | Tailwind CSS + CSS variables |
 | **Types** | None | Full TypeScript interfaces |
 | **Tests** | None | 30+ test cases (utils, API, components) |
@@ -27,9 +27,9 @@ The monolithic 831-line artifact has been decomposed into a proper Next.js proje
 ### File Map
 
 ```
-the-digest/                    (22 source files, 1,786 LOC)
+sift/                    (22 source files, 1,786 LOC)
 ├── app/
-│   ├── api/news/route.ts      172 LOC  ← Server-side API proxy
+│   ├── api/news/route.ts      178 LOC  ← Server-side API proxy (NewsAPI)
 │   ├── globals.css             73 LOC  ← Tailwind + CSS vars + reset
 │   ├── layout.tsx              30 LOC  ← Metadata, skip-nav, fonts
 │   └── page.tsx                 5 LOC  ← Thin wrapper
@@ -229,7 +229,7 @@ the-digest/                    (22 source files, 1,786 LOC)
 
 ```bash
 # Clone the project
-cd the-digest
+cd sift
 
 # Install dependencies
 npm install

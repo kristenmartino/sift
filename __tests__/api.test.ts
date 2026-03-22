@@ -76,11 +76,14 @@ describe("API Route Logic", () => {
       expect(CATEGORY_QUERIES).toHaveProperty("technology");
     });
 
-    it("has queries for all 6 categories", () => {
-      const categories = ["top", "technology", "business", "science", "world", "health"];
+    it("has queries for all 7 categories", () => {
+      const categories = ["top", "technology", "business", "science", "energy", "world", "health"];
       categories.forEach((cat) => {
         expect(CATEGORY_QUERIES).toHaveProperty(cat);
-        expect(typeof CATEGORY_QUERIES[cat as keyof typeof CATEGORY_QUERIES]).toBe("string");
+        const query = CATEGORY_QUERIES[cat as keyof typeof CATEGORY_QUERIES];
+        expect(typeof query.topic).toBe("string");
+        expect(Array.isArray(query.subtopics)).toBe(true);
+        expect(query.subtopics.length).toBeGreaterThan(0);
       });
     });
   });
@@ -132,7 +135,7 @@ describe("API Route Logic", () => {
       };
       const textBlocks = response.content.filter((b) => b.type === "text");
       expect(textBlocks).toHaveLength(1);
-      const articles = JSON.parse(textBlocks[0].text);
+      const articles = JSON.parse((textBlocks[0] as { type: "text"; text: string }).text);
       expect(articles).toHaveLength(2);
     });
   });

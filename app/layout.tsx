@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "The Digest — AI-Curated News",
+  title: "Sift — AI-Curated News",
   description:
     "Stay informed with AI-curated news summaries across technology, business, science, world affairs, and health.",
   openGraph: {
-    title: "The Digest",
+    title: "Sift",
     description: "AI-curated news powered by Claude",
     type: "website",
   },

@@ -1,18 +1,18 @@
-# The Digest
+# Sift
 
-AI-curated news aggregator powered by Claude and the Anthropic web_search tool. Surfaces the top stories across 6 categories with real-time summaries.
+AI-curated news aggregator powered by Claude and the Anthropic web_search tool. Surfaces the top stories across 7 categories with real-time summaries.
 
 ## Quick Start
 
 ```bash
 # 1. Clone and install
 git clone <your-repo-url>
-cd the-digest
+cd sift
 npm install
 
 # 2. Configure API key
 cp .env.local.example .env.local
-# Edit .env.local and add your Anthropic API key
+# Edit .env.local and add your API key
 
 # 3. Run
 npm run dev
@@ -23,9 +23,9 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Architecture
 
 ```
-the-digest/
+sift/
 ├── app/
-│   ├── api/news/route.ts    # Server-side API proxy (→ Anthropic)
+│   ├── api/news/route.ts    # Server-side API proxy
 │   ├── globals.css           # Tailwind + CSS variables
 │   ├── layout.tsx            # Root layout, metadata, skip-nav
 │   └── page.tsx              # Home page
@@ -51,9 +51,8 @@ the-digest/
 ```
 User clicks category
   → useNewsLoader dispatches fetch to /api/news?category=X
-  → API route checks in-memory cache (5min TTL)
-  → If miss: calls Anthropic Messages API with web_search tool
-  → Parses JSON from response (with fallback strategies)
+  → API route checks in-memory cache (15min TTL)
+  → If miss: calls news API for fresh articles
   → Returns normalized Article[] to client
   → Client renders ArticleCard grid with animations
 ```
@@ -63,10 +62,18 @@ User clicks category
 | Decision | Why |
 |----------|-----|
 | Server-side API proxy | API key never reaches the client |
-| "Summarize" prompt framing | Model refuses rigid JSON formatting of search snippets |
-| 3-strategy JSON parser | Handles clean JSON, prose-wrapped, and individual objects |
+| Structured subtopics per category | Broad coverage across each domain |
 | Stable URL-based IDs | Bookmarks survive page refresh |
 | CSS variables for theming | Dark/light toggle without class rewrite |
+
+## Git Workflow
+
+```bash
+main              # always deployable, Vercel auto-deploys
+ └── dev          # daily work, merge to main when stable
+      ├── feat/*  # new features (feat/search, feat/streaming)
+      └── fix/*   # bug fixes (fix/mobile-layout, fix/parser)
+```
 
 ## Scripts
 
@@ -83,29 +90,22 @@ npm run test:coverage # Coverage report
 ## Deployment (Vercel)
 
 ```bash
-# Install Vercel CLI
 npm i -g vercel
-
-# Deploy
 vercel
-
-# Set environment variable
-vercel env add ANTHROPIC_API_KEY
+vercel env add NEWS_API_KEY
+vercel --prod
 ```
-
-Or connect your GitHub repo to [vercel.com](https://vercel.com) for automatic deployments on push.
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Your Anthropic API key |
+| `NEWS_API_KEY` | Yes | Your NewsAPI key |
 
 ## Tech Stack
 
 - **Framework:** Next.js 15 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS + CSS custom properties
-- **AI:** Anthropic Claude Sonnet 4 + web_search tool
 - **Testing:** Jest + React Testing Library
 - **Deployment:** Vercel (recommended)
