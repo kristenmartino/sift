@@ -77,15 +77,20 @@ export function useNewsLoader() {
     lastUpdated: null,
   });
   const fetchedRef = useRef(new Set<string>());
-  const abortRef = useRef<AbortController | null>(null);
+  const inflightRef = useRef(new Map<string, AbortController>());
+
+  // Ensure refs are the correct type (HMR can preserve stale values)
+  if (!(fetchedRef.current instanceof Set)) fetchedRef.current = new Set();
+  if (!(inflightRef.current instanceof Map)) inflightRef.current = new Map();
 
   const loadCategory = useCallback(async (category: CategoryId, force = false) => {
     if (!force && fetchedRef.current.has(category)) return;
 
-    // Cancel any in-flight request
-    if (abortRef.current) abortRef.current.abort();
+    // If already fetching this category, don't duplicate
+    if (inflightRef.current.has(category)) return;
+
     const controller = new AbortController();
-    abortRef.current = controller;
+    inflightRef.current.set(category, controller);
 
     setState((s) => ({ ...s, loading: true, error: null, slow: false }));
 
@@ -119,14 +124,12 @@ export function useNewsLoader() {
       fetchedRef.current.add(category);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        if (abortRef.current === controller) {
-          setState((s) => ({ ...s, error: "Request timed out — try again" }));
-        }
-        return;
+        return; // Aborted by timeout — don't set error, another category may be active
       }
       const message = err instanceof Error ? err.message : "Failed to load articles";
       setState((s) => ({ ...s, error: message }));
     } finally {
+      inflightRef.current.delete(category);
       clearTimeout(slowTimer);
       clearTimeout(timeoutTimer);
       setState((s) => ({ ...s, loading: false, slow: false }));

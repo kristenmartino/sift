@@ -1,6 +1,6 @@
 # Sift
 
-AI-curated news aggregator powered by Claude and the Anthropic web_search tool. Surfaces the top stories across 7 categories with real-time summaries.
+AI-curated news aggregator powered by Claude and the Anthropic `web_search` tool. Surfaces the top stories across 7 categories with real-time, AI-generated summaries from live web search.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ npm install
 
 # 2. Configure API key
 cp .env.local.example .env.local
-# Edit .env.local and add your API key
+# Edit .env.local and add your Anthropic API key
 
 # 3. Run
 npm run dev
@@ -25,7 +25,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ```
 sift/
 ├── app/
-│   ├── api/news/route.ts    # Server-side API proxy
+│   ├── api/news/route.ts    # Server-side API proxy (Claude web_search)
 │   ├── globals.css           # Tailwind + CSS variables
 │   ├── layout.tsx            # Root layout, metadata, skip-nav
 │   └── page.tsx              # Home page
@@ -51,8 +51,10 @@ sift/
 ```
 User clicks category
   → useNewsLoader dispatches fetch to /api/news?category=X
-  → API route checks in-memory cache (15min TTL)
-  → If miss: calls news API for fresh articles
+  → API route checks two-tier cache (30min fresh / 60min stale)
+  → If miss: calls Claude with web_search tool for AI-curated articles
+  → Claude searches the web, summarizes top stories as JSON
+  → extractJsonArray() parses LLM output (3-strategy robust parser)
   → Returns normalized Article[] to client
   → Client renders ArticleCard grid with animations
 ```
@@ -61,19 +63,13 @@ User clicks category
 
 | Decision | Why |
 |----------|-----|
+| Claude web_search over NewsAPI | AI-generated summaries, broader source diversity, no syndication dependency |
+| "Summarize" prompt framing | Avoids model refusals from rigid JSON extraction commands |
 | Server-side API proxy | API key never reaches the client |
-| Structured subtopics per category | Broad coverage across each domain |
+| Two-tier stale-while-revalidate cache | Near-instant repeat loads despite AI latency |
+| 3-strategy JSON parser | Handles LLM output variability (prose-wrapped, markdown-fenced, truncated) |
 | Stable URL-based IDs | Bookmarks survive page refresh |
 | CSS variables for theming | Dark/light toggle without class rewrite |
-
-## Git Workflow
-
-```bash
-main              # always deployable, Vercel auto-deploys
- └── dev          # daily work, merge to main when stable
-      ├── feat/*  # new features (feat/search, feat/streaming)
-      └── fix/*   # bug fixes (fix/mobile-layout, fix/parser)
-```
 
 ## Scripts
 
@@ -92,7 +88,7 @@ npm run test:coverage # Coverage report
 ```bash
 npm i -g vercel
 vercel
-vercel env add NEWS_API_KEY
+vercel env add ANTHROPIC_API_KEY
 vercel --prod
 ```
 
@@ -100,12 +96,13 @@ vercel --prod
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEWS_API_KEY` | Yes | Your NewsAPI key |
+| `ANTHROPIC_API_KEY` | Yes | Your Anthropic API key ([console.anthropic.com](https://console.anthropic.com)) |
 
 ## Tech Stack
 
 - **Framework:** Next.js 15 (App Router)
 - **Language:** TypeScript
+- **AI Engine:** Anthropic Claude + web_search tool
 - **Styling:** Tailwind CSS + CSS custom properties
 - **Testing:** Jest + React Testing Library
 - **Deployment:** Vercel (recommended)

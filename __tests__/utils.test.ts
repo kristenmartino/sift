@@ -267,10 +267,13 @@ describe("normalizeArticle", () => {
     expect(article.readTime).toBe(1);
   });
 
-  it("generates stable ID from source_url", () => {
+  it("generates stable ID from source_url with index", () => {
     const a = normalizeArticle(RAW, "top", 0);
-    const b = normalizeArticle(RAW, "top", 1);
-    expect(a.id).toBe(b.id); // Same URL → same ID
+    const b = normalizeArticle(RAW, "top", 0);
+    expect(a.id).toBe(b.id); // Same URL + same index → same ID
+
+    const c = normalizeArticle(RAW, "top", 1);
+    expect(a.id).not.toBe(c.id); // Same URL + different index → different ID (prevents key collisions)
   });
 
   it("handles missing optional fields", () => {

@@ -11,7 +11,9 @@
  * For now, they validate the logic in isolation.
  */
 
-import { CATEGORY_QUERIES } from "@/lib/constants";
+import { CATEGORY_QUERIES, CACHE_TTL_MS } from "@/lib/constants";
+import { extractJsonArray, normalizeArticle } from "@/lib/utils";
+import type { CategoryId } from "@/lib/types";
 
 // ─── Mock Data ──────────────────────────────────────────
 
@@ -91,26 +93,25 @@ describe("API Route Logic", () => {
   describe("Response parsing scenarios", () => {
     // These test the exact scenarios we encountered during debugging
 
-    it("handles clean JSON response", () => {
+    it("handles clean JSON response via extractJsonArray", () => {
       const response = mockAnthropicResponse(MOCK_ARTICLES_JSON);
       const text = response.content[0].text;
-      const articles = JSON.parse(text);
+      const articles = extractJsonArray(text);
       expect(articles).toHaveLength(2);
-      expect(articles[0].title).toBe("Test Article 1");
+      expect(articles![0].title).toBe("Test Article 1");
     });
 
     it("handles JSON wrapped in markdown fences", () => {
       const wrapped = "```json\n" + MOCK_ARTICLES_JSON + "\n```";
-      const cleaned = wrapped.replace(/```json|```/g, "").trim();
-      const articles = JSON.parse(cleaned);
+      const articles = extractJsonArray(wrapped);
       expect(articles).toHaveLength(2);
     });
 
-    it("detects model refusal (no JSON)", () => {
+    it("detects model refusal (no JSON) and returns null", () => {
       const response = mockAnthropicRefusal();
       const text = response.content[0].text;
-      expect(() => JSON.parse(text)).toThrow();
-      expect(text).toContain("cannot provide");
+      const articles = extractJsonArray(text);
+      expect(articles).toBeNull();
     });
 
     it("handles tool_use response (no text blocks)", () => {
@@ -135,8 +136,19 @@ describe("API Route Logic", () => {
       };
       const textBlocks = response.content.filter((b) => b.type === "text");
       expect(textBlocks).toHaveLength(1);
-      const articles = JSON.parse((textBlocks[0] as { type: "text"; text: string }).text);
+      const text = (textBlocks[0] as { type: "text"; text: string }).text;
+      const articles = extractJsonArray(text);
       expect(articles).toHaveLength(2);
+    });
+
+    it("normalizes raw articles into domain Article type", () => {
+      const raw = extractJsonArray(MOCK_ARTICLES_JSON)!;
+      const article = normalizeArticle(raw[0], "technology" as CategoryId, 0);
+      expect(article.title).toBe("Test Article 1");
+      expect(article.sourceName).toBe("Reuters");
+      expect(article.category).toBe("technology");
+      expect(article.id).toBeTruthy();
+      expect(article.readTime).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -171,13 +183,12 @@ describe("API Route Logic", () => {
       expect(typeof entry.fetchedAt).toBe("number");
     });
 
-    it("TTL check works correctly", () => {
-      const fiveMinutesMs = 5 * 60 * 1000;
+    it("TTL check works correctly with 30-minute cache", () => {
       const fresh = Date.now() - 1000; // 1 second ago
-      const stale = Date.now() - fiveMinutesMs - 1000; // 5 min + 1s ago
+      const stale = Date.now() - CACHE_TTL_MS - 1000; // past TTL
 
-      expect(Date.now() - fresh < fiveMinutesMs).toBe(true); // still fresh
-      expect(Date.now() - stale < fiveMinutesMs).toBe(false); // expired
+      expect(Date.now() - fresh < CACHE_TTL_MS).toBe(true); // still fresh
+      expect(Date.now() - stale < CACHE_TTL_MS).toBe(false); // expired
     });
   });
 });

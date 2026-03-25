@@ -48,19 +48,6 @@ export const CATEGORY_QUERIES: Record<CategoryId, { topic: string; subtopics: st
   },
 };
 
-// NewsAPI.org category mapping
-// See: https://newsapi.org/docs/endpoints/top-headlines
-// Note: NewsAPI doesn't have an "energy" category, so we use "everything" endpoint with query
-export const NEWSAPI_CATEGORIES: Record<CategoryId, string | null> = {
-  top: "general",
-  technology: "technology",
-  business: "business",
-  science: "science",
-  energy: null, // Use "everything" endpoint with energy query
-  world: "general",
-  health: "health",
-};
-
 // ─── Colors ─────────────────────────────────────────────
 // Using rgb tuples so we can compose with rgba() — no hex+alpha hack
 
@@ -86,9 +73,9 @@ export const GRADIENTS: Record<CategoryId, string> = {
 
 // ─── Timing ─────────────────────────────────────────────
 
-export const API_TIMEOUT_MS = 30_000;
+export const API_TIMEOUT_MS = 90_000; // 90s — Claude web_search needs time for multiple searches
 export const SLOW_THRESHOLD_MS = 8_000;
-export const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes server-side
+export const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes server-side (aggressive for AI-curated content)
 export const RATE_LIMIT_MAX = 30; // requests per minute per IP
 
 // ─── Storage Keys ───────────────────────────────────────
