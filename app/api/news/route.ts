@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, mkdirSync } from "fs";
+import { readFileSync, mkdirSync } from "fs";
+import { writeFile } from "fs/promises";
 import { join } from "path";
-import { CATEGORY_QUERIES, CACHE_TTL_MS, RATE_LIMIT_MAX } from "@/lib/constants";
+import { CATEGORY_QUERIES, CACHE_TTL_MS, STALE_TTL_MS, RATE_LIMIT_MAX } from "@/lib/constants";
 import { extractJsonArray, normalizeArticle } from "@/lib/utils";
 import type { CategoryId, Article, NewsApiResponse, NewsApiError } from "@/lib/types";
 
@@ -12,7 +13,8 @@ import type { CategoryId, Article, NewsApiResponse, NewsApiError } from "@/lib/t
 const anthropic = new Anthropic();
 
 // ─── In-Memory Cache + File Persistence ──────────────────
-// Writes to .cache/news.json so data survives server restarts.
+// Writes to /tmp/sift-cache/news.json so data survives server restarts.
+// Note: /tmp is writable on most platforms; use Redis/KV for multi-instance deployments.
 
 interface CacheEntry {
   articles: Article[];
@@ -20,9 +22,8 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
-const STALE_TTL_MS = 60 * 60 * 1000; // 60 minutes — serve stale data up to this age
 
-const CACHE_DIR = join(process.cwd(), ".cache");
+const CACHE_DIR = join("/tmp", "sift-cache");
 const CACHE_FILE = join(CACHE_DIR, "news.json");
 
 function loadCacheFromDisk(): void {
@@ -43,16 +44,17 @@ function loadCacheFromDisk(): void {
   }
 }
 
-function saveCacheToDisk(): void {
+async function saveCacheToDisk(): Promise<void> {
   try {
     mkdirSync(CACHE_DIR, { recursive: true });
     const data: Record<string, CacheEntry> = {};
     for (const [key, entry] of cache.entries()) {
       data[key] = entry;
     }
-    writeFileSync(CACHE_FILE, JSON.stringify(data), "utf-8");
-  } catch {
-    // Non-critical — disk cache is best-effort
+    await writeFile(CACHE_FILE, JSON.stringify(data), "utf-8");
+  } catch (err) {
+    // Non-critical — disk cache is best-effort, but log so it's observable
+    console.warn("[sift] Failed to save disk cache:", err);
   }
 }
 
@@ -141,7 +143,45 @@ async function refreshCategory(category: CategoryId, awaitImages = false): Promi
 // Fetch the og:image meta tag from an article's source URL.
 // Runs in parallel for all articles. Fails silently (returns null).
 
+/**
+ * Guard against SSRF: require https and reject private/reserved IP ranges.
+ */
+function isSafeExternalUrl(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    if (protocol !== "https:") return false;
+    const h = hostname.toLowerCase();
+    if (h === "localhost") return false;
+    // Block IPv4 private/reserved ranges
+    const ipv4 = h.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+    if (ipv4) {
+      const [o1, o2, o3, o4] = ipv4.slice(1).map(Number);
+      // Reject invalid octets (> 255)
+      if ([o1, o2, o3, o4].some((o) => o > 255)) return false;
+      if (o1 === 10) return false;                              // RFC 1918 private
+      if (o1 === 127) return false;                             // loopback
+      if (o1 === 169 && o2 === 254) return false;              // link-local (AWS metadata)
+      if (o1 === 172 && o2 >= 16 && o2 <= 31) return false;   // RFC 1918 private
+      if (o1 === 192 && o2 === 168) return false;              // RFC 1918 private
+      if (o1 === 0) return false;                               // this network
+      if (o1 === 100 && o2 >= 64 && o2 <= 127) return false;  // shared address space
+    }
+    // Block IPv6 loopback, link-local, and private ranges
+    // URL() normalizes IPv6 hostnames without brackets
+    if (h === "::1") return false;                              // loopback
+    if (h.startsWith("fe80:") || h.startsWith("fe90:") ||
+        h.startsWith("fea0:") || h.startsWith("feb0:")) return false; // link-local fe80::/10
+    if (h.startsWith("fc") || h.startsWith("fd")) return false; // ULA fc00::/7
+    if (h.startsWith("fec0:") || h.startsWith("fed0:") ||
+        h.startsWith("fee0:") || h.startsWith("fef0:")) return false; // site-local (deprecated)
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function fetchOgImage(url: string): Promise<string | null> {
+  if (!isSafeExternalUrl(url)) return null;
   try {
     const res = await fetch(url, {
       headers: {
@@ -193,11 +233,8 @@ async function fetchOgImage(url: string): Promise<string | null> {
 }
 
 async function validateImageUrl(url: string): Promise<string | null> {
+  if (!isSafeExternalUrl(url)) return null;
   try {
-    // Quick sanity check on the URL itself
-    const parsed = new URL(url);
-    if (!parsed.protocol.startsWith("http")) return null;
-
     const res = await fetch(url, {
       method: "HEAD",
       headers: {
@@ -284,9 +321,8 @@ async function fetchArticlesFromClaude(category: CategoryId): Promise<Article[]>
     ],
   });
 
-  // Collect citation URLs and search result images from web_search results
+  // Collect citation URLs from web_search results
   const citationUrls: string[] = [];
-  const citationImages = new Map<string, string>(); // domain → image URL from search results
 
   for (const block of response.content) {
     if (block.type === "text" && block.citations) {
@@ -350,16 +386,17 @@ async function fetchArticlesFromClaude(category: CategoryId): Promise<Article[]>
   // Normalize and filter out articles missing required fields
   return enrichedRaw
     .filter((raw) => raw.title && raw.source_url)
-    .map((raw, i) => normalizeArticle(raw, category, i));
+    .map((raw) => normalizeArticle(raw, category));
 }
 
 // ─── Cache Pre-Warming ──────────────────────────────────
-// Warm the default category on module load so the first visitor gets instant results.
-// Runs once when the server starts (or the route module is first imported).
+// Warm all categories on module load so first visitors get instant results.
+// Gate behind SIFT_PREWARM=true to avoid unnecessary cold-start cost on
+// serverless platforms where every cold start would trigger a full warm.
 
 const ALL_CATEGORIES: CategoryId[] = ["top", "technology", "business", "science", "energy", "world", "health"];
 
-if (process.env.ANTHROPIC_API_KEY) {
+if (process.env.ANTHROPIC_API_KEY && process.env.SIFT_PREWARM === "true") {
   // Pre-warm categories on server start.
   // Skip categories already fresh from disk cache.
   const now = Date.now();
@@ -407,7 +444,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Rate limiting
-  const ip = request.headers.get("x-forwarded-for") || "unknown";
+  const ip = (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
   if (isRateLimited(ip)) {
     return NextResponse.json<NewsApiError>(
       { error: "Too many requests. Try again in a minute." },

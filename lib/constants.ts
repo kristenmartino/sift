@@ -75,7 +75,8 @@ export const GRADIENTS: Record<CategoryId, string> = {
 
 export const API_TIMEOUT_MS = 90_000; // 90s — Claude web_search needs time for multiple searches
 export const SLOW_THRESHOLD_MS = 8_000;
-export const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes server-side (aggressive for AI-curated content)
+export const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes — fresh cache window
+export const STALE_TTL_MS = 60 * 60 * 1000; // 60 minutes — serve stale data up to this age
 export const RATE_LIMIT_MAX = 30; // requests per minute per IP
 
 // ─── Storage Keys ───────────────────────────────────────

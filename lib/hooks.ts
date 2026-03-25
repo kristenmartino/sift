@@ -124,7 +124,11 @@ export function useNewsLoader() {
       fetchedRef.current.add(category);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        return; // Aborted by timeout — don't set error, another category may be active
+        setState((s) => ({
+          ...s,
+          error: "Request timed out. Please try again.",
+        }));
+        return; // Aborted by timeout
       }
       const message = err instanceof Error ? err.message : "Failed to load articles";
       setState((s) => ({ ...s, error: message }));
@@ -132,7 +136,11 @@ export function useNewsLoader() {
       inflightRef.current.delete(category);
       clearTimeout(slowTimer);
       clearTimeout(timeoutTimer);
-      setState((s) => ({ ...s, loading: false, slow: false }));
+      setState((s) => ({
+        ...s,
+        loading: inflightRef.current.size > 0,
+        slow: inflightRef.current.size > 0 ? s.slow : false,
+      }));
     }
   }, []);
 

@@ -116,12 +116,14 @@ function stripCitations(text: string): string {
 export function normalizeArticle(
   raw: RawArticle,
   category: CategoryId,
-  index: number
 ): Article {
   const sourceUrl = raw.source_url || "";
+  const title = raw.title || "";
   return {
-    id: sourceUrl ? `${stableHash(sourceUrl)}-${index}` : `${category}-${index}-${Date.now()}`,
-    title: stripCitations(raw.title || "Untitled"),
+    id: (sourceUrl || title)
+      ? stableHash((sourceUrl || "") + title)
+      : stableHash(`${category}-${raw.summary || ""}`),
+    title: stripCitations(title || "Untitled"),
     summary: stripCitations(raw.summary || ""),
     sourceUrl,
     sourceName: raw.source_name || extractSourceDomain(sourceUrl),
