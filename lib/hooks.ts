@@ -86,8 +86,16 @@ export function useNewsLoader() {
   const loadCategory = useCallback(async (category: CategoryId, force = false) => {
     if (!force && fetchedRef.current.has(category)) return;
 
-    // If already fetching this category, don't duplicate
-    if (inflightRef.current.has(category)) return;
+    const existingController = inflightRef.current.get(category);
+    if (existingController) {
+      if (force) {
+        existingController.abort();
+        inflightRef.current.delete(category);
+      } else {
+        // If already fetching this category and not forced, don't duplicate
+        return;
+      }
+    }
 
     const controller = new AbortController();
     inflightRef.current.set(category, controller);
