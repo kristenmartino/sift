@@ -61,6 +61,11 @@ async function saveCacheToDisk(): Promise<void> {
 // Load persisted cache on module init
 loadCacheFromDisk();
 
+// ─── Exports for Testing ────────────────────────────────
+// Exported to allow unit tests to inspect and manipulate cache state
+// and exercise disk persistence logic without going through the HTTP layer.
+export { cache, loadCacheFromDisk, saveCacheToDisk };
+
 // ─── Rate Limiter ───────────────────────────────────────
 // Simple sliding window per IP. In production, use Redis.
 
