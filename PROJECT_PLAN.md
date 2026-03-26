@@ -111,7 +111,8 @@ sift/                    (22 source files, 1,786 LOC)
 | # | Severity | Issue | Effort |
 |---|----------|-------|--------|
 | B4 | Low | Featured card mobile stacking — needs testing with Tailwind grid | 15 min |
-| R1 | Medium | Upgrade cache/rate-limit from in-memory to Redis/KV | 2 hours || R2 | Medium | Add Sentry error tracking | 1 hour |
+| R1 | Medium | Upgrade cache/rate-limit from in-memory to Redis/KV | 2 hours |
+| R2 | Medium | Add Sentry error tracking | 1 hour |
 | R3 | Low | WCAG accessibility audit (contrast, screen reader) | 2 hours |
 | R4 | Low | Lighthouse performance audit | 1 hour |
 
