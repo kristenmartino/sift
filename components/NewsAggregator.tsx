@@ -92,7 +92,7 @@ export default function NewsAggregator() {
             onClick={() => { setShowBookmarks(false); setActiveCategory("top"); }}
           >
             <h1 className="font-heading text-[28px] font-extrabold tracking-tight text-[var(--text)] leading-none">
-              The Digest
+              Sift
             </h1>
             <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--accent)] opacity-80">
               AI-Curated
@@ -247,7 +247,7 @@ export default function NewsAggregator() {
 
       {/* ── Footer ──────────────────────────────────── */}
       <footer className="border-t border-[var(--border)] py-6 px-6 text-center text-xs text-[var(--text-muted)] max-w-[1200px] mx-auto">
-        <span className="font-heading font-semibold">The Digest</span>
+        <span className="font-heading font-semibold">Sift</span>
         {" — "}AI-curated news powered by Claude. Articles link to original sources.
       </footer>
     </div>

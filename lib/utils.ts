@@ -103,18 +103,28 @@ export function extractJsonArray(text: string): RawArticle[] | null {
 }
 
 /**
+ * Strip Claude web_search citation markup from text.
+ * Removes `<cite index="...">` and `</cite>` tags, keeping inner content.
+ */
+function stripCitations(text: string): string {
+  return text.replace(/<cite[^>]*>/gi, "").replace(/<\/cite>/gi, "").trim();
+}
+
+/**
  * Normalize a raw API article into our domain Article type.
  */
 export function normalizeArticle(
   raw: RawArticle,
   category: CategoryId,
-  index: number
 ): Article {
   const sourceUrl = raw.source_url || "";
+  const title = raw.title || "";
   return {
-    id: sourceUrl ? stableHash(sourceUrl) : `${category}-${index}-${Date.now()}`,
-    title: raw.title || "Untitled",
-    summary: raw.summary || "",
+    id: (sourceUrl || title)
+      ? stableHash((sourceUrl || "") + title)
+      : stableHash(`${category}-${raw.summary || ""}`),
+    title: stripCitations(title || "Untitled"),
+    summary: stripCitations(raw.summary || ""),
     sourceUrl,
     sourceName: raw.source_name || extractSourceDomain(sourceUrl),
     publishedDate: raw.published_date || null,
