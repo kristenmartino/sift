@@ -443,8 +443,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Rate limiting
-  const ip = (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
+  // Rate limiting — normalize to the first (client-most) IP in x-forwarded-for,
+  // fall back to x-real-ip or request.ip to avoid bucketing on composite header values.
+  const ip =
+    (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    request.ip ||
+    "unknown";
   if (isRateLimited(ip)) {
     return NextResponse.json<NewsApiError>(
       { error: "Too many requests. Try again in a minute." },
