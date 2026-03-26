@@ -11,7 +11,9 @@
  * For now, they validate the logic in isolation.
  */
 
-import { CATEGORY_QUERIES } from "@/lib/constants";
+import { CATEGORY_QUERIES, CACHE_TTL_MS, STALE_TTL_MS } from "@/lib/constants";
+import { extractJsonArray, normalizeArticle } from "@/lib/utils";
+import type { CategoryId } from "@/lib/types";
 
 // ─── Mock Data ──────────────────────────────────────────
 
@@ -76,11 +78,14 @@ describe("API Route Logic", () => {
       expect(CATEGORY_QUERIES).toHaveProperty("technology");
     });
 
-    it("has queries for all 6 categories", () => {
-      const categories = ["top", "technology", "business", "science", "world", "health"];
+    it("has queries for all 7 categories", () => {
+      const categories = ["top", "technology", "business", "science", "energy", "world", "health"];
       categories.forEach((cat) => {
         expect(CATEGORY_QUERIES).toHaveProperty(cat);
-        expect(typeof CATEGORY_QUERIES[cat as keyof typeof CATEGORY_QUERIES]).toBe("string");
+        const query = CATEGORY_QUERIES[cat as keyof typeof CATEGORY_QUERIES];
+        expect(typeof query.topic).toBe("string");
+        expect(Array.isArray(query.subtopics)).toBe(true);
+        expect(query.subtopics.length).toBeGreaterThan(0);
       });
     });
   });
@@ -88,26 +93,25 @@ describe("API Route Logic", () => {
   describe("Response parsing scenarios", () => {
     // These test the exact scenarios we encountered during debugging
 
-    it("handles clean JSON response", () => {
+    it("handles clean JSON response via extractJsonArray", () => {
       const response = mockAnthropicResponse(MOCK_ARTICLES_JSON);
       const text = response.content[0].text;
-      const articles = JSON.parse(text);
+      const articles = extractJsonArray(text);
       expect(articles).toHaveLength(2);
-      expect(articles[0].title).toBe("Test Article 1");
+      expect(articles![0].title).toBe("Test Article 1");
     });
 
     it("handles JSON wrapped in markdown fences", () => {
       const wrapped = "```json\n" + MOCK_ARTICLES_JSON + "\n```";
-      const cleaned = wrapped.replace(/```json|```/g, "").trim();
-      const articles = JSON.parse(cleaned);
+      const articles = extractJsonArray(wrapped);
       expect(articles).toHaveLength(2);
     });
 
-    it("detects model refusal (no JSON)", () => {
+    it("detects model refusal (no JSON) and returns null", () => {
       const response = mockAnthropicRefusal();
       const text = response.content[0].text;
-      expect(() => JSON.parse(text)).toThrow();
-      expect(text).toContain("cannot provide");
+      const articles = extractJsonArray(text);
+      expect(articles).toBeNull();
     });
 
     it("handles tool_use response (no text blocks)", () => {
@@ -132,8 +136,30 @@ describe("API Route Logic", () => {
       };
       const textBlocks = response.content.filter((b) => b.type === "text");
       expect(textBlocks).toHaveLength(1);
-      const articles = JSON.parse(textBlocks[0].text);
+      const text = (textBlocks[0] as { type: "text"; text: string }).text;
+      const articles = extractJsonArray(text);
       expect(articles).toHaveLength(2);
+    });
+
+    it("normalizes raw articles into domain Article type", () => {
+      const raw = extractJsonArray(MOCK_ARTICLES_JSON)!;
+      const article = normalizeArticle(raw[0], "technology" as CategoryId);
+      expect(article.title).toBe("Test Article 1");
+      expect(article.sourceName).toBe("Reuters");
+      expect(article.category).toBe("technology");
+      expect(article.id).toBeTruthy();
+      expect(article.readTime).toBeGreaterThanOrEqual(1);
+    });
+
+    it("produces stable article IDs regardless of ordering", () => {
+      const raw = extractJsonArray(MOCK_ARTICLES_JSON)!;
+      const articleFirst = normalizeArticle(raw[0], "technology" as CategoryId);
+      const articleAgain = normalizeArticle(raw[0], "technology" as CategoryId);
+      // Same article always gets same ID
+      expect(articleFirst.id).toBe(articleAgain.id);
+      // Different articles get different IDs
+      const articleSecond = normalizeArticle(raw[1], "technology" as CategoryId);
+      expect(articleFirst.id).not.toBe(articleSecond.id);
     });
   });
 
@@ -168,13 +194,61 @@ describe("API Route Logic", () => {
       expect(typeof entry.fetchedAt).toBe("number");
     });
 
-    it("TTL check works correctly", () => {
-      const fiveMinutesMs = 5 * 60 * 1000;
+    it("TTL check works correctly with 30-minute cache", () => {
       const fresh = Date.now() - 1000; // 1 second ago
-      const stale = Date.now() - fiveMinutesMs - 1000; // 5 min + 1s ago
+      const stale = Date.now() - CACHE_TTL_MS - 1000; // past TTL
 
-      expect(Date.now() - fresh < fiveMinutesMs).toBe(true); // still fresh
-      expect(Date.now() - stale < fiveMinutesMs).toBe(false); // expired
+      expect(Date.now() - fresh < CACHE_TTL_MS).toBe(true); // still fresh
+      expect(Date.now() - stale < CACHE_TTL_MS).toBe(false); // expired
+    });
+  });
+
+  describe("Stale-while-revalidate cache behavior", () => {
+    it("correctly identifies stale entries (past TTL but within STALE_TTL)", () => {
+      const staleAge = Date.now() - CACHE_TTL_MS - 1000; // just past fresh TTL
+      const isFresh = Date.now() - staleAge < CACHE_TTL_MS;
+      const isWithinStaleTTL = Date.now() - staleAge < STALE_TTL_MS;
+
+      expect(isFresh).toBe(false);       // no longer fresh
+      expect(isWithinStaleTTL).toBe(true); // still within stale window
+    });
+
+    it("correctly identifies fully expired entries (past STALE_TTL)", () => {
+      const expiredAge = Date.now() - STALE_TTL_MS - 1000;
+      const isWithinStaleTTL = Date.now() - expiredAge < STALE_TTL_MS;
+
+      expect(isWithinStaleTTL).toBe(false); // too old to serve
+    });
+
+    it("STALE_TTL is larger than CACHE_TTL (stale window exists)", () => {
+      expect(STALE_TTL_MS).toBeGreaterThan(CACHE_TTL_MS);
+    });
+
+    it("disk cache load skips entries older than STALE_TTL", () => {
+      // Simulates the loadCacheFromDisk filter logic
+      const expiredEntry = { articles: [], fetchedAt: Date.now() - STALE_TTL_MS - 1000 };
+      const shouldLoad = Date.now() - expiredEntry.fetchedAt < STALE_TTL_MS;
+      expect(shouldLoad).toBe(false);
+    });
+
+    it("disk cache load retains entries within STALE_TTL", () => {
+      const validEntry = { articles: JSON.parse(MOCK_ARTICLES_JSON), fetchedAt: Date.now() - 1000 };
+      const shouldLoad = Date.now() - validEntry.fetchedAt < STALE_TTL_MS;
+      expect(shouldLoad).toBe(true);
+    });
+
+    it("disk cache data round-trips through JSON serialization", () => {
+      const entry = {
+        articles: JSON.parse(MOCK_ARTICLES_JSON),
+        fetchedAt: Date.now(),
+      };
+      const data: Record<string, typeof entry> = { technology: entry };
+      const serialized = JSON.stringify(data);
+      const deserialized = JSON.parse(serialized) as typeof data;
+
+      expect(deserialized.technology.articles).toHaveLength(2);
+      expect(deserialized.technology.fetchedAt).toBe(entry.fetchedAt);
+      expect(deserialized.technology.articles[0].title).toBe("Test Article 1");
     });
   });
 });

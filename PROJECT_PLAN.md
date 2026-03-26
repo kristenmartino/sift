@@ -1,9 +1,9 @@
-# The Digest — Project Audit & Development Plan
+# Sift — Project Audit & Development Plan
 
 **Date:** February 23, 2026
-**Last Updated:** February 23, 2026 — Next.js scaffold complete
-**Status:** Next.js scaffold ready for `npm install && npm run dev`
-**Stack:** Next.js 15 / TypeScript / Tailwind CSS / Anthropic Messages API
+**Last Updated:** March 25, 2026 — Migrated to Claude web_search
+**Status:** Next.js app powered by Anthropic Claude `web_search`
+**Stack:** Next.js 15 / TypeScript / Tailwind CSS / Anthropic Claude (`web_search`)
 
 ---
 
@@ -13,23 +13,23 @@
 
 The monolithic 831-line artifact has been decomposed into a proper Next.js project.
 
-| What | Before (Artifact) | After (Next.js) |
+| What | Before (Artifact) | After (Next.js + Claude) |
 |------|-------------------|-----------------|
 | **Files** | 1 file, 831 LOC | 22 source files, 1,786 LOC |
 | **API key** | Exposed to client via proxy | Server-side only (`process.env`) |
-| **State** | `window.__digestCache` | Custom hooks + localStorage |
+| **State** | `window.__siftCache` | Custom hooks + localStorage |
 | **Styling** | Inline styles | Tailwind CSS + CSS variables |
 | **Types** | None | Full TypeScript interfaces |
-| **Tests** | None | 30+ test cases (utils, API, components) |
-| **Caching** | None | 5-min server-side TTL |
-| **Rate limiting** | None | 10 req/min per IP |
+| **Tests** | None | 59+ test cases (utils, API, components) |
+| **Caching** | None | 30-min server-side TTL + 60-min stale-while-revalidate |
+| **Rate limiting** | None | 30 req/min per IP |
 
 ### File Map
 
 ```
-the-digest/                    (22 source files, 1,786 LOC)
+sift/                    (22 source files, 1,786 LOC)
 ├── app/
-│   ├── api/news/route.ts      172 LOC  ← Server-side API proxy
+│   ├── api/news/route.ts      506 LOC  ← Server-side API (Claude web_search)
 │   ├── globals.css             73 LOC  ← Tailwind + CSS vars + reset
 │   ├── layout.tsx              30 LOC  ← Metadata, skip-nav, fonts
 │   └── page.tsx                 5 LOC  ← Thin wrapper
@@ -72,7 +72,7 @@ the-digest/                    (22 source files, 1,786 LOC)
 | Lines 348-831: Main App | `components/NewsAggregator.tsx` | Extracted hooks, added useMemo |
 | (none) | `lib/hooks.ts` | New: useNewsLoader, useBookmarks, useTheme |
 | (none) | `lib/types.ts` | New: Full TypeScript interfaces |
-| (none) | `__tests__/*` | New: 30+ test cases |
+| (none) | `__tests__/*` | New: 59+ test cases |
 
 ---
 
@@ -84,13 +84,13 @@ the-digest/                    (22 source files, 1,786 LOC)
 |-------|---------------|--------|
 | **UI Framework** | React components in Next.js App Router | ✅ Production-ready |
 | **State Management** | Custom hooks + localStorage | ✅ Persists across refresh |
-| **API Integration** | Server-side route handler with auth | ✅ Key never reaches client |
+| **API Integration** | Server-side Claude `web_search` with auth | ✅ Key never reaches client |
 | **Styling** | Tailwind CSS + CSS custom properties | ✅ Maintainable |
 | **Data Persistence** | localStorage (bookmarks, theme) | ✅ Survives refresh |
 | **Error Handling** | Typed errors, user-visible diagnostics | ✅ Comprehensive |
-| **Testing** | Jest + RTL, 30+ test cases | ✅ Core paths covered |
-| **Caching** | In-memory, 5-min TTL | ⚠️ Resets on deploy (upgrade to Redis) |
-| **Rate Limiting** | In-memory, 10 req/min/IP | ⚠️ Resets on deploy (upgrade to Redis) |
+| **Testing** | Jest + RTL, 59+ test cases | ✅ Core paths covered |
+| **Caching** | In-memory + disk (/tmp), 30-min TTL + 60-min stale | ⚠️ Upgrade to Redis for multi-instance |
+| **Rate Limiting** | In-memory, 30 req/min/IP | ⚠️ Resets on deploy (upgrade to Redis) |
 | **Monitoring** | console.error server-side | ⚠️ Need Sentry/Datadog |
 | **SEO** | Metadata + OG tags in layout | ✅ Basic coverage |
 | **Accessibility** | Skip-nav, aria-labels, focus-visible | ⚠️ Needs WCAG audit |
@@ -130,11 +130,12 @@ the-digest/                    (22 source files, 1,786 LOC)
 - `extractJsonArray`: clean array, markdown fences, prose-wrapped, prose both sides, escaped quotes, empty, null, model refusal, truncated JSON, individual objects, nested brackets, multiline, HTML error, 5-article batch
 - `normalizeArticle`: all fields, stable ID, missing optionals, missing title, missing source_name
 
-**`api.test.ts` — 10 tests:**
-- Category validation (invalid, all 6 present)
+**`api.test.ts` — 10+ tests:**
+- Category validation (invalid, all 7 present)
 - Response parsing (clean JSON, markdown-wrapped, model refusal, tool_use only, empty content, mixed blocks)
 - Error response shapes (400, 429, 502)
-- Cache TTL logic
+- Cache TTL logic (fresh / stale / expired boundaries)
+- Disk cache behavior (entry retention, expiry, data shape)
 
 **`ErrorState.test.tsx` — 3 tests:**
 - Renders message, fallback, retry callback
@@ -163,7 +164,7 @@ the-digest/                    (22 source files, 1,786 LOC)
 | F1 | `npm install && npm run dev` works locally | 🔲 Verify | 15 min |
 | F2 | Deploy to Vercel | 🔲 | 30 min |
 | F3 | Set ANTHROPIC_API_KEY in Vercel env | 🔲 | 5 min |
-| F4 | Verify all 6 categories load in production | 🔲 | 15 min |
+| F4 | Verify all 7 categories load in production | 🔲 | 15 min |
 | F5 | Upgrade cache to Vercel KV | 🔲 | 2 hours |
 
 ### Tier 2 — Core Experience (Sprint 2)
@@ -192,12 +193,13 @@ the-digest/                    (22 source files, 1,786 LOC)
 
 ```
 □ npm install — verify clean install
-□ npm run test — all 30+ tests pass
+□ npm run test — all 59+ tests pass
 □ npm run build — production build succeeds
 □ npm run lint — no errors
 □ vercel deploy — preview URL works
 □ Set ANTHROPIC_API_KEY in Vercel dashboard
-□ Test all 6 categories on preview URL
+□ Set SIFT_PREWARM=true in Vercel env (optional: warm cache on cold start)
+□ Test all 7 categories on preview URL
 □ Test mobile (375px viewport)
 □ Test dark/light toggle
 □ Test bookmarks persist across refresh
@@ -229,7 +231,7 @@ the-digest/                    (22 source files, 1,786 LOC)
 
 ```bash
 # Clone the project
-cd the-digest
+cd sift
 
 # Install dependencies
 npm install

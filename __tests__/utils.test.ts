@@ -256,7 +256,7 @@ describe("normalizeArticle", () => {
   };
 
   it("maps all fields correctly", () => {
-    const article = normalizeArticle(RAW, "technology", 0);
+    const article = normalizeArticle(RAW, "technology");
     expect(article.title).toBe("Test Title");
     expect(article.summary).toBe("A summary.");
     expect(article.sourceUrl).toBe("https://reuters.com/article");
@@ -267,15 +267,19 @@ describe("normalizeArticle", () => {
     expect(article.readTime).toBe(1);
   });
 
-  it("generates stable ID from source_url", () => {
-    const a = normalizeArticle(RAW, "top", 0);
-    const b = normalizeArticle(RAW, "top", 1);
-    expect(a.id).toBe(b.id); // Same URL → same ID
+  it("generates stable ID from source_url and title", () => {
+    const a = normalizeArticle(RAW, "top");
+    const b = normalizeArticle(RAW, "top");
+    expect(a.id).toBe(b.id); // Same URL + title → same ID every time
+
+    const different = { ...RAW, title: "Different Title" };
+    const c = normalizeArticle(different, "top");
+    expect(a.id).not.toBe(c.id); // Different title → different ID
   });
 
   it("handles missing optional fields", () => {
     const minimal = { title: "Min", summary: "", source_url: "" };
-    const article = normalizeArticle(minimal as any, "science", 0);
+    const article = normalizeArticle(minimal as any, "science");
     expect(article.title).toBe("Min");
     expect(article.sourceName).toBe("News");
     expect(article.publishedDate).toBeNull();
@@ -284,13 +288,13 @@ describe("normalizeArticle", () => {
 
   it("falls back to 'Untitled' for missing title", () => {
     const noTitle = { ...RAW, title: undefined };
-    const article = normalizeArticle(noTitle as any, "top", 0);
+    const article = normalizeArticle(noTitle as any, "top");
     expect(article.title).toBe("Untitled");
   });
 
   it("extracts domain when source_name is missing", () => {
     const noName = { ...RAW, source_name: undefined };
-    const article = normalizeArticle(noName as any, "top", 0);
+    const article = normalizeArticle(noName as any, "top");
     expect(article.sourceName).toBe("Reuters");
   });
 });

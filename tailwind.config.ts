@@ -14,7 +14,7 @@ const config: Config = {
         body: ["Source Sans 3", "Segoe UI", "sans-serif"],
       },
       colors: {
-        digest: {
+        sift: {
           bg: "var(--bg)",
           card: "var(--card-bg)",
           border: "var(--border)",
