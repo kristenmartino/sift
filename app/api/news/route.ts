@@ -367,7 +367,16 @@ async function fetchArticlesFromClaude(category: CategoryId): Promise<Article[]>
   // Replace generic homepage URLs with specific citation URLs where possible
   const enrichedRaw = rawArticles.map((raw) => {
     const url = raw.source_url || "";
-    const isGeneric = /^https?:\/\/[^/]+\/?$/.test(url) || /^https?:\/\/[^/]+\/[^/]*\/?$/.test(url.replace(/\?.*$/, ""));
+    let isGeneric = false;
+    try {
+      const parsed = new URL(url);
+      // Normalize pathname by stripping trailing slashes
+      const normalizedPath = parsed.pathname.replace(/\/+$/, "");
+      // Treat only root or explicit index pages as "generic"
+      isGeneric = normalizedPath === "" || normalizedPath === "/" || normalizedPath === "/index.html";
+    } catch {
+      isGeneric = false;
+    }
     if (isGeneric && citationUrls.length > 0) {
       // Find a citation URL from the same domain
       try {
