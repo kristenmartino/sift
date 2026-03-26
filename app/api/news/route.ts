@@ -433,7 +433,7 @@ if (process.env.ANTHROPIC_API_KEY && process.env.SIFT_PREWARM === "true") {
 export async function GET(request: NextRequest) {
   // Validate category param
   const category = request.nextUrl.searchParams.get("category") as CategoryId;
-  if (!category || !(category in CATEGORY_QUERIES)) {
+  if (!category || !Object.hasOwn(CATEGORY_QUERIES, category)) {
     return NextResponse.json<NewsApiError>(
       {
         error: "Invalid category",
