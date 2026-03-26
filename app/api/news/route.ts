@@ -529,6 +529,8 @@ export async function GET(request: NextRequest) {
     cache.set(category, { articles, fetchedAt });
     // Persist cache immediately so disk stays in sync even if enrichment fails
     saveCacheToDisk();
+    // Persist cache immediately so disk stays in sync even if enrichment fails
+    saveCacheToDisk();
 
     // Enrich with OG images in background — updates cache for next request
     enrichWithOgImages(articles).then((enriched) => {
