@@ -1,70 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, mkdirSync } from "fs";
-import { writeFile } from "fs/promises";
-import { join } from "path";
 import { CATEGORY_QUERIES, CACHE_TTL_MS, STALE_TTL_MS, RATE_LIMIT_MAX } from "@/lib/constants";
 import { extractJsonArray, normalizeArticle } from "@/lib/utils";
+import { cache, saveCacheToDisk } from "@/lib/cache";
 import type { CategoryId, Article, NewsApiResponse, NewsApiError } from "@/lib/types";
 
 // ─── Anthropic Client ──────────────────────────────────
 // Uses ANTHROPIC_API_KEY env var automatically
 
 const anthropic = new Anthropic();
-
-// ─── In-Memory Cache + File Persistence ──────────────────
-// Writes to /tmp/sift-cache/news.json so data survives server restarts.
-// Note: /tmp is writable on most platforms; use Redis/KV for multi-instance deployments.
-
-interface CacheEntry {
-  articles: Article[];
-  fetchedAt: number;
-}
-
-const cache = new Map<string, CacheEntry>();
-
-const CACHE_DIR = join("/tmp", "sift-cache");
-const CACHE_FILE = join(CACHE_DIR, "news.json");
-
-function loadCacheFromDisk(): void {
-  try {
-    const data = JSON.parse(readFileSync(CACHE_FILE, "utf-8")) as Record<string, CacheEntry>;
-    const now = Date.now();
-    for (const [key, entry] of Object.entries(data)) {
-      // Only load entries that aren't totally expired
-      if (now - entry.fetchedAt < STALE_TTL_MS) {
-        cache.set(key, entry);
-      }
-    }
-    if (cache.size > 0) {
-      console.log(`[sift] Loaded ${cache.size} categories from disk cache`);
-    }
-  } catch {
-    // No cache file or corrupt — start fresh
-  }
-}
-
-async function saveCacheToDisk(): Promise<void> {
-  try {
-    mkdirSync(CACHE_DIR, { recursive: true });
-    const data: Record<string, CacheEntry> = {};
-    for (const [key, entry] of cache.entries()) {
-      data[key] = entry;
-    }
-    await writeFile(CACHE_FILE, JSON.stringify(data), "utf-8");
-  } catch (err) {
-    // Non-critical — disk cache is best-effort, but log so it's observable
-    console.warn("[sift] Failed to save disk cache:", err);
-  }
-}
-
-// Load persisted cache on module init
-loadCacheFromDisk();
-
-// ─── Exports for Testing ────────────────────────────────
-// Exported to allow unit tests to inspect and manipulate cache state
-// and exercise disk persistence logic without going through the HTTP layer.
-export { cache, loadCacheFromDisk, saveCacheToDisk };
 
 // ─── Rate Limiter ───────────────────────────────────────
 // Simple sliding window per IP. In production, use Redis.
@@ -458,11 +402,10 @@ export async function GET(request: NextRequest) {
   }
 
   // Rate limiting — normalize to the first (client-most) IP in x-forwarded-for,
-  // fall back to x-real-ip or request.ip to avoid bucketing on composite header values.
+  // fall back to x-real-ip to avoid bucketing on composite header values.
   const ip =
     (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() ||
     request.headers.get("x-real-ip")?.trim() ||
-    request.ip ||
     "unknown";
   if (isRateLimited(ip)) {
     return NextResponse.json<NewsApiError>(

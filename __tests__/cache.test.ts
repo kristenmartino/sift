@@ -38,7 +38,8 @@ import { NextRequest } from "next/server";
 import { join } from "path";
 import { CACHE_TTL_MS, STALE_TTL_MS } from "@/lib/constants";
 import type { Article } from "@/lib/types";
-import { GET, cache, loadCacheFromDisk, saveCacheToDisk } from "../app/api/news/route";
+import { cache, loadCacheFromDisk, saveCacheToDisk } from "@/lib/cache";
+import { GET } from "../app/api/news/route";
 
 // ─── Constants & Helpers ──────────────────────────────────────────────────
 
