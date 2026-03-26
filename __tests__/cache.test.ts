@@ -22,7 +22,6 @@
 // lambda so the variable is read at call-time rather than at closure-creation
 // time (avoiding the temporal dead zone).
 
-// eslint-disable-next-line prefer-const
 let mockCreate: jest.Mock;
 
 jest.mock("@anthropic-ai/sdk", () => ({
@@ -65,7 +64,7 @@ const ANTHROPIC_SUCCESS = {
 /** Build a GET request with a unique per-call IP to stay below rate limit. */
 let _ipCounter = 1;
 function makeRequest(category = "technology") {
-  const octet = (_ipCounter++ % 254) + 1;
+  const octet = ((_ipCounter++ - 1) % 254) + 1;
   return new NextRequest(`http://localhost/api/news?category=${category}`, {
     headers: { "x-forwarded-for": `203.0.113.${octet}` },
   });
