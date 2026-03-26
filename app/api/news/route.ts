@@ -513,6 +513,8 @@ export async function GET(request: NextRequest) {
     // Cache the fresh results and return immediately
     const fetchedAt = Date.now();
     cache.set(category, { articles, fetchedAt });
+    // Persist cache immediately so disk stays in sync even if enrichment fails
+    saveCacheToDisk();
 
     // Enrich with OG images in background — updates cache for next request
     enrichWithOgImages(articles).then((enriched) => {
