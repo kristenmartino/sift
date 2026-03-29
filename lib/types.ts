@@ -29,16 +29,6 @@ export interface Article {
 
 // ─── API Types ──────────────────────────────────────────
 
-/** Raw article shape from the Anthropic API before normalization */
-export interface RawArticle {
-  title: string;
-  summary: string;
-  source_url: string;
-  source_name?: string;
-  published_date?: string | null;
-  image_url?: string | null;
-}
-
 /** Shape of /api/news response */
 export interface NewsApiResponse {
   articles: Article[];

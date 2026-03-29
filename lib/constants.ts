@@ -12,41 +12,9 @@ export const CATEGORIES: Category[] = [
   { id: "health", label: "Health", icon: "✦" },
 ];
 
-export const CATEGORY_QUERIES: Record<CategoryId, { topic: string; subtopics: string[] }> = {
-  top: {
-    topic: "top breaking news",
-    subtopics: ["major headlines today", "breaking news worldwide"],
-  },
-  technology: {
-    topic: "technology",
-    subtopics: ["AI and machine learning", "tech startups and companies", "software and cybersecurity"],
-  },
-  business: {
-    topic: "business and finance",
-    subtopics: ["stock market and investing", "corporate earnings and deals", "economic policy"],
-  },
-  science: {
-    topic: "science",
-    subtopics: ["scientific discoveries and research", "space and astronomy", "climate and environment"],
-  },
-  energy: {
-    topic: "energy",
-    subtopics: [
-      "electricity grid and power utilities",
-      "renewable energy solar and wind",
-      "energy prices and electricity demand",
-      "NextEra FPL energy companies",
-    ],
-  },
-  world: {
-    topic: "world news",
-    subtopics: ["international politics and diplomacy", "global conflicts and security", "regional developments"],
-  },
-  health: {
-    topic: "health",
-    subtopics: ["medical breakthroughs and research", "public health and policy", "wellness and nutrition"],
-  },
-};
+export const VALID_CATEGORIES = new Set<CategoryId>([
+  "top", "technology", "business", "science", "energy", "world", "health",
+]);
 
 // ─── Colors ─────────────────────────────────────────────
 // Using rgb tuples so we can compose with rgba() — no hex+alpha hack
@@ -73,11 +41,8 @@ export const GRADIENTS: Record<CategoryId, string> = {
 
 // ─── Timing ─────────────────────────────────────────────
 
-export const API_TIMEOUT_MS = 90_000; // 90s — Claude web_search needs time for multiple searches
-export const SLOW_THRESHOLD_MS = 8_000;
-export const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes — fresh cache window
-export const STALE_TTL_MS = 60 * 60 * 1000; // 60 minutes — serve stale data up to this age
-export const RATE_LIMIT_MAX = 30; // requests per minute per IP
+export const API_TIMEOUT_MS = 10_000; // 10s — DB reads are fast, no need for 90s
+export const SLOW_THRESHOLD_MS = 3_000;
 
 // ─── Storage Keys ───────────────────────────────────────
 
