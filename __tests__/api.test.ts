@@ -1,254 +1,206 @@
 /**
- * API route tests.
+ * @jest-environment node
  *
- * These test the /api/news route handler with mocked fetch calls
- * to the Anthropic API. They verify error handling, caching,
- * rate limiting, and response parsing — the exact failure modes
- * we hit during prototype development.
+ * API route tests for the v2 Postgres-backed /api/news endpoint.
  *
- * NOTE: These are integration-style tests that import the route handler
- * directly. In a full CI setup they'd run against a test server.
- * For now, they validate the logic in isolation.
+ * These test the GET route handler with mocked database calls.
+ * The route reads from Postgres — no AI calls, no cache logic.
  */
 
-import { CATEGORY_QUERIES, CACHE_TTL_MS, STALE_TTL_MS } from "@/lib/constants";
-import { extractJsonArray, normalizeArticle } from "@/lib/utils";
-import type { CategoryId } from "@/lib/types";
+import { NextRequest } from "next/server";
+import type { DbArticle } from "@/lib/db";
+
+// ─── Mock DB ────────────────────────────────────────────
+
+const mockGetArticlesByCategory = jest.fn<Promise<DbArticle[]>, [string, number?]>();
+const mockGetLastRefreshed = jest.fn<Promise<Date | null>, [string]>();
+
+jest.mock("@/lib/db", () => ({
+  getArticlesByCategory: (...args: [string, number?]) => mockGetArticlesByCategory(...args),
+  getLastRefreshed: (...args: [string]) => mockGetLastRefreshed(...args),
+}));
+
+import { GET } from "../app/api/news/route";
 
 // ─── Mock Data ──────────────────────────────────────────
 
-const MOCK_ARTICLES_JSON = JSON.stringify([
+const MOCK_DB_ROWS: DbArticle[] = [
   {
+    id: "abc123",
     title: "Test Article 1",
     summary: "Summary of article 1.",
     source_url: "https://reuters.com/1",
     source_name: "Reuters",
-    published_date: null,
     image_url: null,
+    category: "technology",
+    published_date: new Date("2026-03-28T10:00:00Z"),
+    read_time: 2,
+    created_at: new Date("2026-03-28T10:00:00Z"),
   },
   {
+    id: "def456",
     title: "Test Article 2",
     summary: "Summary of article 2.",
     source_url: "https://bbc.com/2",
     source_name: "BBC",
-    published_date: "2025-01-15T10:00:00Z",
     image_url: "https://img.bbc.com/photo.jpg",
+    category: "technology",
+    published_date: new Date("2026-03-28T08:00:00Z"),
+    read_time: 3,
+    created_at: new Date("2026-03-28T08:00:00Z"),
   },
-]);
+];
 
-function mockAnthropicResponse(text: string, stopReason = "end_turn") {
-  return {
-    content: [{ type: "text", text }],
-    stop_reason: stopReason,
-    model: "claude-sonnet-4-20250514",
-  };
+const MOCK_LAST_REFRESHED = new Date("2026-03-28T12:00:00Z");
+
+function makeRequest(category?: string) {
+  const url = category
+    ? `http://localhost/api/news?category=${category}`
+    : "http://localhost/api/news";
+  return new NextRequest(url);
 }
 
-function mockAnthropicToolUseResponse() {
-  return {
-    content: [
-      { type: "tool_use", id: "tu_1", name: "web_search", input: { query: "news" } },
-    ],
-    stop_reason: "tool_use",
-  };
-}
+// ─── Setup ──────────────────────────────────────────────
 
-function mockAnthropicRefusal() {
-  return {
-    content: [
-      {
-        type: "text",
-        text: "I cannot provide the response in the exact format requested.",
-      },
-    ],
-    stop_reason: "end_turn",
-  };
-}
+beforeEach(() => {
+  mockGetArticlesByCategory.mockReset();
+  mockGetLastRefreshed.mockReset();
+  mockGetArticlesByCategory.mockResolvedValue(MOCK_DB_ROWS);
+  mockGetLastRefreshed.mockResolvedValue(MOCK_LAST_REFRESHED);
+});
 
-// ─── Test Helpers ───────────────────────────────────────
+// ─── Tests ──────────────────────────────────────────────
 
-describe("API Route Logic", () => {
-  // Since Next.js route handlers are tightly coupled to NextRequest/NextResponse,
-  // we test the underlying logic units directly.
-
+describe("GET /api/news", () => {
   describe("Category validation", () => {
-    it("rejects invalid category", () => {
-      expect(CATEGORY_QUERIES).not.toHaveProperty("invalid");
-      expect(CATEGORY_QUERIES).toHaveProperty("top");
-      expect(CATEGORY_QUERIES).toHaveProperty("technology");
+    it("returns 400 for missing category", async () => {
+      const res = await GET(makeRequest());
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Invalid category");
     });
 
-    it("has queries for all 7 categories", () => {
+    it("returns 400 for invalid category", async () => {
+      const res = await GET(makeRequest("invalid"));
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Invalid category");
+      expect(body.details).toContain("technology");
+    });
+
+    it("accepts all 7 valid categories", async () => {
       const categories = ["top", "technology", "business", "science", "energy", "world", "health"];
-      categories.forEach((cat) => {
-        expect(CATEGORY_QUERIES).toHaveProperty(cat);
-        const query = CATEGORY_QUERIES[cat as keyof typeof CATEGORY_QUERIES];
-        expect(typeof query.topic).toBe("string");
-        expect(Array.isArray(query.subtopics)).toBe(true);
-        expect(query.subtopics.length).toBeGreaterThan(0);
-      });
+      for (const cat of categories) {
+        const res = await GET(makeRequest(cat));
+        expect(res.status).toBe(200);
+      }
+      expect(mockGetArticlesByCategory).toHaveBeenCalledTimes(7);
     });
   });
 
-  describe("Response parsing scenarios", () => {
-    // These test the exact scenarios we encountered during debugging
+  describe("Successful response", () => {
+    it("returns articles from database", async () => {
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
 
-    it("handles clean JSON response via extractJsonArray", () => {
-      const response = mockAnthropicResponse(MOCK_ARTICLES_JSON);
-      const text = response.content[0].text;
-      const articles = extractJsonArray(text);
-      expect(articles).toHaveLength(2);
-      expect(articles![0].title).toBe("Test Article 1");
+      expect(res.status).toBe(200);
+      expect(body.articles).toHaveLength(2);
+      expect(body.articles[0].title).toBe("Test Article 1");
+      expect(body.articles[1].title).toBe("Test Article 2");
     });
 
-    it("handles JSON wrapped in markdown fences", () => {
-      const wrapped = "```json\n" + MOCK_ARTICLES_JSON + "\n```";
-      const articles = extractJsonArray(wrapped);
-      expect(articles).toHaveLength(2);
-    });
+    it("maps DB columns to camelCase API fields", async () => {
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+      const article = body.articles[0];
 
-    it("detects model refusal (no JSON) and returns null", () => {
-      const response = mockAnthropicRefusal();
-      const text = response.content[0].text;
-      const articles = extractJsonArray(text);
-      expect(articles).toBeNull();
-    });
-
-    it("handles tool_use response (no text blocks)", () => {
-      const response = mockAnthropicToolUseResponse();
-      const textBlocks = response.content.filter((b) => b.type === "text");
-      expect(textBlocks).toHaveLength(0);
-    });
-
-    it("handles empty content array", () => {
-      const response = { content: [], stop_reason: "end_turn" };
-      const textBlocks = response.content.filter((b: any) => b.type === "text");
-      expect(textBlocks).toHaveLength(0);
-    });
-
-    it("handles mixed text and tool_use blocks", () => {
-      const response = {
-        content: [
-          { type: "tool_use", id: "tu_1", name: "web_search", input: {} },
-          { type: "text", text: MOCK_ARTICLES_JSON },
-        ],
-        stop_reason: "end_turn",
-      };
-      const textBlocks = response.content.filter((b) => b.type === "text");
-      expect(textBlocks).toHaveLength(1);
-      const text = (textBlocks[0] as { type: "text"; text: string }).text;
-      const articles = extractJsonArray(text);
-      expect(articles).toHaveLength(2);
-    });
-
-    it("normalizes raw articles into domain Article type", () => {
-      const raw = extractJsonArray(MOCK_ARTICLES_JSON)!;
-      const article = normalizeArticle(raw[0], "technology" as CategoryId);
-      expect(article.title).toBe("Test Article 1");
+      expect(article.id).toBe("abc123");
+      expect(article.sourceUrl).toBe("https://reuters.com/1");
       expect(article.sourceName).toBe("Reuters");
+      expect(article.publishedDate).toBe("2026-03-28T10:00:00.000Z");
+      expect(article.imageUrl).toBeNull();
       expect(article.category).toBe("technology");
-      expect(article.id).toBeTruthy();
-      expect(article.readTime).toBeGreaterThanOrEqual(1);
+      expect(article.readTime).toBe(2);
     });
 
-    it("produces stable article IDs regardless of ordering", () => {
-      const raw = extractJsonArray(MOCK_ARTICLES_JSON)!;
-      const articleFirst = normalizeArticle(raw[0], "technology" as CategoryId);
-      const articleAgain = normalizeArticle(raw[0], "technology" as CategoryId);
-      // Same article always gets same ID
-      expect(articleFirst.id).toBe(articleAgain.id);
-      // Different articles get different IDs
-      const articleSecond = normalizeArticle(raw[1], "technology" as CategoryId);
-      expect(articleFirst.id).not.toBe(articleSecond.id);
+    it("includes fetchedAt from pipeline_state", async () => {
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.fetchedAt).toBe("2026-03-28T12:00:00.000Z");
+      expect(body.cached).toBe(false);
+    });
+
+    it("uses current time for fetchedAt when no pipeline_state exists", async () => {
+      mockGetLastRefreshed.mockResolvedValue(null);
+      const before = new Date().toISOString();
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(new Date(body.fetchedAt).getTime()).toBeGreaterThanOrEqual(new Date(before).getTime());
+    });
+
+    it("handles empty result set", async () => {
+      mockGetArticlesByCategory.mockResolvedValue([]);
+      const res = await GET(makeRequest("energy"));
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body.articles).toHaveLength(0);
+    });
+
+    it("falls back to empty string for null summary", async () => {
+      mockGetArticlesByCategory.mockResolvedValue([
+        { ...MOCK_DB_ROWS[0], summary: null },
+      ]);
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.articles[0].summary).toBe("");
+    });
+
+    it("handles null published_date", async () => {
+      mockGetArticlesByCategory.mockResolvedValue([
+        { ...MOCK_DB_ROWS[0], published_date: null },
+      ]);
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.articles[0].publishedDate).toBeNull();
+    });
+
+    it("defaults readTime to 1 when read_time is 0", async () => {
+      mockGetArticlesByCategory.mockResolvedValue([
+        { ...MOCK_DB_ROWS[0], read_time: 0 },
+      ]);
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.articles[0].readTime).toBe(1);
     });
   });
 
-  describe("Error response shapes", () => {
-    it("400 error has correct shape", () => {
-      const error = { error: "Invalid category", details: "Must be one of: ..." };
-      expect(error).toHaveProperty("error");
-      expect(typeof error.error).toBe("string");
-    });
+  describe("Error handling", () => {
+    it("returns 500 when database query fails", async () => {
+      mockGetArticlesByCategory.mockRejectedValue(new Error("connection refused"));
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
 
-    it("429 error has correct shape", () => {
-      const error = { error: "Too many requests. Try again in a minute." };
-      expect(error).toHaveProperty("error");
-    });
-
-    it("502 error includes details", () => {
-      const error = {
-        error: "Could not parse articles from AI response",
-        details: "I cannot provide...",
-      };
-      expect(error).toHaveProperty("details");
+      expect(res.status).toBe(500);
+      expect(body.error).toBe("Internal server error");
+      expect(body.details).toContain("connection refused");
     });
   });
 
-  describe("Cache behavior", () => {
-    it("cache entry has correct shape", () => {
-      const entry = {
-        articles: JSON.parse(MOCK_ARTICLES_JSON),
-        fetchedAt: Date.now(),
-      };
-      expect(entry.articles).toHaveLength(2);
-      expect(typeof entry.fetchedAt).toBe("number");
+  describe("Query parameters", () => {
+    it("passes category to getArticlesByCategory", async () => {
+      await GET(makeRequest("science"));
+      expect(mockGetArticlesByCategory).toHaveBeenCalledWith("science");
     });
 
-    it("TTL check works correctly with 30-minute cache", () => {
-      const fresh = Date.now() - 1000; // 1 second ago
-      const stale = Date.now() - CACHE_TTL_MS - 1000; // past TTL
-
-      expect(Date.now() - fresh < CACHE_TTL_MS).toBe(true); // still fresh
-      expect(Date.now() - stale < CACHE_TTL_MS).toBe(false); // expired
-    });
-  });
-
-  describe("Stale-while-revalidate cache behavior", () => {
-    it("correctly identifies stale entries (past TTL but within STALE_TTL)", () => {
-      const staleAge = Date.now() - CACHE_TTL_MS - 1000; // just past fresh TTL
-      const isFresh = Date.now() - staleAge < CACHE_TTL_MS;
-      const isWithinStaleTTL = Date.now() - staleAge < STALE_TTL_MS;
-
-      expect(isFresh).toBe(false);       // no longer fresh
-      expect(isWithinStaleTTL).toBe(true); // still within stale window
-    });
-
-    it("correctly identifies fully expired entries (past STALE_TTL)", () => {
-      const expiredAge = Date.now() - STALE_TTL_MS - 1000;
-      const isWithinStaleTTL = Date.now() - expiredAge < STALE_TTL_MS;
-
-      expect(isWithinStaleTTL).toBe(false); // too old to serve
-    });
-
-    it("STALE_TTL is larger than CACHE_TTL (stale window exists)", () => {
-      expect(STALE_TTL_MS).toBeGreaterThan(CACHE_TTL_MS);
-    });
-
-    it("disk cache load skips entries older than STALE_TTL", () => {
-      // Simulates the loadCacheFromDisk filter logic
-      const expiredEntry = { articles: [], fetchedAt: Date.now() - STALE_TTL_MS - 1000 };
-      const shouldLoad = Date.now() - expiredEntry.fetchedAt < STALE_TTL_MS;
-      expect(shouldLoad).toBe(false);
-    });
-
-    it("disk cache load retains entries within STALE_TTL", () => {
-      const validEntry = { articles: JSON.parse(MOCK_ARTICLES_JSON), fetchedAt: Date.now() - 1000 };
-      const shouldLoad = Date.now() - validEntry.fetchedAt < STALE_TTL_MS;
-      expect(shouldLoad).toBe(true);
-    });
-
-    it("disk cache data round-trips through JSON serialization", () => {
-      const entry = {
-        articles: JSON.parse(MOCK_ARTICLES_JSON),
-        fetchedAt: Date.now(),
-      };
-      const data: Record<string, typeof entry> = { technology: entry };
-      const serialized = JSON.stringify(data);
-      const deserialized = JSON.parse(serialized) as typeof data;
-
-      expect(deserialized.technology.articles).toHaveLength(2);
-      expect(deserialized.technology.fetchedAt).toBe(entry.fetchedAt);
-      expect(deserialized.technology.articles[0].title).toBe("Test Article 1");
+    it("passes category to getLastRefreshed", async () => {
+      await GET(makeRequest("world"));
+      expect(mockGetLastRefreshed).toHaveBeenCalledWith("world");
     });
   });
 });

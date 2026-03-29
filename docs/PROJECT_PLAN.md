@@ -2,99 +2,142 @@
 
 **Date:** February 23, 2026
 **Last Updated:** March 28, 2026
-**Status:** v2 architecture in progress — Claude web_search live, migrating to RSS hybrid pipeline
-**Stack:** Next.js 15 / TypeScript / Tailwind CSS / Anthropic Claude (`web_search`)
+**Status:** Week 1 complete — Python pipeline live, 479 articles in Postgres, starting Week 2
+**Stack:** Next.js 15 / TypeScript / Tailwind CSS / Python FastAPI + LangGraph / Postgres + pgvector
 
 ---
 
-## Current state (v1.5 — Claude web_search)
+## Current state
 
-The app is live on `localhost:3000` with Anthropic Claude `web_search` as the content engine. All 7 categories load AI-generated summaries. This is the bridge between v1 (NewsAPI) and v2 (RSS hybrid pipeline).
+### v1.5 frontend (sift/) — working, pending v2 rewrite
 
-### What's working
+The Next.js app is live on `localhost:3000` with Claude `web_search` as the content engine. All 7 categories load AI-generated summaries. This will be rewritten in Week 2 to read from Postgres instead.
 
 | Layer | Implementation | Status |
 |-------|---------------|--------|
 | UI Framework | React components in Next.js App Router | Working |
 | State Management | Custom hooks + localStorage | Working |
-| API Integration | Server-side Claude `web_search` | Working |
+| API Integration | Server-side Claude `web_search` | Working (to be replaced) |
 | Styling | Tailwind CSS + CSS custom properties | Working |
-| Caching | In-memory Map + persistent disk (`/tmp/sift-cache/`) | Working |
-| Stale-while-revalidate | 30-min fresh TTL + 60-min stale TTL | Working |
-| Image pipeline | Claude → OG scraping (7 patterns) → HEAD validation | Working |
-| Citation stripping | Removes `<cite>` markup from Claude responses | Working |
-| Rate limiting | In-memory, 30 req/min per IP | Working |
+| Caching | In-memory Map + persistent disk (`/tmp/sift-cache/`) | Working (to be replaced) |
+| Image pipeline | Claude → OG scraping → HEAD validation | Working (to be simplified) |
 | Testing | Jest + RTL, 80 test cases | Passing |
 | Dark/light mode | CSS variables + localStorage toggle | Working |
 | Bookmarks | localStorage persistence | Working |
 
-### File map
+### v2 backend (sift-api/) — Week 1 complete
+
+The Python FastAPI + LangGraph pipeline service is built and tested end-to-end. Running locally on `localhost:8000` with Docker Postgres on `localhost:5432`.
+
+| Layer | Implementation | Status |
+|-------|---------------|--------|
+| FastAPI server | Health endpoint, CORS, lifespan DB pool | **Done** |
+| Postgres schema | 4 tables: articles, custom_topics, bookmarks, pipeline_state | **Done** |
+| Docker Compose | pgvector/pgvector:pg16 on port 5432 | **Done** |
+| LangGraph pipeline | fetch_rss → deduplicate → summarize → embed → store | **Done** |
+| RSS feeds | 56 feeds across 7 categories | **Done** |
+| Claude summarization | Haiku 4.5 batch summaries, 3-strategy JSON parser | **Done** |
+| Voyage AI embeddings | voyage-3-lite, 1024-dim (needs API key) | **Scaffolded** |
+| Pipeline auth | X-Pipeline-Key header validation | **Done** |
+| Deduplication | Batch URL check against Postgres | **Done** |
+| Dockerfile + Railway config | Production-ready | **Done** |
+| Tests | 40 passing (RSS, summarizer, health, router) | **Passing** |
+| Git repo | 3 commits on main | **Done** |
+
+**Pipeline results (full run):**
+- 479 articles stored across all 7 categories
+- All with AI summaries from Claude Haiku
+- Zero errors
+- Deduplication verified: second run skips all existing articles
+- ~6.5 minutes for full 56-feed refresh
+
+### File maps
 
 ```
-sift/                      (26 source files, 2,601 LOC)
+sift/                          (26 source files, 2,601 LOC)
 ├── app/
-│   ├── api/news/route.ts       512 LOC  ← Claude web_search + OG enrichment
-│   ├── globals.css              73 LOC  ← Tailwind + CSS vars + reset
-│   ├── layout.tsx               30 LOC  ← Metadata, skip-nav, fonts
-│   └── page.tsx                  5 LOC  ← Thin wrapper
+│   ├── api/news/route.ts           512 LOC  ← Claude web_search (to be rewritten)
+│   ├── globals.css                  73 LOC
+│   ├── layout.tsx                   30 LOC
+│   └── page.tsx                      5 LOC
 ├── components/
-│   ├── NewsAggregator.tsx      255 LOC  ← Main orchestrator
-│   ├── ArticleCard.tsx         124 LOC  ← Card with badge, bookmark, meta
-│   ├── CardImage.tsx            64 LOC  ← Image with gradient fallback
-│   ├── SkeletonCard.tsx         41 LOC  ← Loading placeholder
-│   ├── ErrorState.tsx           23 LOC  ← Error UI with retry
-│   └── index.ts                  5 LOC  ← Barrel exports
+│   ├── NewsAggregator.tsx          255 LOC
+│   ├── ArticleCard.tsx             124 LOC
+│   ├── CardImage.tsx                64 LOC
+│   ├── SkeletonCard.tsx             41 LOC
+│   ├── ErrorState.tsx               23 LOC
+│   └── index.ts                      5 LOC
 ├── lib/
-│   ├── hooks.ts                156 LOC  ← useNewsLoader, useBookmarks, useTheme
-│   ├── utils.ts                135 LOC  ← Parse, hash, time, domain, citations
-│   ├── types.ts                 84 LOC  ← All TypeScript interfaces
-│   ├── constants.ts             87 LOC  ← Categories, colors, timing
-│   └── cache.ts                 54 LOC  ← In-memory + disk cache
-├── __tests__/
-│   ├── utils.test.ts           300 LOC  ← 25 tests: parser, hash, time, domain
-│   ├── cache.test.ts           291 LOC  ← Cache TTL, disk persistence
-│   ├── api.test.ts             254 LOC  ← API response parsing scenarios
-│   └── ErrorState.test.tsx      22 LOC  ← Component rendering tests
-├── docs/                        ← Architecture, PRD, decisions, specs
-├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
-├── jest.config.ts
-├── next.config.js
-├── .env.local.example
-├── .gitignore
-└── README.md
+│   ├── hooks.ts                    156 LOC
+│   ├── utils.ts                    135 LOC
+│   ├── types.ts                     84 LOC
+│   ├── constants.ts                 87 LOC
+│   └── cache.ts                     54 LOC  ← to be removed
+├── __tests__/                       867 LOC (80 tests)
+└── docs/
+
+sift-api/                      (16 source files, ~1,200 LOC)
+├── app/
+│   ├── main.py                      FastAPI app, health endpoint
+│   ├── config.py                    pydantic-settings
+│   ├── db.py                        asyncpg connection pool
+│   ├── models.py                    Pydantic schemas
+│   └── routers/
+│       ├── pipeline.py              POST /pipeline/refresh
+│       └── compare.py               POST /analyze/compare (stub)
+├── workflows/
+│   ├── pipeline_workflow.py         LangGraph: 5-node state graph
+│   └── compare_workflow.py          stub
+├── services/
+│   ├── rss.py                       56 RSS feeds, feedparser, image extraction
+│   ├── summarizer.py                Claude Haiku batch summarization
+│   ├── embedder.py                  Voyage AI embeddings
+│   └── deduplicator.py              Postgres dedup check
+├── tests/                           40 tests
+├── docker-compose.yml               Postgres 16 + pgvector
+├── init.sql                         DB schema
+├── Dockerfile
+└── railway.toml
 ```
 
 ---
 
-## v2 migration plan
+## v2 build sequence
 
-The v2 architecture moves from Claude web_search (in the request path) to a background RSS pipeline. See these docs for full details:
-
-- **[PRD.md](PRD.md)** — Product requirements, feature tiers, card design
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — System architecture, data flows, scaling path
-- **[TECHNICAL_SPEC.md](TECHNICAL_SPEC.md)** — Service map, DB schema, API contracts, RSS feeds
-- **[DECISIONS.md](DECISIONS.md)** — 17 architectural decisions, all locked
-
-### v2 build sequence
-
-1. Postgres schema + migrations
-2. Python FastAPI service scaffold on Railway
-3. LangGraph pipeline workflow (RSS → Claude → Voyage → store)
-4. RSS feed integration (28 feeds, 7 categories)
-5. Next.js API routes rewrite (Postgres reads)
-6. Card redesign — text-first + RSS images
-7. Vercel Cron configuration
-8. Clerk auth integration
-9. Custom topics — vector search + fallback
-10. SSE streaming for article delivery
-11. LangGraph comparison workflow
-12. Landing page at siftnews.ai
+| # | Task | Status |
+|---|------|--------|
+| 1 | Postgres schema + migrations | **Done** |
+| 2 | Python FastAPI service scaffold | **Done** |
+| 3 | LangGraph pipeline workflow (RSS → Claude → Voyage → store) | **Done** |
+| 4 | RSS feed integration (56 feeds, 7 categories) | **Done** |
+| 5 | Next.js API routes rewrite (Postgres reads) | Pending (Week 2) |
+| 6 | Card redesign — text-first + RSS images | Pending (Week 2) |
+| 7 | Vercel Cron configuration | Pending (Week 2) |
+| 8 | Clerk auth integration | Pending (Week 2) |
+| 9 | Custom topics — vector search + fallback | Pending (Week 3) |
+| 10 | SSE streaming for article delivery | Pending (Week 2) |
+| 11 | LangGraph comparison workflow | Pending (Week 3) |
+| 12 | Landing page at siftnews.ai | Pending (Week 3) |
 
 ---
 
-## Bugs fixed
+## What's next: Week 2
+
+Rewrite the Next.js frontend to read from Postgres instead of calling Claude directly. This is the core v2 shift — AI moves out of the request path.
+
+**Key changes:**
+1. **New `lib/db.ts`** — Postgres client (Neon serverless driver or @vercel/postgres)
+2. **Rewrite `app/api/news/route.ts`** — `SELECT * FROM articles WHERE category = $1 ORDER BY published_date DESC LIMIT 7` instead of Claude web_search
+3. **Add `app/api/cron/refresh/route.ts`** — Vercel Cron handler that triggers Railway pipeline
+4. **Remove `lib/cache.ts`** — Postgres is the cache now
+5. **Simplify `CardImage.tsx`** — RSS images or text-first, no OG scraping
+6. **Update `ArticleCard.tsx`** — text-first variant for articles without images
+7. **Add Clerk auth** — ClerkProvider, middleware, sign-in/sign-up pages
+8. **Update tests** — adapt to Postgres reads instead of Claude mocks
+
+---
+
+## Bugs fixed (v1 → v1.5)
 
 | # | Bug | Fix |
 |---|-----|-----|
@@ -126,3 +169,4 @@ The v2 architecture moves from Claude web_search (in the request path) to a back
 | 3/28/26 | 3-layer image pipeline | Claude → OG scraping → HEAD validation |
 | 3/28/26 | Persistent disk cache | Cold start: 20s → <400ms |
 | 3/28/26 | v2: RSS hybrid + Postgres + LangGraph | Background pipeline, <50ms reads (see DECISIONS.md) |
+| 3/28/26 | 56 RSS feeds (expanded from 28) | Added Axios, Hacker News, Economist, ArXiv, etc. |
