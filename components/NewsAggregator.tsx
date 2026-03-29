@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CATEGORIES } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
 import SkeletonCard from "./SkeletonCard";
 import ErrorState from "./ErrorState";
+import AuthButtons from "./AuthButtons";
 import type { CategoryId } from "@/lib/types";
-import { useState } from "react";
 
 // ─── Theme CSS Variables ────────────────────────────────
 
@@ -132,6 +132,8 @@ export default function NewsAggregator() {
             >
               {darkMode ? "☀" : "◑"}
             </button>
+
+            <AuthButtons />
           </div>
         </div>
 
