@@ -50,6 +50,8 @@ export default function NewsAggregator() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>("top");
   const [showBookmarks, setShowBookmarks] = useState(false);
 
+  const [refreshed, setRefreshed] = useState(false);
+
   const { articles, loading, error, slow, lastUpdated, loadCategory } = useNewsLoader();
   const { bookmarks, toggle: toggleBookmark, count: bookmarkCount } = useBookmarks();
   const { dark: darkMode, toggle: toggleDark } = useTheme();
@@ -57,6 +59,12 @@ export default function NewsAggregator() {
   useEffect(() => {
     loadCategory(activeCategory);
   }, [activeCategory, loadCategory]);
+
+  const handleRefresh = async () => {
+    await loadCategory(activeCategory, true);
+    setRefreshed(true);
+    setTimeout(() => setRefreshed(false), 2000);
+  };
 
   const currentArticles = useMemo(() => {
     if (showBookmarks) {
@@ -114,14 +122,18 @@ export default function NewsAggregator() {
             </button>
 
             <button
-              onClick={() => loadCategory(activeCategory, true)}
+              onClick={handleRefresh}
               disabled={loading}
               aria-label="Refresh"
-              className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-[var(--text-secondary)] text-base transition-all duration-200"
-              style={{ cursor: loading ? "wait" : "pointer", opacity: loading ? 0.5 : 1 }}
+              className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-base transition-all duration-200"
+              style={{
+                cursor: loading ? "wait" : "pointer",
+                opacity: loading ? 0.5 : 1,
+                color: refreshed ? "var(--accent)" : "var(--text-secondary)",
+              }}
             >
               <span className={loading ? "animate-spin-slow inline-block" : "inline-block"}>
-                ↻
+                {refreshed ? "✓" : "↻"}
               </span>
             </button>
 
@@ -172,8 +184,8 @@ export default function NewsAggregator() {
               {showBookmarks ? "Saved Articles" : activeCatLabel}
             </h2>
             {lastUpdated && !showBookmarks && (
-              <p className="text-xs text-[var(--text-muted)] mt-1">
-                Updated {timeAgo(lastUpdated.toISOString())}
+              <p className="text-xs mt-1" style={{ color: refreshed ? "var(--accent)" : "var(--text-muted)" }}>
+                {refreshed ? "Updated just now" : `Updated ${timeAgo(lastUpdated.toISOString())}`}
               </p>
             )}
           </div>
