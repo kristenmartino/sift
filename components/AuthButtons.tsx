@@ -3,7 +3,6 @@
 import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
 
 const clerkEnabled =
-  typeof window !== "undefined" &&
   !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith("pk_");
 
