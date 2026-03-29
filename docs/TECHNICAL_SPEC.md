@@ -302,15 +302,19 @@ data: {"count": 5, "cached": false}
 
 Feeds to be consumed by the background pipeline. Grouped by category. Each feed should be verified before implementation — URLs may have changed.
 
-### Top Stories
+### Top Stories (8 feeds)
 | Source | Feed URL | Format |
 |--------|----------|--------|
 | AP News | `https://apnews.com/index.rss` | RSS 2.0 |
 | Reuters | `https://www.reuters.com/rssFeed/topNews` | RSS 2.0 |
 | NPR News | `https://feeds.npr.org/1001/rss.xml` | RSS 2.0 |
 | BBC Top | `http://feeds.bbci.co.uk/news/rss.xml` | RSS 2.0 |
+| Axios | `https://api.axios.com/feed/` | RSS 2.0 |
+| The Hill | `https://thehill.com/news/feed/` | RSS 2.0 |
+| Politico | `https://rss.politico.com/politics-news.xml` | RSS 2.0 |
+| PBS NewsHour | `https://www.pbs.org/newshour/feeds/rss/headlines` | RSS 2.0 |
 
-### Technology
+### Technology (11 feeds)
 | Source | Feed URL | Format |
 |--------|----------|--------|
 | TechCrunch | `https://techcrunch.com/feed/` | RSS 2.0 |
@@ -318,48 +322,71 @@ Feeds to be consumed by the background pipeline. Grouped by category. Each feed 
 | The Verge | `https://www.theverge.com/rss/index.xml` | Atom |
 | Wired | `https://www.wired.com/feed/rss` | RSS 2.0 |
 | MIT Tech Review | `https://www.technologyreview.com/feed/` | RSS 2.0 |
+| Hacker News | `https://hnrss.org/frontpage?points=50` | RSS 2.0 |
+| Engadget | `https://www.engadget.com/rss.xml` | RSS 2.0 |
+| ZDNet | `https://www.zdnet.com/news/rss.xml` | RSS 2.0 |
+| The Register | `https://www.theregister.com/headlines.atom` | Atom |
+| IEEE Spectrum | `https://spectrum.ieee.org/feeds/feed.rss` | RSS 2.0 |
+| VentureBeat | `https://venturebeat.com/feed/` | RSS 2.0 |
 
-### Business
+### Business (8 feeds)
 | Source | Feed URL | Format |
 |--------|----------|--------|
 | CNBC Top | `https://www.cnbc.com/id/100003114/device/rss/rss.html` | RSS 2.0 |
 | MarketWatch | `https://www.marketwatch.com/rss/topstories` | RSS 2.0 |
 | Reuters Business | `https://www.reuters.com/rssFeed/businessNews` | RSS 2.0 |
 | Financial Times | `https://www.ft.com/rss/home` | RSS 2.0 (limited) |
+| The Economist | `https://www.economist.com/finance-and-economics/rss.xml` | RSS 2.0 |
+| Fortune | `https://fortune.com/feed/fortune-feeds/?id=3230629` | RSS 2.0 |
+| Business Insider | `https://feeds2.feedburner.com/businessinsider` | RSS 2.0 |
+| Yahoo Finance | `https://finance.yahoo.com/news/rssindex` | RSS 2.0 |
 
-### Science
+### Science (8 feeds)
 | Source | Feed URL | Format |
 |--------|----------|--------|
 | Nature | `https://www.nature.com/nature.rss` | RSS 2.0 |
 | Science (AAAS) | `https://www.science.org/rss/news_current.xml` | RSS 2.0 |
 | Phys.org | `https://phys.org/rss-feed/` | RSS 2.0 |
 | New Scientist | `https://www.newscientist.com/feed/home/` | RSS 2.0 |
+| Scientific American | `http://rss.sciam.com/ScientificAmericanGlobal` | RSS 2.0 |
+| Live Science | `https://www.livescience.com/feeds.xml` | RSS 2.0 |
+| Space.com | `https://www.space.com/feeds.xml` | RSS 2.0 |
+| ArXiv AI | `https://rss.arxiv.org/rss/cs.AI` | RSS 2.0 |
 
-### Energy
+### Energy (7 feeds)
 | Source | Feed URL | Format |
 |--------|----------|--------|
 | Utility Dive | `https://www.utilitydive.com/feeds/news/` | RSS 2.0 |
 | Solar Power World | `https://www.solarpowerworldonline.com/feed/` | RSS 2.0 |
 | Renewable Energy World | `https://www.renewableenergyworld.com/feed/` | RSS 2.0 |
 | E&E News (Politico) | `https://www.eenews.net/feed/` | RSS 2.0 |
+| Canary Media | `https://www.canarymedia.com/rss.rss` | RSS 2.0 |
+| CleanTechnica | `https://cleantechnica.com/feed/` | RSS 2.0 |
+| Electrek | `https://electrek.co/feed/` | RSS 2.0 |
 
-### World
+### World (7 feeds)
 | Source | Feed URL | Format |
 |--------|----------|--------|
 | BBC World | `http://feeds.bbci.co.uk/news/world/rss.xml` | RSS 2.0 |
 | Al Jazeera | `https://www.aljazeera.com/xml/rss/all.xml` | RSS 2.0 |
 | The Guardian | `https://www.theguardian.com/world/rss` | RSS 2.0 |
 | DW News | `https://rss.dw.com/rss/en/top` | RSS 2.0 |
+| France 24 | `https://www.france24.com/en/rss` | RSS 2.0 |
+| NPR World | `https://feeds.npr.org/1004/rss.xml` | RSS 2.0 |
+| Foreign Policy | `https://foreignpolicy.com/feed/` | RSS 2.0 |
 
-### Health
+### Health (7 feeds)
 | Source | Feed URL | Format |
 |--------|----------|--------|
 | STAT News | `https://www.statnews.com/feed/` | RSS 2.0 |
 | NPR Health | `https://feeds.npr.org/1128/rss.xml` | RSS 2.0 |
 | WHO News | `https://www.who.int/rss-feeds/news-english.xml` | RSS 2.0 |
 | Health Affairs | `https://www.healthaffairs.org/action/showFeed?type=etoc&feed=rss&jc=hlthaff` | RSS 2.0 |
+| KFF Health News | `https://kffhealthnews.org/feed/` | RSS 2.0 |
+| Fierce Healthcare | `https://www.fiercehealthcare.com/rss/xml` | RSS 2.0 |
+| CDC MMWR | `https://tools.cdc.gov/api/v2/resources/media/342778.rss` | RSS 2.0 |
 
-**Total: ~28 feeds across 7 categories.**
+**Total: 56 feeds across 7 categories.**
 
 **Image extraction from RSS:**
 Most RSS feeds include images via one of these tags:

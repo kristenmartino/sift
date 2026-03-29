@@ -1,5 +1,3 @@
-import type { RawArticle, Article, CategoryId } from "./types";
-
 /**
  * Estimate reading time in minutes from text content.
  * Handles empty/whitespace-only strings correctly.
@@ -25,7 +23,7 @@ export function timeAgo(dateStr: string | null): string {
 
 /**
  * Extract a display-friendly domain name from a URL.
- * "https://www.reuters.com/article/123" → "Reuters"
+ * "https://www.reuters.com/article/123" -> "Reuters"
  */
 export function extractSourceDomain(url: string): string {
   try {
@@ -47,89 +45,4 @@ export function stableHash(str: string): string {
     hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
   }
   return Math.abs(hash).toString(36);
-}
-
-/**
- * Robustly extract a JSON array from potentially messy API text.
- *
- * Strategy 1: Direct JSON.parse
- * Strategy 2: Find outermost [...] with string-aware bracket matching
- * Strategy 3: Collect individual {...} objects with a title key
- */
-export function extractJsonArray(text: string): RawArticle[] | null {
-  if (!text) return null;
-
-  // Strategy 1: Direct parse
-  try {
-    const r = JSON.parse(text.trim());
-    if (Array.isArray(r)) return r;
-  } catch {}
-
-  // Strategy 2: String-aware bracket matching
-  const start = text.indexOf("[");
-  if (start !== -1) {
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
-    for (let i = start; i < text.length; i++) {
-      const ch = text[i];
-      if (escaped) { escaped = false; continue; }
-      if (ch === "\\") { escaped = true; continue; }
-      if (ch === '"') { inString = !inString; continue; }
-      if (inString) continue;
-      if (ch === "[") depth++;
-      else if (ch === "]") {
-        depth--;
-        if (depth === 0) {
-          try { return JSON.parse(text.slice(start, i + 1)); } catch { break; }
-        }
-      }
-    }
-  }
-
-  // Strategy 3: Collect individual objects
-  const objects: RawArticle[] = [];
-  const objRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
-  let match;
-  while ((match = objRegex.exec(text)) !== null) {
-    try {
-      const obj = JSON.parse(match[0]);
-      if (obj.title) objects.push(obj);
-    } catch {}
-  }
-  if (objects.length > 0) return objects;
-
-  return null;
-}
-
-/**
- * Strip Claude web_search citation markup from text.
- * Removes `<cite index="...">` and `</cite>` tags, keeping inner content.
- */
-function stripCitations(text: string): string {
-  return text.replace(/<cite[^>]*>/gi, "").replace(/<\/cite>/gi, "").trim();
-}
-
-/**
- * Normalize a raw API article into our domain Article type.
- */
-export function normalizeArticle(
-  raw: RawArticle,
-  category: CategoryId,
-): Article {
-  const sourceUrl = raw.source_url || "";
-  const title = raw.title || "";
-  return {
-    id: (sourceUrl || title)
-      ? stableHash((sourceUrl || "") + title)
-      : stableHash(`${category}-${raw.summary || ""}`),
-    title: stripCitations(title || "Untitled"),
-    summary: stripCitations(raw.summary || ""),
-    sourceUrl,
-    sourceName: raw.source_name || extractSourceDomain(sourceUrl),
-    publishedDate: raw.published_date || null,
-    imageUrl: raw.image_url || null,
-    category,
-    readTime: estimateReadTime(raw.summary),
-  };
 }

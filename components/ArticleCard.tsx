@@ -16,6 +16,7 @@ export default function ArticleCard({
   const [hovered, setHovered] = useState(false);
   const cat = CATEGORIES.find((c) => c.id === article.category) || CATEGORIES[0];
   const color = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.top;
+  const hasImage = !!article.imageUrl;
 
   return (
     <article
@@ -24,7 +25,7 @@ export default function ArticleCard({
       className={`
         bg-[var(--card-bg)] rounded-[14px] overflow-hidden cursor-pointer
         border border-[var(--border)] animate-fade-slide-in
-        ${featured ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
+        ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
       `}
       style={{
         transition: "transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)",
@@ -33,17 +34,22 @@ export default function ArticleCard({
           ? "0 20px 60px var(--shadow-hover)"
           : "0 2px 16px var(--shadow)",
         animationDelay: `${index * 60}ms`,
+        // Text-first card: thin accent bar at top when no image
+        borderTop: !hasImage ? `3px solid ${color.hex}` : undefined,
       }}
       onClick={() =>
         article.sourceUrl && window.open(article.sourceUrl, "_blank", "noopener")
       }
     >
-      <CardImage
-        src={article.imageUrl}
-        alt={article.title}
-        featured={featured}
-        category={article.category}
-      />
+      {/* Image area — only rendered if article has an image */}
+      {hasImage && (
+        <CardImage
+          src={article.imageUrl}
+          alt={article.title}
+          featured={featured}
+          category={article.category}
+        />
+      )}
 
       <div
         className={`flex flex-col gap-3 ${
@@ -75,7 +81,7 @@ export default function ArticleCard({
               transform: isBookmarked ? "scale(1.15)" : "scale(1)",
             }}
           >
-            {isBookmarked ? "★" : "☆"}
+            {isBookmarked ? "\u2605" : "\u2606"}
           </button>
         </div>
 
@@ -113,9 +119,9 @@ export default function ArticleCard({
           <span className="font-bold text-[var(--text-secondary)]">
             {article.sourceName}
           </span>
-          <span className="opacity-30">·</span>
+          <span className="opacity-30">&middot;</span>
           <span>{timeAgo(article.publishedDate)}</span>
-          <span className="opacity-30">·</span>
+          <span className="opacity-30">&middot;</span>
           <span>{article.readTime} min read</span>
         </div>
       </div>
