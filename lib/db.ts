@@ -51,4 +51,41 @@ export async function healthCheck(): Promise<boolean> {
   }
 }
 
+// ─── Bookmarks ─────────────────────────────────────────
+
+export async function getBookmarks(userId: string): Promise<string[]> {
+  const result = await pool.query<{ article_id: string }>(
+    "SELECT article_id FROM bookmarks WHERE user_id = $1 ORDER BY created_at DESC",
+    [userId]
+  );
+  return result.rows.map((r) => r.article_id);
+}
+
+export async function addBookmark(userId: string, articleId: string): Promise<void> {
+  await pool.query(
+    "INSERT INTO bookmarks (user_id, article_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+    [userId, articleId]
+  );
+}
+
+export async function removeBookmark(userId: string, articleId: string): Promise<void> {
+  await pool.query(
+    "DELETE FROM bookmarks WHERE user_id = $1 AND article_id = $2",
+    [userId, articleId]
+  );
+}
+
+export async function getBookmarkedArticles(userId: string): Promise<DbArticle[]> {
+  const result = await pool.query<DbArticle>(
+    `SELECT a.id, a.title, a.summary, a.source_url, a.source_name, a.image_url,
+            a.category, a.published_date, a.read_time, a.created_at
+     FROM articles a
+     JOIN bookmarks b ON b.article_id = a.id
+     WHERE b.user_id = $1
+     ORDER BY b.created_at DESC`,
+    [userId]
+  );
+  return result.rows;
+}
+
 export default pool;

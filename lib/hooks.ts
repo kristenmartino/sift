@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS } from "./constants";
 import type { Article, ArticleCache, CategoryId, NewsApiResponse } from "./types";
 
@@ -28,23 +28,71 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (val: T | ((prev:
 
 // ─── useBookmarks ───────────────────────────────────────
 
-export function useBookmarks() {
-  const [ids, setIds] = useLocalStorage<string[]>(STORAGE_KEYS.bookmarks, []);
-  const bookmarkSet = new Set(ids);
+export function useBookmarks(userId?: string | null) {
+  // localStorage fallback for signed-out users
+  const [localIds, setLocalIds] = useLocalStorage<string[]>(STORAGE_KEYS.bookmarks, []);
+
+  // Server-synced state for signed-in users
+  const [serverIds, setServerIds] = useState<string[]>([]);
+  const [synced, setSynced] = useState(false);
+
+  const isSignedIn = !!userId;
+
+  // Fetch bookmarks from API on mount when signed in
+  useEffect(() => {
+    if (!isSignedIn) {
+      setSynced(false);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/bookmarks")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data: { ids: string[] }) => {
+        if (!cancelled) {
+          setServerIds(data.ids);
+          setSynced(true);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch bookmarks:", err));
+    return () => { cancelled = true; };
+  }, [isSignedIn]);
+
+  const ids = isSignedIn && synced ? serverIds : localIds;
+  const bookmarkSet = useMemo(() => new Set(ids), [ids]);
 
   const toggle = useCallback(
     (id: string) => {
-      setIds((prev) => {
-        const set = new Set(prev);
-        if (set.has(id)) {
-          set.delete(id);
-        } else {
-          set.add(id);
-        }
-        return [...set];
-      });
+      if (isSignedIn) {
+        // Optimistic update
+        setServerIds((prev) => {
+          const set = new Set(prev);
+          const removing = set.has(id);
+          if (removing) {
+            set.delete(id);
+          } else {
+            set.add(id);
+          }
+          // Fire API call in background
+          fetch("/api/bookmarks", {
+            method: removing ? "DELETE" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ articleId: id }),
+          }).catch((err) => console.error("Bookmark sync error:", err));
+          return [...set];
+        });
+      } else {
+        setLocalIds((prev) => {
+          const set = new Set(prev);
+          if (set.has(id)) {
+            set.delete(id);
+          } else {
+            set.add(id);
+          }
+          return [...set];
+        });
+      }
     },
-    [setIds]
+    [isSignedIn, setLocalIds]
   );
 
   return { bookmarks: bookmarkSet, toggle, count: ids.length };
