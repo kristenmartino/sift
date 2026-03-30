@@ -33,13 +33,20 @@ export const metadata: Metadata = {
 const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const clerkEnabled = !!clerkPk && clerkPk.startsWith("pk_");
 
+// Blocking script that sets data-theme on <html> before first paint.
+// Reads from localStorage; defaults to "dark" if unset.
+const themeScript = `(function(){try{var t=JSON.parse(localStorage.getItem("sift-theme"));document.documentElement.dataset.theme=t===false?"light":"dark"}catch(e){document.documentElement.dataset.theme="dark"}})()`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const inner = (
-    <html lang="en">
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
         <a href="#main-content" className="skip-nav">
           Skip to content
