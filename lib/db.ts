@@ -26,7 +26,7 @@ export async function getArticlesByCategory(
     `SELECT id, title, summary, source_url, source_name, image_url,
             category, published_date, read_time, created_at
      FROM articles
-     WHERE category = $1
+     WHERE category = $1 AND from_search = false
      ORDER BY published_date DESC NULLS LAST
      LIMIT $2`,
     [category, limit]
@@ -129,8 +129,8 @@ export async function insertArticle(article: {
   const vectorStr = `[${article.embedding.join(",")}]`;
   await pool.query(
     `INSERT INTO articles (id, title, summary, source_url, source_name, image_url,
-                           category, published_date, embedding, read_time)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector, $10)
+                           category, published_date, embedding, read_time, from_search)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector, $10, true)
      ON CONFLICT (source_url) DO NOTHING`,
     [
       article.id,
