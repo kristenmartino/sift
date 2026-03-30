@@ -1,3 +1,4 @@
+import type React from "react";
 import type { Category, CategoryId } from "./types";
 
 // ─── Categories ─────────────────────────────────────────
@@ -38,6 +39,40 @@ export const GRADIENTS: Record<CategoryId, string> = {
   world: "linear-gradient(135deg, #1f1408 0%, #2a1f0a 50%, #3d2a0f 100%)",
   health: "linear-gradient(135deg, #200a1a 0%, #2e1525 50%, #3d0f2a 100%)",
 };
+
+// ─── Theme Variables ────────────────────────────────────
+
+export const DARK_VARS = {
+  "--bg": "#0a0a0f",
+  "--card-bg": "#16161f",
+  "--text": "#eeeef0",
+  "--text-secondary": "#9d9daa",
+  "--text-muted": "#5a5a6e",
+  "--border": "#222233",
+  "--shadow": "rgba(0,0,0,0.4)",
+  "--shadow-hover": "rgba(0,0,0,0.6)",
+  "--skeleton": "#1e1e2a",
+  "--accent": "#6366f1",
+  "--nav-bg": "rgba(14,14,22,0.92)",
+  "--pill-active": "#6366f1",
+  "--pill-text": "#eeeef0",
+} as React.CSSProperties;
+
+export const LIGHT_VARS = {
+  "--bg": "#f5f3f0",
+  "--card-bg": "#ffffff",
+  "--text": "#1a1a1a",
+  "--text-secondary": "#555566",
+  "--text-muted": "#8888a0",
+  "--border": "#e0ddd8",
+  "--shadow": "rgba(0,0,0,0.06)",
+  "--shadow-hover": "rgba(0,0,0,0.12)",
+  "--skeleton": "#e8e5e0",
+  "--accent": "#4f46e5",
+  "--nav-bg": "rgba(245,243,240,0.92)",
+  "--pill-active": "#1a1a1a",
+  "--pill-text": "#ffffff",
+} as React.CSSProperties;
 
 // ─── Timing ─────────────────────────────────────────────
 
