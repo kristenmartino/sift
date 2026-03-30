@@ -5,8 +5,10 @@
 /* ─── Google Fonts ─────────────────────────────────────── */
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap");
 
-/* ─── CSS Variable Defaults (dark) ─────────────────────── */
-:root {
+/* ─── Theme Variables ─────────────────────────────────── */
+/* Default: dark (matches server render and blocking script default) */
+:root,
+html[data-theme="dark"] {
   --bg: #0a0a0f;
   --card-bg: #16161f;
   --text: #eeeef0;
@@ -20,6 +22,22 @@
   --nav-bg: rgba(14, 14, 22, 0.92);
   --pill-active: #6366f1;
   --pill-text: #eeeef0;
+}
+
+html[data-theme="light"] {
+  --bg: #f5f3f0;
+  --card-bg: #ffffff;
+  --text: #1a1a1a;
+  --text-secondary: #555566;
+  --text-muted: #8888a0;
+  --border: #e0ddd8;
+  --shadow: rgba(0, 0, 0, 0.06);
+  --shadow-hover: rgba(0, 0, 0, 0.12);
+  --skeleton: #e8e5e0;
+  --accent: #4f46e5;
+  --nav-bg: rgba(245, 243, 240, 0.92);
+  --pill-active: #1a1a1a;
+  --pill-text: #ffffff;
 }
 
 /* ─── Base Reset ───────────────────────────────────────── */

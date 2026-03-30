@@ -7,7 +7,10 @@ export type CategoryId =
   | "science"
   | "energy"
   | "world"
-  | "health";
+  | "health"
+  | "politics"
+  | "sports"
+  | "entertainment";
 
 export interface Category {
   id: CategoryId;
@@ -64,6 +67,23 @@ export interface CompareResponse {
   sources_checked: string[];
   claims: CompareClaim[];
   duration_ms: number;
+}
+
+// ─── SSE Event Types (topic search streaming) ──────────
+
+export interface SSEResultsEvent {
+  articles: Article[];
+  source: "vector" | "web-search";
+}
+
+export interface SSEDoneEvent {
+  matchQuality: "strong" | "weak";
+  fallbackUsed: boolean;
+  query: string;
+}
+
+export interface SSEErrorEvent {
+  message: string;
 }
 
 // ─── Component Props ────────────────────────────────────
