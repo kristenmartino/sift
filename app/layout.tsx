@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,12 +13,15 @@ export const metadata: Metadata = {
   },
 };
 
+const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const clerkEnabled = !!clerkPk && clerkPk.startsWith("pk_");
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
+  const inner = (
     <html lang="en">
       <body>
         <a href="#main-content" className="skip-nav">
@@ -27,4 +31,8 @@ export default function RootLayout({
       </body>
     </html>
   );
+
+  if (!clerkEnabled) return inner;
+
+  return <ClerkProvider>{inner}</ClerkProvider>;
 }
