@@ -20,9 +20,7 @@ export async function GET(request: NextRequest) {
         "Content-Type": "application/json",
         "X-Pipeline-Key": SIFT_API_KEY,
       },
-      body: JSON.stringify({
-        categories: ["top", "technology", "business", "science", "energy", "world", "health"],
-      }),
+      body: JSON.stringify({}),
       signal: AbortSignal.timeout(300_000), // 5 min timeout for full pipeline
     });
 
