@@ -8,6 +8,77 @@ const SIMILARITY_THRESHOLD = 0.35;
 const MIN_STRONG_RESULTS = 3;
 const MAX_RESULTS = 10;
 
+// ─── Category classification for fallback articles ──────
+
+const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  technology:
+    "Technology news: software engineering, hardware devices, artificial intelligence, machine learning, programming, cybersecurity, tech startups, smartphones, cloud computing, robotics, semiconductors",
+  business:
+    "Business and finance news: stock market, corporate earnings, mergers, venture capital, banking, real estate, retail sales, employment, GDP, inflation, Federal Reserve",
+  science:
+    "Scientific research: physics, chemistry, biology, space exploration, NASA, astronomy, peer-reviewed papers, laboratory research, geology, paleontology",
+  energy:
+    "Energy industry: renewable energy, solar, wind, nuclear power, oil prices, natural gas, battery technology, electric vehicles, carbon emissions, climate policy",
+  world:
+    "International news: foreign affairs, diplomacy, wars, military conflicts, international elections, government policy, immigration, United Nations, human rights, sanctions",
+  health:
+    "Health and medicine: medical research, clinical trials, disease outbreaks, pharmaceuticals, mental health, nutrition, vaccines, public health, FDA approvals",
+  top:
+    "General interest: breaking news, popular culture, entertainment, celebrity, lifestyle, music, movies, sports, food, travel, arts, fashion, viral stories",
+};
+
+let categoryEmbeddingsCache: { embeddings: number[][]; categories: string[] } | null = null;
+
+async function getCategoryEmbeddings(): Promise<{ embeddings: number[][]; categories: string[] }> {
+  if (categoryEmbeddingsCache) return categoryEmbeddingsCache;
+
+  const categories = Object.keys(CATEGORY_DESCRIPTIONS);
+  const texts = categories.map((c) => CATEGORY_DESCRIPTIONS[c]);
+  const res = await fetch("https://api.voyageai.com/v1/embeddings", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ input: texts, model: "voyage-3-lite", input_type: "document" }),
+  });
+  if (!res.ok) throw new Error(`Voyage category embed error: ${res.status}`);
+  const data = await res.json();
+  const embeddings = data.data.map((d: { embedding: number[] }) => d.embedding);
+  categoryEmbeddingsCache = { embeddings, categories };
+  return categoryEmbeddingsCache;
+}
+
+function cosineSim(a: number[], b: number[]): number {
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+
+const MIN_MARGIN = 0.03;
+
+function classifyCategory(articleEmbedding: number[], catEmbeddings: number[][], categories: string[]): CategoryId {
+  const topIdx = categories.indexOf("top");
+  let bestIdx = 0;
+  let bestSim = -1;
+  for (let i = 0; i < catEmbeddings.length; i++) {
+    const sim = cosineSim(articleEmbedding, catEmbeddings[i]);
+    if (sim > bestSim) {
+      bestSim = sim;
+      bestIdx = i;
+    }
+  }
+  // If winner is "top" or doesn't beat "top" by enough margin, default to "top"
+  if (bestIdx === topIdx) return "top" as CategoryId;
+  const topSim = cosineSim(articleEmbedding, catEmbeddings[topIdx]);
+  if (bestSim - topSim < MIN_MARGIN) return "top" as CategoryId;
+  return categories[bestIdx] as CategoryId;
+}
+
 // ─── Embedding Cache (in-memory, per-process) ───────────
 
 const embeddingCache = new Map<string, { embedding: number[]; ts: number }>();
@@ -74,21 +145,33 @@ export async function GET(request: NextRequest) {
       readTime: row.read_time || 1,
     }));
 
-    const matchQuality: "strong" | "weak" =
-      articles.length >= MIN_STRONG_RESULTS ? "strong" : "weak";
-
-    // 4. If < 3 results, kick off Claude web_search in background
-    //    Results get embedded and stored in Postgres for next search
+    // 4. If < 3 results, run Claude web_search (blocking)
+    //    Wait for results so the user sees them immediately
     let fallbackUsed = false;
+    let allArticles = articles;
+
     if (articles.length < MIN_STRONG_RESULTS) {
       fallbackUsed = true;
-      webSearchFallback(query).catch((err) =>
-        console.error("Background web search fallback error:", err)
-      );
+      try {
+        const fallbackArticles = await webSearchFallback(query);
+        // Combine: vector results first, then fallback (deduped by id)
+        const seenIds = new Set(articles.map((a) => a.id));
+        for (const a of fallbackArticles) {
+          if (!seenIds.has(a.id)) {
+            allArticles.push(a);
+            seenIds.add(a.id);
+          }
+        }
+      } catch (err) {
+        console.error("Web search fallback error:", err);
+      }
     }
 
+    const matchQuality: "strong" | "weak" =
+      allArticles.length >= MIN_STRONG_RESULTS ? "strong" : "weak";
+
     return NextResponse.json<TopicSearchResponse>({
-      articles,
+      articles: allArticles,
       matchQuality,
       fallbackUsed,
       query,
@@ -133,7 +216,7 @@ async function webSearchFallback(query: string): Promise<Article[]> {
   const anthropic = new Anthropic();
 
   const response = await anthropic.messages.create({
-    model: "claude-haiku-4-20250414",
+    model: "claude-haiku-4-5",
     max_tokens: 4096,
     tools: [
       {
@@ -145,18 +228,20 @@ async function webSearchFallback(query: string): Promise<Article[]> {
     messages: [
       {
         role: "user",
-        content: `Search the web for recent news about: "${query}"
+        content: `Search the web for recent news articles related to: "${query}"
 
-Find 3-5 relevant, recent news articles. For each article, provide:
-1. title - the actual article headline
-2. summary - a 2-3 sentence summary of the article
-3. source_url - the URL of the article
-4. source_name - the publication name (e.g., "Reuters", "TechCrunch")
+If the query is vague or broad (like a single word), interpret it generously — find interesting recent news stories that relate to the theme.
 
-Return your findings as a JSON array with this exact structure:
+Find 3-5 real, recent news articles from reputable sources. For each article provide:
+- title: the actual headline
+- summary: 2-3 sentence summary
+- source_url: the full URL
+- source_name: publication name (e.g. "Reuters", "BBC")
+
+You MUST respond with ONLY a JSON array, no explanation or apology:
 [{"title": "...", "summary": "...", "source_url": "...", "source_name": "..."}]
 
-Return ONLY the JSON array, no other text.`,
+If you truly cannot find any articles, respond with an empty array: []`,
       },
     ],
   });
@@ -227,11 +312,26 @@ Return ONLY the JSON array, no other text.`,
     console.error("Failed to embed fallback articles:", err);
   }
 
+  // Classify articles into proper categories using embeddings
+  let catData: { embeddings: number[][]; categories: string[] } | null = null;
+  if (embeddings.length > 0) {
+    try {
+      catData = await getCategoryEmbeddings();
+    } catch (err) {
+      console.error("Failed to load category embeddings:", err);
+    }
+  }
+
   // Build return array and store in Postgres
   const articles: Article[] = [];
   for (let i = 0; i < parsed.length; i++) {
     const a = parsed[i];
     if (!a.title || !a.source_url) continue;
+
+    const category: CategoryId =
+      catData && embeddings[i]
+        ? classifyCategory(embeddings[i], catData.embeddings, catData.categories)
+        : ("top" as CategoryId);
 
     const id = stableHash(a.source_url + a.title);
     articles.push({
@@ -242,7 +342,7 @@ Return ONLY the JSON array, no other text.`,
       sourceName: a.source_name || "Web",
       publishedDate: new Date().toISOString(),
       imageUrl: null,
-      category: "top" as CategoryId,
+      category,
       readTime: estimateReadTime(a.summary),
     });
 
@@ -254,7 +354,7 @@ Return ONLY the JSON array, no other text.`,
         summary: a.summary || "",
         source_url: a.source_url,
         source_name: a.source_name || "Web",
-        category: "top",
+        category,
         embedding: embeddings[i],
         published_date: new Date(),
         read_time: estimateReadTime(a.summary),

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS } from "./constants";
-import type { Article, ArticleCache, CategoryId, NewsApiResponse, TopicSearchResponse } from "./types";
+import type { Article, ArticleCache, CategoryId, NewsApiResponse, TopicSearchResponse, CompareResponse, CompareClaim } from "./types";
 
 // ─── useLocalStorage ────────────────────────────────────
 
@@ -205,7 +205,7 @@ export function useNewsLoader() {
 
 // ─── useTopicSearch ──────────────────────────────────────
 
-const TOPIC_TIMEOUT_MS = 30_000;
+const TOPIC_TIMEOUT_MS = 45_000; // Longer — Claude web search fallback can take 15-20s
 
 interface TopicSearchState {
   articles: Article[];
@@ -265,7 +265,7 @@ export function useTopicSearch() {
       const data: TopicSearchResponse = await res.json();
 
       if (data.articles.length === 0) {
-        throw new Error("No articles found for this topic");
+        throw new Error("No articles found for this topic. Try a different search.");
       }
 
       setState({
@@ -311,4 +311,118 @@ export function useTopicSearch() {
   }, []);
 
   return { ...state, search, clear };
+}
+
+// ─── useCompare ─────────────────────────────────────────
+
+const COMPARE_TIMEOUT_MS = 65_000; // Multi-source search can take 20-30s
+const COMPARE_SLOW_MS = 8_000;
+
+interface CompareState {
+  topic: string | null;
+  comparison: string | null;
+  sourcesChecked: string[];
+  claims: CompareClaim[];
+  durationMs: number | null;
+  loading: boolean;
+  error: string | null;
+  slow: boolean;
+}
+
+export function useCompare() {
+  const [state, setState] = useState<CompareState>({
+    topic: null,
+    comparison: null,
+    sourcesChecked: [],
+    claims: [],
+    durationMs: null,
+    loading: false,
+    error: null,
+    slow: false,
+  });
+  const controllerRef = useRef<AbortController | null>(null);
+
+  const compare = useCallback(async (topic: string, sources?: string[]) => {
+    controllerRef.current?.abort();
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
+    setState({
+      topic,
+      comparison: null,
+      sourcesChecked: [],
+      claims: [],
+      durationMs: null,
+      loading: true,
+      error: null,
+      slow: false,
+    });
+
+    const slowTimer = setTimeout(
+      () => setState((s) => ({ ...s, slow: true })),
+      COMPARE_SLOW_MS
+    );
+    const timeoutTimer = setTimeout(() => controller.abort(), COMPARE_TIMEOUT_MS);
+
+    try {
+      const res = await fetch("/api/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, sources }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+
+      const data: CompareResponse = await res.json();
+
+      setState({
+        topic: data.topic,
+        comparison: data.comparison,
+        sourcesChecked: data.sources_checked,
+        claims: data.claims,
+        durationMs: data.duration_ms,
+        loading: false,
+        error: null,
+        slow: false,
+      });
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setState((s) => ({
+          ...s,
+          loading: false,
+          error: "Comparison timed out. Try a more specific topic.",
+          slow: false,
+        }));
+        return;
+      }
+      const message = err instanceof Error ? err.message : "Comparison failed";
+      setState((s) => ({ ...s, loading: false, error: message, slow: false }));
+    } finally {
+      clearTimeout(slowTimer);
+      clearTimeout(timeoutTimer);
+      controllerRef.current = null;
+    }
+  }, []);
+
+  const clear = useCallback(() => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    setState({
+      topic: null,
+      comparison: null,
+      sourcesChecked: [],
+      claims: [],
+      durationMs: null,
+      loading: false,
+      error: null,
+      slow: false,
+    });
+  }, []);
+
+  return { ...state, compare, clear };
 }

@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { CATEGORIES } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
-import { useNewsLoader, useBookmarks, useTheme, useTopicSearch } from "@/lib/hooks";
+import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
 import SkeletonCard from "./SkeletonCard";
 import ErrorState from "./ErrorState";
 import TopicSearch from "./TopicSearch";
+import CompareView from "./CompareView";
 import AuthButtons, { clerkEnabled } from "./AuthButtons";
 import type { Article, CategoryId } from "@/lib/types";
 
@@ -61,6 +62,8 @@ export default function NewsAggregator() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>("top");
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareInputValue, setCompareInputValue] = useState("");
 
   const [refreshed, setRefreshed] = useState(false);
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
@@ -82,6 +85,19 @@ export default function NewsAggregator() {
     search: searchTopic,
     clear: clearTopicSearch,
   } = useTopicSearch();
+
+  const {
+    topic: compareTopic,
+    comparison: compareComparison,
+    sourcesChecked: compareSources,
+    claims: compareClaims,
+    durationMs: compareDuration,
+    loading: compareLoading,
+    error: compareError,
+    slow: compareSlow,
+    compare: runCompare,
+    clear: clearCompare,
+  } = useCompare();
 
   useEffect(() => {
     loadCategory(activeCategory);
@@ -111,8 +127,22 @@ export default function NewsAggregator() {
     setTimeout(() => setRefreshed(false), 2000);
   };
 
+  const handleCompare = (topic: string) => {
+    setCompareMode(true);
+    setShowBookmarks(false);
+    setSearchMode(false);
+    clearTopicSearch();
+    runCompare(topic);
+  };
+
+  const exitCompareMode = () => {
+    setCompareMode(false);
+    setCompareInputValue("");
+    clearCompare();
+  };
+
   const currentArticles = useMemo(() => {
-    if (searchMode && topicArticles.length > 0) {
+    if (searchMode) {
       return topicArticles;
     }
     if (showBookmarks) {
@@ -148,7 +178,7 @@ export default function NewsAggregator() {
         <div className="max-w-[1200px] mx-auto px-6 py-3.5 flex items-center justify-between">
           <div
             className="flex items-baseline gap-3 cursor-pointer"
-            onClick={() => { setShowBookmarks(false); setSearchMode(false); clearTopicSearch(); setActiveCategory("top"); }}
+            onClick={() => { setShowBookmarks(false); setSearchMode(false); clearTopicSearch(); exitCompareMode(); setActiveCategory("top"); }}
           >
             <h1 className="font-heading text-[28px] font-extrabold tracking-tight text-[var(--text)] leading-none">
               Sift
@@ -160,7 +190,7 @@ export default function NewsAggregator() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { setShowBookmarks(!showBookmarks); setSearchMode(false); clearTopicSearch(); }}
+              onClick={() => { setShowBookmarks(!showBookmarks); setSearchMode(false); clearTopicSearch(); exitCompareMode(); }}
               aria-label="Bookmarks"
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold cursor-pointer transition-all duration-200 font-body"
               style={{
@@ -176,6 +206,7 @@ export default function NewsAggregator() {
               onClick={() => {
                 setSearchMode(!searchMode);
                 setShowBookmarks(false);
+                exitCompareMode();
                 if (searchMode) clearTopicSearch();
               }}
               aria-label="Search topics"
@@ -187,6 +218,28 @@ export default function NewsAggregator() {
               }}
             >
               ⌕
+            </button>
+
+            <button
+              onClick={() => {
+                if (compareMode) {
+                  exitCompareMode();
+                } else {
+                  setCompareMode(true);
+                  setShowBookmarks(false);
+                  setSearchMode(false);
+                  clearTopicSearch();
+                }
+              }}
+              aria-label="Compare coverage"
+              className="flex items-center justify-center w-9 h-9 rounded-full border text-base cursor-pointer transition-all duration-200"
+              style={{
+                background: compareMode ? "var(--accent)" : "transparent",
+                color: compareMode ? "#fff" : "var(--text-secondary)",
+                borderColor: compareMode ? "var(--accent)" : "var(--border)",
+              }}
+            >
+              ⇌
             </button>
 
             <button
@@ -218,7 +271,7 @@ export default function NewsAggregator() {
         </div>
 
         {/* Category pills */}
-        {!showBookmarks && !searchMode && (
+        {!showBookmarks && !searchMode && !compareMode && (
           <div className="max-w-[1200px] mx-auto px-6 pb-3 flex gap-1.5 overflow-x-auto">
             {CATEGORIES.map((cat) => {
               const active = activeCategory === cat.id;
@@ -253,99 +306,207 @@ export default function NewsAggregator() {
             resultCount={topicArticles.length}
           />
         )}
+
+        {/* Compare input bar */}
+        {compareMode && !compareComparison && !compareLoading && (
+          <div className="max-w-[1200px] mx-auto px-6 pb-3">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const trimmed = compareInputValue.trim();
+                if (trimmed.length >= 3) handleCompare(trimmed);
+              }}
+              className="flex items-center gap-2"
+            >
+              <button
+                type="button"
+                onClick={exitCompareMode}
+                aria-label="Exit compare"
+                className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-[var(--text-secondary)] text-base cursor-pointer transition-all duration-200 shrink-0"
+              >
+                &larr;
+              </button>
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={compareInputValue}
+                  onChange={(e) => setCompareInputValue(e.target.value)}
+                  placeholder={'Compare coverage across sources\u2026 e.g. "Federal Reserve rate decision"'}
+                  maxLength={200}
+                  autoFocus
+                  className="w-full px-4 py-2 pr-12 rounded-full text-sm font-body transition-all duration-200 outline-none"
+                  style={{
+                    background: "var(--card-bg)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text)",
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={compareInputValue.trim().length < 3}
+                  aria-label="Compare"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-full text-sm cursor-pointer transition-all duration-200"
+                  style={{
+                    background: compareInputValue.trim().length >= 3 ? "var(--accent)" : "transparent",
+                    color: compareInputValue.trim().length >= 3 ? "#fff" : "var(--text-muted)",
+                  }}
+                >
+                  &rarr;
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </header>
 
       {/* ── Main ────────────────────────────────────── */}
       <main className="max-w-[1200px] mx-auto px-6 pt-7 pb-20">
-        {/* Section header */}
-        <div className="flex justify-between items-baseline mb-7">
-          <div>
-            <h2 className="font-heading text-[22px] font-bold text-[var(--text)] tracking-tight">
-              {searchMode
-                ? (topicQuery ? `Results for \u201c${topicQuery}\u201d` : "Search Topics")
-                : showBookmarks
-                  ? "Saved Articles"
-                  : activeCatLabel}
-            </h2>
-            {lastUpdated && !showBookmarks && !searchMode && (
-              <p className="text-xs mt-1" style={{ color: refreshed ? "var(--accent)" : "var(--text-muted)" }}>
-                {refreshed ? "Updated just now" : `Updated ${timeAgo(lastUpdated.toISOString())}`}
-              </p>
+        {/* Compare mode */}
+        {compareMode ? (
+          <>
+            {/* Compare loading */}
+            {compareLoading && (
+              <div className="text-center py-20 px-5 animate-fade-slide-in">
+                <div className="text-4xl mb-5 animate-spin-slow inline-block">⇌</div>
+                <p className="text-base font-semibold text-[var(--text-secondary)]">
+                  Comparing coverage across sources...
+                </p>
+                {compareSlow && (
+                  <p className="text-sm mt-3 text-[var(--text-muted)] animate-fade-slide-in">
+                    Searching multiple news outlets — this takes 10–20 seconds
+                  </p>
+                )}
+              </div>
             )}
-          </div>
-          {hasData && (
-            <span className="text-xs text-[var(--text-muted)] font-medium">
-              {currentArticles.length} article{currentArticles.length !== 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
 
-        {/* Loading skeleton */}
-        {((searchMode ? topicLoading : loading) && !hasData && !(searchMode ? topicError : error)) && (
-          <div>
-            <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
-              <SkeletonCard featured />
-              {[1, 2, 3, 4].map((i) => (
-                <SkeletonCard key={i} />
-              ))}
-            </div>
-            {(searchMode ? topicSlow : slow) && (
-              <p className="text-center mt-6 text-sm text-[var(--text-muted)] animate-fade-slide-in">
-                {searchMode
-                  ? "Searching articles\u2026 this may take a moment"
-                  : "Still searching\u2026 this can take up to 30 seconds"}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Error */}
-        {(searchMode ? topicError : error) && !(searchMode ? topicLoading : loading) && !hasData && (
-          <ErrorState
-            message={(searchMode ? topicError : error) || "Something went wrong"}
-            onRetry={() =>
-              searchMode && topicQuery
-                ? searchTopic(topicQuery)
-                : loadCategory(activeCategory, true)
-            }
-          />
-        )}
-
-        {/* Empty bookmarks */}
-        {showBookmarks && !hasData && !loading && !loadingBookmarks && (
-          <div className="text-center py-20 px-5 text-[var(--text-muted)]">
-            <div className="text-5xl mb-4 opacity-30">☆</div>
-            <p className="text-base font-semibold text-[var(--text-secondary)]">
-              No saved articles yet
-            </p>
-            <p className="text-sm mt-2">
-              Click the star on any article to save it for later
-            </p>
-          </div>
-        )}
-
-        {/* Articles grid */}
-        {hasData && (
-          <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
-            {currentArticles.map((article, i) => (
-              <ArticleCard
-                key={article.id}
-                article={article}
-                featured={i === 0 && !showBookmarks && !searchMode}
-                onBookmark={toggleBookmark}
-                isBookmarked={bookmarks.has(article.id)}
-                index={i}
+            {/* Compare error */}
+            {compareError && !compareLoading && (
+              <ErrorState
+                message={compareError}
+                onRetry={() => compareTopic && runCompare(compareTopic)}
               />
-            ))}
-          </div>
-        )}
+            )}
 
-        {/* Loading toast for refresh */}
-        {loading && hasData && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-6 py-2.5 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2.5 shadow-lg z-50 animate-fade-slide-in">
-            <span className="animate-spin-slow inline-block">↻</span>
-            Fetching latest stories…
-          </div>
+            {/* Compare results */}
+            {compareComparison && !compareLoading && (
+              <CompareView
+                topic={compareTopic!}
+                comparison={compareComparison}
+                sourcesChecked={compareSources}
+                claims={compareClaims}
+                durationMs={compareDuration!}
+                onCompareAnother={handleCompare}
+                onClose={exitCompareMode}
+              />
+            )}
+
+            {/* Compare empty state (input shown, no results yet) */}
+            {!compareLoading && !compareError && !compareComparison && (
+              <div className="text-center py-20 px-5 text-[var(--text-muted)]">
+                <div className="text-5xl mb-4 opacity-30">⇌</div>
+                <p className="text-base font-semibold text-[var(--text-secondary)]">
+                  Multi-Source Comparison
+                </p>
+                <p className="text-sm mt-2">
+                  Enter a topic above to compare how different news outlets cover it
+                </p>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Section header */}
+            <div className="flex justify-between items-baseline mb-7">
+              <div>
+                <h2 className="font-heading text-[22px] font-bold text-[var(--text)] tracking-tight">
+                  {searchMode
+                    ? (topicQuery ? `Results for \u201c${topicQuery}\u201d` : "Search Topics")
+                    : showBookmarks
+                      ? "Saved Articles"
+                      : activeCatLabel}
+                </h2>
+                {lastUpdated && !showBookmarks && !searchMode && (
+                  <p className="text-xs mt-1" style={{ color: refreshed ? "var(--accent)" : "var(--text-muted)" }}>
+                    {refreshed ? "Updated just now" : `Updated ${timeAgo(lastUpdated.toISOString())}`}
+                  </p>
+                )}
+              </div>
+              {hasData && (
+                <span className="text-xs text-[var(--text-muted)] font-medium">
+                  {currentArticles.length} article{currentArticles.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+
+            {/* Loading skeleton */}
+            {((searchMode ? topicLoading : loading) && !hasData && !(searchMode ? topicError : error)) && (
+              <div>
+                <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
+                  <SkeletonCard featured />
+                  {[1, 2, 3, 4].map((i) => (
+                    <SkeletonCard key={i} />
+                  ))}
+                </div>
+                {(searchMode ? topicSlow : slow) && (
+                  <p className="text-center mt-6 text-sm text-[var(--text-muted)] animate-fade-slide-in">
+                    {searchMode
+                      ? "Searching articles\u2026 this may take a moment"
+                      : "Still searching\u2026 this can take up to 30 seconds"}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Error */}
+            {(searchMode ? topicError : error) && !(searchMode ? topicLoading : loading) && !hasData && (
+              <ErrorState
+                message={(searchMode ? topicError : error) || "Something went wrong"}
+                onRetry={() =>
+                  searchMode && topicQuery
+                    ? searchTopic(topicQuery)
+                    : loadCategory(activeCategory, true)
+                }
+              />
+            )}
+
+            {/* Empty bookmarks */}
+            {showBookmarks && !hasData && !loading && !loadingBookmarks && (
+              <div className="text-center py-20 px-5 text-[var(--text-muted)]">
+                <div className="text-5xl mb-4 opacity-30">☆</div>
+                <p className="text-base font-semibold text-[var(--text-secondary)]">
+                  No saved articles yet
+                </p>
+                <p className="text-sm mt-2">
+                  Click the star on any article to save it for later
+                </p>
+              </div>
+            )}
+
+            {/* Articles grid */}
+            {hasData && (
+              <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
+                {currentArticles.map((article, i) => (
+                  <ArticleCard
+                    key={article.id}
+                    article={article}
+                    featured={i === 0 && !showBookmarks && !searchMode}
+                    onBookmark={toggleBookmark}
+                    isBookmarked={bookmarks.has(article.id)}
+                    index={i}
+                    onCompare={handleCompare}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Loading toast for refresh */}
+            {loading && hasData && (
+              <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-6 py-2.5 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2.5 shadow-lg z-50 animate-fade-slide-in">
+                <span className="animate-spin-slow inline-block">↻</span>
+                Fetching latest stories…
+              </div>
+            )}
+          </>
         )}
       </main>
 

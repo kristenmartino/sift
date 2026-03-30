@@ -49,6 +49,23 @@ export interface TopicSearchResponse {
   query: string;
 }
 
+/** Shape of /api/compare response */
+export interface CompareClaim {
+  claim: string;
+  agreement: "unanimous" | "majority" | "disputed" | "unique";
+  sources?: string[];
+  sources_for?: string[];
+  sources_against?: string[];
+}
+
+export interface CompareResponse {
+  topic: string;
+  comparison: string;
+  sources_checked: string[];
+  claims: CompareClaim[];
+  duration_ms: number;
+}
+
 // ─── Component Props ────────────────────────────────────
 
 export interface ArticleCardProps {
@@ -57,6 +74,7 @@ export interface ArticleCardProps {
   onBookmark: (id: string) => void;
   isBookmarked: boolean;
   index: number;
+  onCompare?: (topic: string) => void;
 }
 
 export interface CardImageProps {
