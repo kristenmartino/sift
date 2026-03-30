@@ -41,6 +41,14 @@ export interface NewsApiError {
   details?: string;
 }
 
+/** Shape of /api/news/topic response */
+export interface TopicSearchResponse {
+  articles: Article[];
+  matchQuality: "strong" | "weak";
+  fallbackUsed: boolean;
+  query: string;
+}
+
 // ─── Component Props ────────────────────────────────────
 
 export interface ArticleCardProps {

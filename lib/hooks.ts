@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS } from "./constants";
-import type { Article, ArticleCache, CategoryId, NewsApiResponse } from "./types";
+import type { Article, ArticleCache, CategoryId, NewsApiResponse, TopicSearchResponse } from "./types";
 
 // ─── useLocalStorage ────────────────────────────────────
 
@@ -201,4 +201,114 @@ export function useNewsLoader() {
   }, []);
 
   return { ...state, loadCategory };
+}
+
+// ─── useTopicSearch ──────────────────────────────────────
+
+const TOPIC_TIMEOUT_MS = 30_000;
+
+interface TopicSearchState {
+  articles: Article[];
+  loading: boolean;
+  error: string | null;
+  slow: boolean;
+  matchQuality: "strong" | "weak" | null;
+  fallbackUsed: boolean;
+  query: string | null;
+}
+
+export function useTopicSearch() {
+  const [state, setState] = useState<TopicSearchState>({
+    articles: [],
+    loading: false,
+    error: null,
+    slow: false,
+    matchQuality: null,
+    fallbackUsed: false,
+    query: null,
+  });
+  const controllerRef = useRef<AbortController | null>(null);
+
+  const search = useCallback(async (query: string) => {
+    controllerRef.current?.abort();
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
+    setState({
+      articles: [],
+      loading: true,
+      error: null,
+      slow: false,
+      matchQuality: null,
+      fallbackUsed: false,
+      query,
+    });
+
+    const slowTimer = setTimeout(
+      () => setState((s) => ({ ...s, slow: true })),
+      SLOW_THRESHOLD_MS
+    );
+    const timeoutTimer = setTimeout(() => controller.abort(), TOPIC_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(
+        `/api/news/topic?q=${encodeURIComponent(query)}`,
+        { signal: controller.signal }
+      );
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+
+      const data: TopicSearchResponse = await res.json();
+
+      if (data.articles.length === 0) {
+        throw new Error("No articles found for this topic");
+      }
+
+      setState({
+        articles: data.articles,
+        loading: false,
+        error: null,
+        slow: false,
+        matchQuality: data.matchQuality,
+        fallbackUsed: data.fallbackUsed,
+        query,
+      });
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setState((s) => ({
+          ...s,
+          loading: false,
+          error: "Search timed out. Try a simpler query.",
+          slow: false,
+        }));
+        return;
+      }
+      const message = err instanceof Error ? err.message : "Search failed";
+      setState((s) => ({ ...s, loading: false, error: message, slow: false }));
+    } finally {
+      clearTimeout(slowTimer);
+      clearTimeout(timeoutTimer);
+      controllerRef.current = null;
+    }
+  }, []);
+
+  const clear = useCallback(() => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    setState({
+      articles: [],
+      loading: false,
+      error: null,
+      slow: false,
+      matchQuality: null,
+      fallbackUsed: false,
+      query: null,
+    });
+  }, []);
+
+  return { ...state, search, clear };
 }

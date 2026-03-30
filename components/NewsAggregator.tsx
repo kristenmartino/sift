@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { CATEGORIES } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
-import { useNewsLoader, useBookmarks, useTheme } from "@/lib/hooks";
+import { useNewsLoader, useBookmarks, useTheme, useTopicSearch } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
 import SkeletonCard from "./SkeletonCard";
 import ErrorState from "./ErrorState";
+import TopicSearch from "./TopicSearch";
 import AuthButtons, { clerkEnabled } from "./AuthButtons";
 import type { Article, CategoryId } from "@/lib/types";
 
@@ -51,7 +52,7 @@ function useClerkUserId(): string | null {
   if (!clerkEnabled) return null;
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { userId } = useAuth();
-  return userId;
+  return userId ?? null;
 }
 
 // ─── Component ──────────────────────────────────────────
@@ -59,6 +60,7 @@ function useClerkUserId(): string | null {
 export default function NewsAggregator() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>("top");
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [searchMode, setSearchMode] = useState(false);
 
   const [refreshed, setRefreshed] = useState(false);
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
@@ -69,6 +71,17 @@ export default function NewsAggregator() {
   const { articles, loading, error, slow, lastUpdated, loadCategory } = useNewsLoader();
   const { bookmarks, toggle: toggleBookmark, count: bookmarkCount } = useBookmarks(userId);
   const { dark: darkMode, toggle: toggleDark } = useTheme();
+  const {
+    articles: topicArticles,
+    loading: topicLoading,
+    error: topicError,
+    slow: topicSlow,
+    matchQuality,
+    fallbackUsed,
+    query: topicQuery,
+    search: searchTopic,
+    clear: clearTopicSearch,
+  } = useTopicSearch();
 
   useEffect(() => {
     loadCategory(activeCategory);
@@ -99,15 +112,17 @@ export default function NewsAggregator() {
   };
 
   const currentArticles = useMemo(() => {
+    if (searchMode && topicArticles.length > 0) {
+      return topicArticles;
+    }
     if (showBookmarks) {
-      // Signed in: use server-fetched articles; signed out: filter loaded ones
       if (userId && bookmarkedArticles.length > 0) {
         return bookmarkedArticles;
       }
       return Object.values(articles).flat().filter((a) => bookmarks.has(a.id));
     }
     return articles[activeCategory] || [];
-  }, [articles, activeCategory, showBookmarks, bookmarks, userId, bookmarkedArticles]);
+  }, [articles, activeCategory, showBookmarks, bookmarks, userId, bookmarkedArticles, searchMode, topicArticles]);
 
   const hasData = currentArticles.length > 0;
   const activeCatLabel = CATEGORIES.find((c) => c.id === activeCategory)?.label;
@@ -133,7 +148,7 @@ export default function NewsAggregator() {
         <div className="max-w-[1200px] mx-auto px-6 py-3.5 flex items-center justify-between">
           <div
             className="flex items-baseline gap-3 cursor-pointer"
-            onClick={() => { setShowBookmarks(false); setActiveCategory("top"); }}
+            onClick={() => { setShowBookmarks(false); setSearchMode(false); clearTopicSearch(); setActiveCategory("top"); }}
           >
             <h1 className="font-heading text-[28px] font-extrabold tracking-tight text-[var(--text)] leading-none">
               Sift
@@ -145,7 +160,7 @@ export default function NewsAggregator() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowBookmarks(!showBookmarks)}
+              onClick={() => { setShowBookmarks(!showBookmarks); setSearchMode(false); clearTopicSearch(); }}
               aria-label="Bookmarks"
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold cursor-pointer transition-all duration-200 font-body"
               style={{
@@ -155,6 +170,23 @@ export default function NewsAggregator() {
               }}
             >
               ★ {bookmarkCount}
+            </button>
+
+            <button
+              onClick={() => {
+                setSearchMode(!searchMode);
+                setShowBookmarks(false);
+                if (searchMode) clearTopicSearch();
+              }}
+              aria-label="Search topics"
+              className="flex items-center justify-center w-9 h-9 rounded-full border text-base cursor-pointer transition-all duration-200"
+              style={{
+                background: searchMode ? "var(--accent)" : "transparent",
+                color: searchMode ? "#fff" : "var(--text-secondary)",
+                borderColor: searchMode ? "var(--accent)" : "var(--border)",
+              }}
+            >
+              ⌕
             </button>
 
             <button
@@ -186,7 +218,7 @@ export default function NewsAggregator() {
         </div>
 
         {/* Category pills */}
-        {!showBookmarks && (
+        {!showBookmarks && !searchMode && (
           <div className="max-w-[1200px] mx-auto px-6 pb-3 flex gap-1.5 overflow-x-auto">
             {CATEGORIES.map((cat) => {
               const active = activeCategory === cat.id;
@@ -209,6 +241,18 @@ export default function NewsAggregator() {
             })}
           </div>
         )}
+
+        {/* Topic search input */}
+        {searchMode && (
+          <TopicSearch
+            onSearch={searchTopic}
+            onClose={() => { setSearchMode(false); clearTopicSearch(); }}
+            loading={topicLoading}
+            matchQuality={matchQuality}
+            fallbackUsed={fallbackUsed}
+            resultCount={topicArticles.length}
+          />
+        )}
       </header>
 
       {/* ── Main ────────────────────────────────────── */}
@@ -217,9 +261,13 @@ export default function NewsAggregator() {
         <div className="flex justify-between items-baseline mb-7">
           <div>
             <h2 className="font-heading text-[22px] font-bold text-[var(--text)] tracking-tight">
-              {showBookmarks ? "Saved Articles" : activeCatLabel}
+              {searchMode
+                ? (topicQuery ? `Results for \u201c${topicQuery}\u201d` : "Search Topics")
+                : showBookmarks
+                  ? "Saved Articles"
+                  : activeCatLabel}
             </h2>
-            {lastUpdated && !showBookmarks && (
+            {lastUpdated && !showBookmarks && !searchMode && (
               <p className="text-xs mt-1" style={{ color: refreshed ? "var(--accent)" : "var(--text-muted)" }}>
                 {refreshed ? "Updated just now" : `Updated ${timeAgo(lastUpdated.toISOString())}`}
               </p>
@@ -233,7 +281,7 @@ export default function NewsAggregator() {
         </div>
 
         {/* Loading skeleton */}
-        {loading && !hasData && !error && (
+        {((searchMode ? topicLoading : loading) && !hasData && !(searchMode ? topicError : error)) && (
           <div>
             <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
               <SkeletonCard featured />
@@ -241,19 +289,25 @@ export default function NewsAggregator() {
                 <SkeletonCard key={i} />
               ))}
             </div>
-            {slow && (
+            {(searchMode ? topicSlow : slow) && (
               <p className="text-center mt-6 text-sm text-[var(--text-muted)] animate-fade-slide-in">
-                Still searching… this can take up to 30 seconds
+                {searchMode
+                  ? "Searching articles\u2026 this may take a moment"
+                  : "Still searching\u2026 this can take up to 30 seconds"}
               </p>
             )}
           </div>
         )}
 
         {/* Error */}
-        {error && !loading && !hasData && (
+        {(searchMode ? topicError : error) && !(searchMode ? topicLoading : loading) && !hasData && (
           <ErrorState
-            message={error}
-            onRetry={() => loadCategory(activeCategory, true)}
+            message={(searchMode ? topicError : error) || "Something went wrong"}
+            onRetry={() =>
+              searchMode && topicQuery
+                ? searchTopic(topicQuery)
+                : loadCategory(activeCategory, true)
+            }
           />
         )}
 
@@ -277,7 +331,7 @@ export default function NewsAggregator() {
               <ArticleCard
                 key={article.id}
                 article={article}
-                featured={i === 0 && !showBookmarks}
+                featured={i === 0 && !showBookmarks && !searchMode}
                 onBookmark={toggleBookmark}
                 isBookmarked={bookmarks.has(article.id)}
                 index={i}
