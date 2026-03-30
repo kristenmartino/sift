@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { CATEGORIES } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
 import SkeletonCard from "./SkeletonCard";
 import ErrorState from "./ErrorState";
-import AuthButtons from "./AuthButtons";
-import type { CategoryId } from "@/lib/types";
+import AuthButtons, { clerkEnabled } from "./AuthButtons";
+import type { Article, CategoryId } from "@/lib/types";
 
 // ─── Theme CSS Variables ────────────────────────────────
 
@@ -44,6 +45,15 @@ const LIGHT_VARS = {
   "--pill-text": "#ffffff",
 } as React.CSSProperties;
 
+// ─── Clerk user ID (safe when ClerkProvider absent) ─────
+
+function useClerkUserId(): string | null {
+  if (!clerkEnabled) return null;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { userId } = useAuth();
+  return userId;
+}
+
 // ─── Component ──────────────────────────────────────────
 
 export default function NewsAggregator() {
@@ -51,14 +61,36 @@ export default function NewsAggregator() {
   const [showBookmarks, setShowBookmarks] = useState(false);
 
   const [refreshed, setRefreshed] = useState(false);
+  const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
+  const [loadingBookmarks, setLoadingBookmarks] = useState(false);
+
+  const userId = useClerkUserId();
 
   const { articles, loading, error, slow, lastUpdated, loadCategory } = useNewsLoader();
-  const { bookmarks, toggle: toggleBookmark, count: bookmarkCount } = useBookmarks();
+  const { bookmarks, toggle: toggleBookmark, count: bookmarkCount } = useBookmarks(userId);
   const { dark: darkMode, toggle: toggleDark } = useTheme();
 
   useEffect(() => {
     loadCategory(activeCategory);
   }, [activeCategory, loadCategory]);
+
+  // Fetch full bookmarked articles from DB when viewing bookmarks (signed in)
+  useEffect(() => {
+    if (!showBookmarks || !userId) {
+      setBookmarkedArticles([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingBookmarks(true);
+    fetch("/api/bookmarks?full=1")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data: { articles: Article[] }) => {
+        if (!cancelled) setBookmarkedArticles(data.articles);
+      })
+      .catch((err) => console.error("Failed to fetch bookmarked articles:", err))
+      .finally(() => { if (!cancelled) setLoadingBookmarks(false); });
+    return () => { cancelled = true; };
+  }, [showBookmarks, userId, bookmarks]);
 
   const handleRefresh = async () => {
     await loadCategory(activeCategory, true);
@@ -68,10 +100,14 @@ export default function NewsAggregator() {
 
   const currentArticles = useMemo(() => {
     if (showBookmarks) {
+      // Signed in: use server-fetched articles; signed out: filter loaded ones
+      if (userId && bookmarkedArticles.length > 0) {
+        return bookmarkedArticles;
+      }
       return Object.values(articles).flat().filter((a) => bookmarks.has(a.id));
     }
     return articles[activeCategory] || [];
-  }, [articles, activeCategory, showBookmarks, bookmarks]);
+  }, [articles, activeCategory, showBookmarks, bookmarks, userId, bookmarkedArticles]);
 
   const hasData = currentArticles.length > 0;
   const activeCatLabel = CATEGORIES.find((c) => c.id === activeCategory)?.label;
@@ -222,7 +258,7 @@ export default function NewsAggregator() {
         )}
 
         {/* Empty bookmarks */}
-        {showBookmarks && !hasData && !loading && (
+        {showBookmarks && !hasData && !loading && !loadingBookmarks && (
           <div className="text-center py-20 px-5 text-[var(--text-muted)]">
             <div className="text-5xl mb-4 opacity-30">☆</div>
             <p className="text-base font-semibold text-[var(--text-secondary)]">

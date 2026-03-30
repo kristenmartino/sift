@@ -2,7 +2,7 @@
 
 import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
 
-const clerkEnabled =
+export const clerkEnabled =
   !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith("pk_");
 

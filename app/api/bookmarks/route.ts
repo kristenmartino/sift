@@ -1,0 +1,81 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import {
+  getBookmarks,
+  addBookmark,
+  removeBookmark,
+  getBookmarkedArticles,
+} from "@/lib/db";
+import type { Article, CategoryId } from "@/lib/types";
+
+function unauthorized() {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+// GET /api/bookmarks — returns bookmark IDs (default) or full articles (?full=1)
+export async function GET(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) return unauthorized();
+
+  try {
+    const full = request.nextUrl.searchParams.get("full") === "1";
+
+    if (full) {
+      const rows = await getBookmarkedArticles(userId);
+      const articles: Article[] = rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        summary: row.summary || "",
+        sourceUrl: row.source_url,
+        sourceName: row.source_name,
+        publishedDate: row.published_date ? row.published_date.toISOString() : null,
+        imageUrl: row.image_url,
+        category: row.category as CategoryId,
+        readTime: row.read_time || 1,
+      }));
+      return NextResponse.json({ articles });
+    }
+
+    const ids = await getBookmarks(userId);
+    return NextResponse.json({ ids });
+  } catch (err) {
+    console.error("Bookmarks GET error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// POST /api/bookmarks — body { articleId }
+export async function POST(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) return unauthorized();
+
+  try {
+    const { articleId } = await request.json();
+    if (!articleId || typeof articleId !== "string") {
+      return NextResponse.json({ error: "articleId required" }, { status: 400 });
+    }
+    await addBookmark(userId, articleId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Bookmarks POST error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// DELETE /api/bookmarks — body { articleId }
+export async function DELETE(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) return unauthorized();
+
+  try {
+    const { articleId } = await request.json();
+    if (!articleId || typeof articleId !== "string") {
+      return NextResponse.json({ error: "articleId required" }, { status: 400 });
+    }
+    await removeBookmark(userId, articleId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Bookmarks DELETE error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
