@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   },
   description:
     "AI-curated news summaries from 100+ sources across technology, business, science, energy, world, and health. Updated every 10 minutes.",
-  metadataBase: new URL("https://siftnews.ai"),
+  metadataBase: new URL("https://siftnews.kristenmartino.ai"),
   openGraph: {
     title: "Sift — AI-Curated News",
     description:
