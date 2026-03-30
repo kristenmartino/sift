@@ -20,7 +20,7 @@ export interface DbArticle {
 
 export async function getArticlesByCategory(
   category: string,
-  limit = 7
+  limit = 30
 ): Promise<DbArticle[]> {
   const result = await pool.query<DbArticle>(
     `SELECT id, title, summary, source_url, source_name, image_url,
@@ -86,6 +86,65 @@ export async function getBookmarkedArticles(userId: string): Promise<DbArticle[]
     [userId]
   );
   return result.rows;
+}
+
+// ─── Vector Search ─────────────────────────────────────
+
+export interface DbArticleWithSimilarity extends DbArticle {
+  similarity: number;
+}
+
+export async function searchArticlesByEmbedding(
+  embedding: number[],
+  similarityThreshold = 0.35,
+  limit = 10
+): Promise<DbArticleWithSimilarity[]> {
+  const vectorStr = `[${embedding.join(",")}]`;
+  const result = await pool.query<DbArticle & { similarity: number }>(
+    `SELECT id, title, summary, source_url, source_name, image_url,
+            category, published_date, read_time, created_at,
+            1 - (embedding <=> $1::vector) AS similarity
+     FROM articles
+     WHERE embedding IS NOT NULL
+       AND 1 - (embedding <=> $1::vector) > $2
+     ORDER BY embedding <=> $1::vector
+     LIMIT $3`,
+    [vectorStr, similarityThreshold, limit]
+  );
+  return result.rows;
+}
+
+export async function insertArticle(article: {
+  id: string;
+  title: string;
+  summary: string;
+  source_url: string;
+  source_name: string;
+  category: string;
+  embedding: number[];
+  published_date?: Date | null;
+  image_url?: string | null;
+  read_time?: number;
+}): Promise<void> {
+  const vectorStr = `[${article.embedding.join(",")}]`;
+  await pool.query(
+    `INSERT INTO articles (id, title, summary, source_url, source_name, image_url,
+                           category, published_date, embedding, read_time)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector, $10)
+     ON CONFLICT (source_url) DO NOTHING`,
+    [
+      article.id,
+      article.title,
+      article.summary,
+      article.source_url,
+      article.source_name,
+      article.image_url || null,
+      article.category,
+      article.published_date || null,
+      vectorStr,
+      article.read_time || 1,
+    ]
+  );
 }
 
 export default pool;
