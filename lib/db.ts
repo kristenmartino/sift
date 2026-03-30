@@ -20,7 +20,7 @@ export interface DbArticle {
 
 export async function getArticlesByCategory(
   category: string,
-  limit = 7
+  limit = 30
 ): Promise<DbArticle[]> {
   const result = await pool.query<DbArticle>(
     `SELECT id, title, summary, source_url, source_name, image_url,

@@ -192,6 +192,54 @@ const TOPICS = [
   "trail running adventure racing", "pottery wheel throwing classes", "film photography analog revival",
 ];
 
+// ─── Category Classification ─────────────────────────────
+
+const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  technology:
+    "Technology, software, hardware, AI, programming, cybersecurity, startups, gadgets, apps, internet, social media, computing, robotics, digital innovation",
+  business:
+    "Business, finance, economics, markets, stocks, investing, corporate news, entrepreneurship, trade, banking, real estate, retail, supply chain, jobs",
+  science:
+    "Science, research, physics, chemistry, biology, space, astronomy, scientific discoveries, experiments, academic research, mathematics, geology",
+  energy:
+    "Energy, renewable energy, solar, wind, nuclear, oil, gas, electricity, power grid, batteries, EVs, electric vehicles, climate change, sustainability, environment",
+  world:
+    "World news, international affairs, geopolitics, diplomacy, foreign policy, wars, conflicts, elections, government, politics, immigration, human rights",
+  health:
+    "Health, medicine, healthcare, disease, treatment, mental health, nutrition, fitness, hospitals, pharmaceuticals, vaccines, public health, wellness",
+  top:
+    "Breaking news, general interest, trending stories, major events, top headlines, popular culture, entertainment, celebrity news, lifestyle, hobbies, arts, sports, food",
+};
+
+let categoryEmbeddings: { name: string; embedding: number[] }[] | null = null;
+
+async function initCategoryEmbeddings(): Promise<void> {
+  const names = Object.keys(CATEGORY_DESCRIPTIONS);
+  const texts = names.map((n) => CATEGORY_DESCRIPTIONS[n]);
+  const embeddings = await embedTexts(texts);
+  categoryEmbeddings = names.map((name, i) => ({ name, embedding: embeddings[i] }));
+}
+
+function classifyArticle(embedding: number[]): string {
+  if (!categoryEmbeddings) return "top";
+  let best = "top";
+  let bestSim = -1;
+  for (const cat of categoryEmbeddings) {
+    let dot = 0, magA = 0, magB = 0;
+    for (let i = 0; i < embedding.length; i++) {
+      dot += embedding[i] * cat.embedding[i];
+      magA += embedding[i] * embedding[i];
+      magB += cat.embedding[i] * cat.embedding[i];
+    }
+    const sim = dot / (Math.sqrt(magA) * Math.sqrt(magB));
+    if (sim > bestSim) {
+      bestSim = sim;
+      best = cat.name;
+    }
+  }
+  return best;
+}
+
 // ─── Helpers ─────────────────────────────────────────────
 
 function stableHash(input: string): string {
@@ -321,6 +369,10 @@ async function main() {
   const anthropic = new Anthropic({ apiKey: ANTHROPIC_KEY });
   const pool = new Pool({ connectionString: DB_URL, max: 5 });
 
+  // Initialize category embeddings for auto-classification
+  console.log("Initializing category embeddings...");
+  await initCategoryEmbeddings();
+
   let completed = 0;
   let totalArticles = 0;
   let errors = 0;
@@ -353,14 +405,15 @@ async function main() {
 
           const id = stableHash(a.source_url + a.title);
           const vectorStr = `[${emb.join(",")}]`;
+          const category = classifyArticle(emb);
           try {
             await pool.query(
               `INSERT INTO articles (id, title, summary, source_url, source_name, image_url,
                                      category, published_date, embedding, read_time)
-               VALUES ($1, $2, $3, $4, $5, NULL, 'top', NOW(), $6::vector, $7)
+               VALUES ($1, $2, $3, $4, $5, NULL, $6, NOW(), $7::vector, $8)
                ON CONFLICT (source_url) DO NOTHING`,
               [id, a.title, a.summary || "", a.source_url, a.source_name || "Web",
-               vectorStr, estimateReadTime(a.summary)]
+               category, vectorStr, estimateReadTime(a.summary)]
             );
             inserted++;
           } catch (err) {
