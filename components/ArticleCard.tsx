@@ -12,6 +12,7 @@ export default function ArticleCard({
   onBookmark,
   isBookmarked,
   index,
+  onCompare,
 }: ArticleCardProps) {
   const [hovered, setHovered] = useState(false);
   const cat = CATEGORIES.find((c) => c.id === article.category) || CATEGORIES[0];
@@ -123,6 +124,21 @@ export default function ArticleCard({
           <span>{timeAgo(article.publishedDate)}</span>
           <span className="opacity-30">&middot;</span>
           <span>{article.readTime} min read</span>
+          {onCompare && (
+            <>
+              <span className="opacity-30">&middot;</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCompare(article.title);
+                }}
+                className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200"
+                style={{ color: "var(--accent)" }}
+              >
+                Compare coverage
+              </button>
+            </>
+          )}
         </div>
       </div>
     </article>

@@ -10,7 +10,7 @@ function ClerkAuthButtons() {
   const { user } = useUser();
 
   if (user) {
-    return <UserButton afterSignOutUrl="/" />;
+    return <UserButton />;
   }
 
   return (
