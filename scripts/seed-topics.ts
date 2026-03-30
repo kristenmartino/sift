@@ -216,13 +216,13 @@ async function searchTopic(
   topic: string
 ): Promise<FoundArticle[]> {
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-haiku-4-20250414",
     max_tokens: 4096,
     tools: [
       {
         type: "web_search_20250305" as never,
         name: "web_search",
-        max_uses: 5,
+        max_uses: 2,
       },
     ],
     messages: [
