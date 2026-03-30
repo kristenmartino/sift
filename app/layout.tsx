@@ -3,13 +3,30 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sift — AI-Curated News",
+  title: {
+    default: "Sift — AI-Curated News, Already Read for You",
+    template: "%s | Sift",
+  },
   description:
-    "Stay informed with AI-curated news summaries across the topics you care about.",
+    "AI-curated news summaries from 100+ sources across technology, business, science, energy, world, and health. Updated every 10 minutes.",
+  metadataBase: new URL("https://siftnews.ai"),
   openGraph: {
-    title: "Sift",
-    description: "AI-curated news powered by Claude",
+    title: "Sift — AI-Curated News",
+    description:
+      "AI-curated news summaries from 100+ sources. Get the key points in 60 seconds.",
+    siteName: "Sift",
     type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sift — AI-Curated News",
+    description:
+      "AI-curated news summaries from 100+ sources. Get the key points in 60 seconds.",
+  },
+  other: {
+    "theme-color": "#0a0a0f",
+    "color-scheme": "dark light",
   },
 };
 
