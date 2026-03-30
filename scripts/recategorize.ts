@@ -2,8 +2,8 @@
  * Re-categorize articles using vector similarity.
  *
  * Embeds a description for each category, then assigns each article
- * in 'top' to whichever category its embedding is closest to.
- * Only moves articles that are clearly a better fit elsewhere.
+ * to whichever category its embedding is closest to — but only if
+ * the winner beats the "top" (general) category by a meaningful margin.
  */
 
 import { config } from "dotenv";
@@ -14,27 +14,31 @@ import { Pool } from "pg";
 const DB_URL = process.env.DATABASE_URL || "postgresql://sift:sift@localhost:5432/siftdb";
 const VOYAGE_KEY = process.env.VOYAGE_API_KEY;
 
+// The winning category must beat "top" by at least this margin
+const MIN_MARGIN = 0.03;
+
 if (!VOYAGE_KEY) {
   console.error("VOYAGE_API_KEY not set");
   process.exit(1);
 }
 
 // Category descriptions — these get embedded and compared against articles
+// More specific descriptions help avoid false positives
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   technology:
-    "Technology, software, hardware, AI, programming, cybersecurity, startups, gadgets, apps, internet, social media, computing, robotics, digital innovation",
+    "Technology news: software engineering, hardware devices, artificial intelligence, machine learning, programming languages, cybersecurity breaches, tech startups, smartphone apps, cloud computing, robotics, semiconductors, data centers",
   business:
-    "Business, finance, economics, markets, stocks, investing, corporate news, entrepreneurship, trade, banking, real estate, retail, supply chain, jobs",
+    "Business and finance news: stock market, Wall Street, corporate earnings, mergers and acquisitions, entrepreneurship, venture capital, banking, real estate market, retail sales, supply chain logistics, employment reports, GDP, inflation, Federal Reserve",
   science:
-    "Science, research, physics, chemistry, biology, space, astronomy, scientific discoveries, experiments, academic research, mathematics, geology",
+    "Scientific research and discovery: physics experiments, chemistry breakthroughs, biology studies, space exploration, NASA missions, astronomy observations, peer-reviewed papers, laboratory research, mathematics proofs, geology, paleontology, scientific journals",
   energy:
-    "Energy, renewable energy, solar, wind, nuclear, oil, gas, electricity, power grid, batteries, EVs, electric vehicles, climate change, sustainability, environment",
+    "Energy industry news: renewable energy projects, solar panels, wind farms, nuclear power plants, oil prices, natural gas, electricity grid, battery technology, electric vehicles, carbon emissions, climate policy, sustainability initiatives, environmental regulation",
   world:
-    "World news, international affairs, geopolitics, diplomacy, foreign policy, wars, conflicts, elections, government, politics, immigration, human rights",
+    "International news and geopolitics: foreign affairs, diplomatic relations, wars and military conflicts, international elections, government policy, immigration policy, United Nations, human rights, international trade agreements, sanctions, protests abroad",
   health:
-    "Health, medicine, healthcare, disease, treatment, mental health, nutrition, fitness, hospitals, pharmaceuticals, vaccines, public health, wellness",
+    "Health and medicine news: medical research, clinical trials, disease outbreaks, pharmaceutical drugs, hospital systems, mental health treatment, nutrition science, surgical procedures, vaccines, public health policy, FDA approvals, healthcare costs",
   top:
-    "Breaking news, general interest, trending stories, major events, top headlines, popular culture, entertainment, celebrity news, lifestyle",
+    "General interest and trending: breaking news, popular culture, entertainment, celebrity news, lifestyle, music, movies, television, sports, food, travel, arts, fashion, social trends, viral stories, human interest",
 };
 
 async function embedTexts(texts: string[]): Promise<number[][]> {
@@ -74,15 +78,18 @@ async function main() {
   console.log("Embedding category descriptions...");
   const categoryEmbeddings = await embedTexts(descriptions);
 
-  // 2. Fetch all articles currently in 'top' that have embeddings
-  const { rows } = await pool.query<{ id: string; embedding: string }>(
-    "SELECT id, embedding::text FROM articles WHERE category = 'top' AND embedding IS NOT NULL"
+  // 2. Fetch ALL articles with embeddings
+  const { rows } = await pool.query<{ id: string; category: string; embedding: string }>(
+    "SELECT id, category, embedding::text FROM articles WHERE embedding IS NOT NULL"
   );
-  console.log(`Found ${rows.length} articles in 'top' to re-categorize`);
+  console.log(`Found ${rows.length} articles to evaluate`);
 
   // 3. For each article, find the best-matching category
+  //    Only move if the winner beats "top" by MIN_MARGIN
+  const topIdx = categories.indexOf("top");
   const moves: Record<string, string[]> = {};
-  categories.forEach((c) => (moves[c] = []));
+  const unchanged: Record<string, number> = {};
+  categories.forEach((c) => { moves[c] = []; unchanged[c] = 0; });
 
   for (const row of rows) {
     // Parse the embedding vector from Postgres text format "[0.1,0.2,...]"
@@ -93,31 +100,50 @@ async function main() {
 
     let bestCategory = "top";
     let bestSimilarity = -1;
+    const similarities: Record<string, number> = {};
 
     for (let i = 0; i < categories.length; i++) {
       const sim = cosineSimilarity(embedding, categoryEmbeddings[i]);
+      similarities[categories[i]] = sim;
       if (sim > bestSimilarity) {
         bestSimilarity = sim;
         bestCategory = categories[i];
       }
     }
 
-    moves[bestCategory].push(row.id);
+    // If best is a specialized category, it must beat "top" by margin
+    if (bestCategory !== "top") {
+      const topSim = similarities["top"];
+      if (bestSimilarity - topSim < MIN_MARGIN) {
+        bestCategory = "top"; // Not confident enough, keep in general
+      }
+    }
+
+    if (bestCategory !== row.category) {
+      moves[bestCategory].push(row.id);
+    } else {
+      unchanged[row.category] = (unchanged[row.category] || 0) + 1;
+    }
   }
 
   // 4. Batch update articles
+  let totalMoved = 0;
   for (const [category, ids] of Object.entries(moves)) {
     if (ids.length === 0) continue;
-    if (category === "top") {
-      console.log(`  top: ${ids.length} articles staying`);
-      continue;
-    }
     await pool.query(
       "UPDATE articles SET category = $1 WHERE id = ANY($2)",
       [category, ids]
     );
-    console.log(`  ${category}: ${ids.length} articles moved`);
+    totalMoved += ids.length;
+    console.log(`  → ${category}: ${ids.length} moved in, ${unchanged[category] || 0} unchanged`);
   }
+  // Show categories with no moves
+  for (const [cat, count] of Object.entries(unchanged)) {
+    if (!moves[cat] || moves[cat].length === 0) {
+      console.log(`  → ${cat}: 0 moved in, ${count} unchanged`);
+    }
+  }
+  console.log(`\nTotal: ${totalMoved} articles re-assigned`);
 
   // 5. Show final distribution
   const dist = await pool.query(
