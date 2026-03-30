@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, DARK_VARS, LIGHT_VARS } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
@@ -12,40 +12,6 @@ import TopicSearch from "./TopicSearch";
 import CompareView from "./CompareView";
 import AuthButtons, { clerkEnabled } from "./AuthButtons";
 import type { Article, CategoryId } from "@/lib/types";
-
-// ─── Theme CSS Variables ────────────────────────────────
-
-const DARK_VARS = {
-  "--bg": "#0a0a0f",
-  "--card-bg": "#16161f",
-  "--text": "#eeeef0",
-  "--text-secondary": "#9d9daa",
-  "--text-muted": "#5a5a6e",
-  "--border": "#222233",
-  "--shadow": "rgba(0,0,0,0.4)",
-  "--shadow-hover": "rgba(0,0,0,0.6)",
-  "--skeleton": "#1e1e2a",
-  "--accent": "#6366f1",
-  "--nav-bg": "rgba(14,14,22,0.92)",
-  "--pill-active": "#6366f1",
-  "--pill-text": "#eeeef0",
-} as React.CSSProperties;
-
-const LIGHT_VARS = {
-  "--bg": "#f5f3f0",
-  "--card-bg": "#ffffff",
-  "--text": "#1a1a1a",
-  "--text-secondary": "#555566",
-  "--text-muted": "#8888a0",
-  "--border": "#e0ddd8",
-  "--shadow": "rgba(0,0,0,0.06)",
-  "--shadow-hover": "rgba(0,0,0,0.12)",
-  "--skeleton": "#e8e5e0",
-  "--accent": "#4f46e5",
-  "--nav-bg": "rgba(245,243,240,0.92)",
-  "--pill-active": "#1a1a1a",
-  "--pill-text": "#ffffff",
-} as React.CSSProperties;
 
 // ─── Clerk user ID (safe when ClerkProvider absent) ─────
 
