@@ -14,7 +14,7 @@ const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   technology:
     "Technology news: software engineering, hardware devices, artificial intelligence, machine learning, programming, cybersecurity, tech startups, smartphones, cloud computing, robotics, semiconductors",
   business:
-    "Business and finance news: stock market, corporate earnings, mergers, venture capital, banking, real estate, retail sales, employment, GDP, inflation, Federal Reserve",
+    "Wall Street and finance news: stock market, corporate earnings, mergers and acquisitions, IPOs, venture capital, banking, interest rates, Federal Reserve, employment data, GDP, inflation, corporate strategy, trade policy, institutional investing",
   science:
     "Scientific research: physics, chemistry, biology, space exploration, NASA, astronomy, peer-reviewed papers, laboratory research, geology, paleontology",
   energy:
@@ -23,8 +23,14 @@ const CATEGORY_DESCRIPTIONS: Record<string, string> = {
     "International news: foreign affairs, diplomacy, wars, military conflicts, international elections, government policy, immigration, United Nations, human rights, sanctions",
   health:
     "Health and medicine: medical research, clinical trials, disease outbreaks, pharmaceuticals, mental health, nutrition, vaccines, public health, FDA approvals",
+  politics:
+    "Politics: elections, voting, political parties, legislation, Congress, Senate, governors, campaigns, lobbying, political debate, government policy, Supreme Court, executive orders",
+  sports:
+    "Sports news: NFL, NBA, MLB, NHL, soccer, tennis, golf, Olympics, college sports, esports, player trades, game results, championships, athletics",
+  entertainment:
+    "Entertainment news: movies, TV shows, streaming, music, celebrities, awards, box office, concerts, video games, books, theater, pop culture, Hollywood, consumer product launches, brand collaborations, viral consumer trends",
   top:
-    "General interest: breaking news, popular culture, entertainment, celebrity, lifestyle, music, movies, sports, food, travel, arts, fashion, viral stories",
+    "General interest: breaking news, cross-cutting stories that transcend a single topic, lifestyle, food, travel, arts, fashion, viral stories",
 };
 
 let categoryEmbeddingsCache: { embeddings: number[][]; categories: string[] } | null = null;

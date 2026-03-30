@@ -17,9 +17,9 @@ const FEATURES = [
   },
   {
     icon: "◆",
-    title: "7 Categories",
+    title: "10 Categories",
     description:
-      "Technology, business, science, energy, world news, health — plus curated top stories.",
+      "Technology, business, science, energy, world news, health, politics, sports, entertainment — plus curated top stories.",
     accent: "#dc2626",
   },
   {
@@ -166,7 +166,7 @@ export default function LandingPage() {
           <span className="opacity-30">&middot;</span>
           <span>Updated every 10 min</span>
           <span className="opacity-30">&middot;</span>
-          <span>7 categories</span>
+          <span>10 categories</span>
         </div>
         <Link
           href="/news"
@@ -246,7 +246,7 @@ export default function LandingPage() {
       {/* ── Category Showcase ─────────────────────── */}
       <section className="max-w-[1200px] mx-auto px-6 pb-20">
         <h2 className="font-heading text-2xl font-bold text-center text-[var(--text)] mb-8">
-          7 categories, 100+ sources
+          10 categories, 100+ sources
         </h2>
         <div className="flex flex-wrap justify-center gap-2 mb-6">
           {CATEGORIES.map((cat) => {
@@ -274,6 +274,9 @@ export default function LandingPage() {
           · CleanTechnica · Electrek · Canary Media · Carbon Brief · Grist · Inside Climate News
           · Al Jazeera · The Guardian · DW News · France 24 · South China Morning Post · Foreign Policy
           · STAT News · WHO · The BMJ · NIH · The Lancet · Medscape
+          · Politico · The Hill · FiveThirtyEight · RealClearPolitics
+          · ESPN · BBC Sport · The Athletic · CBS Sports · Sports Illustrated
+          · Variety · Hollywood Reporter · Deadline · Rolling Stone · Pitchfork · IGN
           · Vox · The Atlantic · ProPublica · Rest of World · and more
         </p>
       </section>

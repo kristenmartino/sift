@@ -7,7 +7,10 @@ export type CategoryId =
   | "science"
   | "energy"
   | "world"
-  | "health";
+  | "health"
+  | "politics"
+  | "sports"
+  | "entertainment";
 
 export interface Category {
   id: CategoryId;
