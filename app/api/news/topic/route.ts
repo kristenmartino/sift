@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { searchArticlesByEmbedding, insertArticle } from "@/lib/db";
 import { stableHash, estimateReadTime } from "@/lib/utils";
-import type { Article, CategoryId, TopicSearchResponse } from "@/lib/types";
+import type { Article, CategoryId } from "@/lib/types";
 
 const SIMILARITY_THRESHOLD = 0.35;
 const MIN_STRONG_RESULTS = 3;
@@ -103,7 +103,15 @@ function setCachedEmbedding(query: string, embedding: number[]) {
   embeddingCache.set(query.toLowerCase(), { embedding, ts: Date.now() });
 }
 
-// ─── Route Handler ──────────────────────────────────────
+// ─── SSE Helpers ────────────────────────────────────────
+
+const encoder = new TextEncoder();
+
+function sseEvent(event: string, data: unknown): Uint8Array {
+  return encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+// ─── Route Handler (SSE streaming) ─────────────────────
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim();
@@ -115,74 +123,101 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  try {
-    // 1. Embed the query (with cache)
-    let embedding = getCachedEmbedding(query);
-    if (!embedding) {
-      embedding = await embedQuery(query);
-      setCachedEmbedding(query, embedding);
-    }
+  const stream = new ReadableStream({
+    async start(controller) {
+      let totalArticles = 0;
+      let fallbackUsed = false;
 
-    // 2. Vector similarity search in Postgres
-    const rows = await searchArticlesByEmbedding(
-      embedding,
-      SIMILARITY_THRESHOLD,
-      MAX_RESULTS
-    );
-
-    // 3. Map DB rows to Article type
-    const articles: Article[] = rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      summary: row.summary || "",
-      sourceUrl: row.source_url,
-      sourceName: row.source_name,
-      publishedDate: row.published_date
-        ? row.published_date.toISOString()
-        : null,
-      imageUrl: row.image_url,
-      category: row.category as CategoryId,
-      readTime: row.read_time || 1,
-    }));
-
-    // 4. If < 3 results, run Claude web_search (blocking)
-    //    Wait for results so the user sees them immediately
-    let fallbackUsed = false;
-    let allArticles = articles;
-
-    if (articles.length < MIN_STRONG_RESULTS) {
-      fallbackUsed = true;
       try {
-        const fallbackArticles = await webSearchFallback(query);
-        // Combine: vector results first, then fallback (deduped by id)
-        const seenIds = new Set(articles.map((a) => a.id));
-        for (const a of fallbackArticles) {
-          if (!seenIds.has(a.id)) {
-            allArticles.push(a);
-            seenIds.add(a.id);
+        // 1. Embed the query (with cache)
+        let embedding = getCachedEmbedding(query);
+        if (!embedding) {
+          embedding = await embedQuery(query);
+          setCachedEmbedding(query, embedding);
+        }
+
+        // 2. Vector similarity search in Postgres
+        const rows = await searchArticlesByEmbedding(
+          embedding,
+          SIMILARITY_THRESHOLD,
+          MAX_RESULTS
+        );
+
+        // 3. Map DB rows to Article type
+        const articles: Article[] = rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          summary: row.summary || "",
+          sourceUrl: row.source_url,
+          sourceName: row.source_name,
+          publishedDate: row.published_date
+            ? row.published_date.toISOString()
+            : null,
+          imageUrl: row.image_url,
+          category: row.category as CategoryId,
+          readTime: row.read_time || 1,
+        }));
+
+        // 4. Stream vector results immediately
+        if (articles.length > 0) {
+          controller.enqueue(
+            sseEvent("results", { articles, source: "vector" })
+          );
+        }
+        totalArticles = articles.length;
+
+        // 5. If < 3 results, run Claude web_search fallback
+        if (articles.length < MIN_STRONG_RESULTS) {
+          fallbackUsed = true;
+          controller.enqueue(sseEvent("fallback-start", {}));
+
+          try {
+            const fallbackArticles = await webSearchFallback(query);
+            // Dedupe against vector results
+            const seenIds = new Set(articles.map((a) => a.id));
+            const newArticles = fallbackArticles.filter(
+              (a) => !seenIds.has(a.id)
+            );
+
+            if (newArticles.length > 0) {
+              controller.enqueue(
+                sseEvent("results", {
+                  articles: newArticles,
+                  source: "web-search",
+                })
+              );
+              totalArticles += newArticles.length;
+            }
+          } catch (err) {
+            console.error("Web search fallback error:", err);
           }
         }
+
+        // 6. Done
+        const matchQuality: "strong" | "weak" =
+          totalArticles >= MIN_STRONG_RESULTS ? "strong" : "weak";
+
+        controller.enqueue(
+          sseEvent("done", { matchQuality, fallbackUsed, query })
+        );
       } catch (err) {
-        console.error("Web search fallback error:", err);
+        console.error("Topic search error:", err);
+        controller.enqueue(
+          sseEvent("error", { message: String(err) })
+        );
+      } finally {
+        controller.close();
       }
-    }
+    },
+  });
 
-    const matchQuality: "strong" | "weak" =
-      allArticles.length >= MIN_STRONG_RESULTS ? "strong" : "weak";
-
-    return NextResponse.json<TopicSearchResponse>({
-      articles: allArticles,
-      matchQuality,
-      fallbackUsed,
-      query,
-    });
-  } catch (err) {
-    console.error("Topic search error:", err);
-    return NextResponse.json(
-      { error: "Search failed", details: String(err) },
-      { status: 500 }
-    );
-  }
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }
 
 // ─── Voyage AI Embedding ────────────────────────────────

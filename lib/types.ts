@@ -66,6 +66,23 @@ export interface CompareResponse {
   duration_ms: number;
 }
 
+// ─── SSE Event Types (topic search streaming) ──────────
+
+export interface SSEResultsEvent {
+  articles: Article[];
+  source: "vector" | "web-search";
+}
+
+export interface SSEDoneEvent {
+  matchQuality: "strong" | "weak";
+  fallbackUsed: boolean;
+  query: string;
+}
+
+export interface SSEErrorEvent {
+  message: string;
+}
+
 // ─── Component Props ────────────────────────────────────
 
 export interface ArticleCardProps {

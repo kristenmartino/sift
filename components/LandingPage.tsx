@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CATEGORIES, CATEGORY_COLORS, DARK_VARS, LIGHT_VARS } from "@/lib/constants";
+import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { useTheme } from "@/lib/hooks";
 import type { CategoryId } from "@/lib/types";
 
@@ -94,18 +93,12 @@ const ARCHITECTURE_POINTS = [
 // ─── Component ──────────────────────────────────────────
 
 export default function LandingPage() {
-  const { dark: darkMode, toggle: toggleDark } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
-
-  const themeVars = darkMode ? DARK_VARS : LIGHT_VARS;
+  const { dark: darkMode, toggle: toggleDark, mounted } = useTheme();
 
   return (
     <div
       id="main-content"
       style={{
-        ...themeVars,
         background: "var(--bg)",
         color: "var(--text)",
         minHeight: "100vh",
