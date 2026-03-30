@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { CATEGORIES, DARK_VARS, LIGHT_VARS } from "@/lib/constants";
+import { CATEGORIES } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
@@ -39,7 +39,7 @@ export default function NewsAggregator() {
 
   const { articles, loading, error, slow, lastUpdated, loadCategory } = useNewsLoader();
   const { bookmarks, toggle: toggleBookmark, count: bookmarkCount } = useBookmarks(userId);
-  const { dark: darkMode, toggle: toggleDark } = useTheme();
+  const { dark: darkMode, toggle: toggleDark, mounted } = useTheme();
   const {
     articles: topicArticles,
     loading: topicLoading,
@@ -128,7 +128,6 @@ export default function NewsAggregator() {
     <div
       className="min-h-screen font-body"
       style={{
-        ...(darkMode ? DARK_VARS : LIGHT_VARS),
         background: "var(--bg)",
         color: "var(--text)",
       }}
@@ -225,13 +224,15 @@ export default function NewsAggregator() {
               </span>
             </button>
 
-            <button
-              onClick={toggleDark}
-              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-              className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-[var(--text-secondary)] text-base cursor-pointer transition-all duration-200"
-            >
-              {darkMode ? "☀" : "◑"}
-            </button>
+            {mounted && (
+              <button
+                onClick={toggleDark}
+                aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-[var(--text-secondary)] text-base cursor-pointer transition-all duration-200"
+              >
+                {darkMode ? "☀" : "◑"}
+              </button>
+            )}
 
             <AuthButtons />
           </div>

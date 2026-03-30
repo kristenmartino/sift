@@ -2,28 +2,39 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS } from "./constants";
-import type { Article, ArticleCache, CategoryId, NewsApiResponse, TopicSearchResponse, CompareResponse, CompareClaim } from "./types";
+import type { Article, ArticleCache, CategoryId, NewsApiResponse, CompareResponse, CompareClaim, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
+import { readSSE } from "./sse";
 
 // ─── useLocalStorage ────────────────────────────────────
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, (val: T | ((prev: T) => T)) => void] {
-  const [stored, setStored] = useState<T>(() => {
-    if (typeof window === "undefined") return initialValue;
-    try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch {
-      return initialValue;
-    }
-  });
+  // Always initialize with default to avoid SSR/client hydration mismatch.
+  // localStorage is read in useEffect after hydration.
+  const [stored, setStored] = useState<T>(initialValue);
 
+  // Sync from localStorage after hydration (client-only)
   useEffect(() => {
     try {
-      localStorage.setItem(key, JSON.stringify(stored));
+      const item = localStorage.getItem(key);
+      if (item !== null) setStored(JSON.parse(item));
     } catch {}
-  }, [key, stored]);
+  }, [key]);
 
-  return [stored, setStored];
+  // Custom setter that also persists to localStorage
+  const setValue = useCallback(
+    (val: T | ((prev: T) => T)) => {
+      setStored((prev) => {
+        const next = val instanceof Function ? val(prev) : val;
+        try {
+          localStorage.setItem(key, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    },
+    [key]
+  );
+
+  return [stored, setValue];
 }
 
 // ─── useBookmarks ───────────────────────────────────────
@@ -101,9 +112,30 @@ export function useBookmarks(userId?: string | null) {
 // ─── useTheme ───────────────────────────────────────────
 
 export function useTheme() {
-  const [dark, setDark] = useLocalStorage(STORAGE_KEYS.theme, true);
-  const toggle = useCallback(() => setDark((d) => !d), [setDark]);
-  return { dark, toggle };
+  // Always initialize as dark to match server render — prevents hydration mismatch.
+  // The blocking script in <head> already set the correct data-theme on <html>,
+  // so CSS variables are correct from first paint. This state only drives the toggle icon.
+  const [dark, setDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  // After hydration, read actual theme from the DOM (set by blocking script)
+  useEffect(() => {
+    setDark(document.documentElement.dataset.theme !== "light");
+    setMounted(true);
+  }, []);
+
+  const toggle = useCallback(() => {
+    setDark((prev) => {
+      const next = !prev;
+      document.documentElement.dataset.theme = next ? "dark" : "light";
+      try {
+        localStorage.setItem(STORAGE_KEYS.theme, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  return { dark, toggle, mounted };
 }
 
 // ─── useNewsLoader ──────────────────────────────────────
@@ -203,7 +235,7 @@ export function useNewsLoader() {
   return { ...state, loadCategory };
 }
 
-// ─── useTopicSearch ──────────────────────────────────────
+// ─── useTopicSearch (SSE streaming) ─────────────────────
 
 const TOPIC_TIMEOUT_MS = 45_000; // Longer — Claude web search fallback can take 15-20s
 
@@ -262,27 +294,74 @@ export function useTopicSearch() {
         throw new Error(body.error || `HTTP ${res.status}`);
       }
 
-      const data: TopicSearchResponse = await res.json();
+      // Consume SSE stream — articles arrive incrementally
+      let receivedAny = false;
+      for await (const { event, data } of readSSE(res)) {
+        if (controller.signal.aborted) break;
 
-      if (data.articles.length === 0) {
-        throw new Error("No articles found for this topic. Try a different search.");
+        switch (event) {
+          case "results": {
+            const d = data as SSEResultsEvent;
+            receivedAny = receivedAny || d.articles.length > 0;
+            setState((s) => ({
+              ...s,
+              articles: [...s.articles, ...d.articles],
+              slow: false, // Got results, clear slow indicator
+            }));
+            break;
+          }
+          case "fallback-start":
+            // Keep loading, reset slow timer for fallback phase
+            setState((s) => ({ ...s, slow: false }));
+            clearTimeout(slowTimer);
+            setTimeout(
+              () => setState((s) => (s.loading ? { ...s, slow: true } : s)),
+              SLOW_THRESHOLD_MS
+            );
+            break;
+          case "done": {
+            const d = data as SSEDoneEvent;
+            setState((s) => ({
+              ...s,
+              loading: false,
+              slow: false,
+              matchQuality: d.matchQuality,
+              fallbackUsed: d.fallbackUsed,
+            }));
+            break;
+          }
+          case "error": {
+            const d = data as SSEErrorEvent;
+            setState((s) => ({
+              ...s,
+              loading: false,
+              slow: false,
+              error: d.message,
+            }));
+            break;
+          }
+        }
       }
 
-      setState({
-        articles: data.articles,
-        loading: false,
-        error: null,
-        slow: false,
-        matchQuality: data.matchQuality,
-        fallbackUsed: data.fallbackUsed,
-        query,
-      });
+      // If stream ended without any articles
+      if (!receivedAny) {
+        setState((s) =>
+          s.loading
+            ? {
+                ...s,
+                loading: false,
+                slow: false,
+                error: "No articles found for this topic. Try a different search.",
+              }
+            : s
+        );
+      }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
         setState((s) => ({
           ...s,
           loading: false,
-          error: "Search timed out. Try a simpler query.",
+          error: s.articles.length > 0 ? null : "Search timed out. Try a simpler query.",
           slow: false,
         }));
         return;
