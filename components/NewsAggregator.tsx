@@ -146,6 +146,7 @@ export default function NewsAggregator() {
       return topicArticles;
     }
     if (showBookmarks) {
+      // Signed in: use server-fetched articles; signed out: filter loaded ones
       if (userId && bookmarkedArticles.length > 0) {
         return bookmarkedArticles;
       }
