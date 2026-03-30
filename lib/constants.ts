@@ -10,10 +10,14 @@ export const CATEGORIES: Category[] = [
   { id: "energy", label: "Energy", icon: "⚡" },
   { id: "world", label: "World", icon: "◐" },
   { id: "health", label: "Health", icon: "✦" },
+  { id: "politics", label: "Politics", icon: "⚖" },
+  { id: "sports", label: "Sports", icon: "⬢" },
+  { id: "entertainment", label: "Entertainment", icon: "♦" },
 ];
 
 export const VALID_CATEGORIES = new Set<CategoryId>([
   "top", "technology", "business", "science", "energy", "world", "health",
+  "politics", "sports", "entertainment",
 ]);
 
 // ─── Colors ─────────────────────────────────────────────
@@ -27,6 +31,9 @@ export const CATEGORY_COLORS: Record<CategoryId, { hex: string; rgb: string }> =
   energy:     { hex: "#ea580c", rgb: "234,88,12" },
   world:      { hex: "#d97706", rgb: "217,119,6" },
   health:     { hex: "#db2777", rgb: "219,39,119" },
+  politics:   { hex: "#6366f1", rgb: "99,102,241" },
+  sports:     { hex: "#0891b2", rgb: "8,145,178" },
+  entertainment: { hex: "#e11d48", rgb: "225,29,72" },
 };
 
 export const GRADIENTS: Record<CategoryId, string> = {
@@ -37,6 +44,9 @@ export const GRADIENTS: Record<CategoryId, string> = {
   energy: "linear-gradient(135deg, #1f1008 0%, #2a1a0a 50%, #3d1f0f 100%)",
   world: "linear-gradient(135deg, #1f1408 0%, #2a1f0a 50%, #3d2a0f 100%)",
   health: "linear-gradient(135deg, #200a1a 0%, #2e1525 50%, #3d0f2a 100%)",
+  politics: "linear-gradient(135deg, #0f0f2e 0%, #1a1a4e 50%, #1e1e5f 100%)",
+  sports: "linear-gradient(135deg, #0a1a20 0%, #0f2a35 50%, #0a3040 100%)",
+  entertainment: "linear-gradient(135deg, #200a15 0%, #2e1020 50%, #3d0f25 100%)",
 };
 
 // ─── Timing ─────────────────────────────────────────────

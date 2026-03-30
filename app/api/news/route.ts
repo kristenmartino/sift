@@ -6,6 +6,7 @@ import type { CategoryId, Article, NewsApiResponse, NewsApiError } from "@/lib/t
 
 const VALID_CATEGORIES = new Set<string>([
   "top", "technology", "business", "science", "energy", "world", "health",
+  "politics", "sports", "entertainment",
 ]);
 
 // ─── Route Handler ──────────────────────────────────────
