@@ -49,6 +49,12 @@ export const COPY = {
     emptyTitle: "No stories yet for this topic",
     emptyBody: "Check back in a bit \u2014 the AI is still looking.",
   },
+  stories: {
+    sourcesBadge: (count: number) => `${count} source${count !== 1 ? "s" : ""}`,
+    expand: (count: number) => `View ${count} article${count !== 1 ? "s" : ""}`,
+    collapse: "Collapse",
+    framing: "How sources covered this",
+  },
   notFound: {
     title: "This page wandered off",
     body: "We looked everywhere \u2014 even had the AI search for it. Let\u2019s get you back to the stories.",

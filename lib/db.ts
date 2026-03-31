@@ -34,6 +34,69 @@ export async function getArticlesByCategory(
   return result.rows;
 }
 
+// ─── Stories ──────────────────────────────────────────
+
+export interface DbStory {
+  id: string;
+  headline: string;
+  summary: string;
+  category: string;
+  framings: unknown; // JSONB — parsed at API layer
+  entities: unknown; // JSONB
+  article_count: number;
+  representative_image_url: string | null;
+  published_date: Date | null;
+  synthesis_status: string;
+}
+
+export interface DbStoryArticle extends DbArticle {
+  story_id: string | null;
+}
+
+export async function getStoriesWithArticles(
+  category: string
+): Promise<{ stories: DbStory[]; storyArticles: Record<string, DbStoryArticle[]>; standaloneArticles: DbArticle[] }> {
+  // 1. Get stories for this category
+  const storiesResult = await pool.query<DbStory>(
+    `SELECT id, headline, summary, category, framings, entities,
+            article_count, representative_image_url, published_date, synthesis_status
+     FROM stories
+     WHERE category = $1 AND synthesis_status = 'complete'
+     ORDER BY published_date DESC NULLS LAST
+     LIMIT 20`,
+    [category]
+  );
+  const stories = storiesResult.rows;
+  const storyIds = stories.map((s) => s.id);
+
+  // 2. Get all articles for this category (with story_id)
+  const articlesResult = await pool.query<DbStoryArticle>(
+    `SELECT id, title, summary, source_url, source_name, image_url,
+            category, published_date, read_time, created_at, story_id
+     FROM articles
+     WHERE category = $1 AND from_search = false
+     ORDER BY published_date DESC NULLS LAST
+     LIMIT 50`,
+    [category]
+  );
+
+  // 3. Partition into story-grouped and standalone
+  const storyArticles: Record<string, DbStoryArticle[]> = {};
+  const standaloneArticles: DbArticle[] = [];
+  const storyIdSet = new Set(storyIds);
+
+  for (const row of articlesResult.rows) {
+    if (row.story_id && storyIdSet.has(row.story_id)) {
+      if (!storyArticles[row.story_id]) storyArticles[row.story_id] = [];
+      storyArticles[row.story_id].push(row);
+    } else {
+      standaloneArticles.push(row);
+    }
+  }
+
+  return { stories, storyArticles, standaloneArticles };
+}
+
 export async function getLastRefreshed(category: string): Promise<Date | null> {
   const result = await pool.query(
     "SELECT last_refreshed_at FROM pipeline_state WHERE category = $1",

@@ -30,11 +30,44 @@ export interface Article {
   readTime: number;
 }
 
+// ─── Story Types ────────────────────────────────────────
+
+export interface StoryFraming {
+  sourceName: string;
+  framing: string;
+  tone: "neutral" | "urgent" | "analytical" | "critical" | "optimistic";
+}
+
+export interface EntitySet {
+  people: string[];
+  organizations: string[];
+  locations: string[];
+  eventDescription: string;
+}
+
+export interface Story {
+  id: string;
+  headline: string;
+  summary: string;
+  category: CategoryId;
+  framings: StoryFraming[];
+  entities: EntitySet[];
+  articleCount: number;
+  imageUrl: string | null;
+  publishedDate: string | null;
+  articles: Article[];
+}
+
+export type FeedItem =
+  | { type: "article"; data: Article }
+  | { type: "story"; data: Story };
+
 // ─── API Types ──────────────────────────────────────────
 
 /** Shape of /api/news response */
 export interface NewsApiResponse {
   articles: Article[];
+  stories: Story[];
   cached: boolean;
   fetchedAt: string;
 }
@@ -97,6 +130,15 @@ export interface ArticleCardProps {
   onCompare?: (topic: string) => void;
 }
 
+export interface StoryCardProps {
+  story: Story;
+  featured?: boolean;
+  onBookmark: (id: string) => void;
+  bookmarks: Set<string>;
+  index: number;
+  onCompare?: (topic: string) => void;
+}
+
 export interface CardImageProps {
   src: string | null;
   alt: string;
@@ -124,4 +166,8 @@ export interface CompareSource {
 
 export interface ArticleCache {
   [key: string]: Article[];
+}
+
+export interface StoryCache {
+  [key: string]: Story[];
 }
