@@ -7,6 +7,7 @@ import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
+import StoryCard from "./StoryCard";
 import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
@@ -14,7 +15,7 @@ import TopicSearch from "./TopicSearch";
 import CompareView from "./CompareView";
 import SiftLogo from "./SiftLogo";
 import AuthButtons, { clerkEnabled } from "./AuthButtons";
-import type { Article, CategoryId } from "@/lib/types";
+import type { Article, FeedItem, CategoryId } from "@/lib/types";
 
 // ─── Clerk user ID (safe when ClerkProvider absent) ─────
 
@@ -45,7 +46,7 @@ export default function NewsAggregator() {
 
   const userId = useClerkUserId();
 
-  const { articles, loading, error, slow, lastUpdated, loadCategory } = useNewsLoader();
+  const { articles, stories, loading, error, slow, lastUpdated, loadCategory } = useNewsLoader();
   const { bookmarks, toggle: toggleBookmark, count: bookmarkCount } = useBookmarks(userId);
   const { dark: darkMode, toggle: toggleDark, mounted } = useTheme();
   const {
@@ -156,12 +157,11 @@ export default function NewsAggregator() {
     clearCompare();
   };
 
-  const currentArticles = useMemo(() => {
+  const currentArticles = useMemo((): Article[] => {
     if (searchMode) {
       return topicArticles;
     }
     if (showBookmarks) {
-      // Signed in: use server-fetched articles; signed out: filter loaded ones
       if (userId && bookmarkedArticles.length > 0) {
         return bookmarkedArticles;
       }
@@ -170,7 +170,33 @@ export default function NewsAggregator() {
     return articles[activeCategory] || [];
   }, [articles, activeCategory, showBookmarks, bookmarks, userId, bookmarkedArticles, searchMode, topicArticles]);
 
-  const hasData = currentArticles.length > 0;
+  // Build feed items: stories + standalone articles, sorted by date
+  const feedItems = useMemo((): FeedItem[] => {
+    // Stories only apply to category view (not bookmarks/search)
+    if (searchMode || showBookmarks) {
+      return currentArticles.map((a) => ({ type: "article" as const, data: a }));
+    }
+
+    const categoryStories = stories[activeCategory] || [];
+    const items: FeedItem[] = [
+      ...categoryStories.map((s) => ({ type: "story" as const, data: s })),
+      ...currentArticles.map((a) => ({ type: "article" as const, data: a })),
+    ];
+
+    // Sort by published date descending
+    items.sort((a, b) => {
+      const dateA = a.type === "story" ? a.data.publishedDate : a.data.publishedDate;
+      const dateB = b.type === "story" ? b.data.publishedDate : b.data.publishedDate;
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+
+    return items;
+  }, [currentArticles, stories, activeCategory, searchMode, showBookmarks]);
+
+  const hasData = feedItems.length > 0;
   const activeCatLabel = CATEGORIES.find((c) => c.id === activeCategory)?.label;
 
   return (
@@ -497,7 +523,7 @@ export default function NewsAggregator() {
               </div>
               {hasData && (
                 <span className="text-xs text-[var(--text-muted)] font-medium">
-                  {currentArticles.length} article{currentArticles.length !== 1 ? "s" : ""}
+                  {feedItems.length} item{feedItems.length !== 1 ? "s" : ""}
                 </span>
               )}
             </div>
@@ -550,7 +576,7 @@ export default function NewsAggregator() {
               />
             )}
 
-            {/* Articles grid — fades on category switch */}
+            {/* Feed grid — fades on category switch */}
             {hasData && (
               <div
                 className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5"
@@ -560,17 +586,29 @@ export default function NewsAggregator() {
                   transform: categoryFading ? "translateY(4px)" : "translateY(0)",
                 }}
               >
-                {currentArticles.map((article, i) => (
-                  <ArticleCard
-                    key={article.id}
-                    article={article}
-                    featured={i === 0 && !showBookmarks && !searchMode}
-                    onBookmark={toggleBookmark}
-                    isBookmarked={bookmarks.has(article.id)}
-                    index={i}
-                    onCompare={handleCompare}
-                  />
-                ))}
+                {feedItems.map((item, i) =>
+                  item.type === "story" ? (
+                    <StoryCard
+                      key={`story-${item.data.id}`}
+                      story={item.data}
+                      featured={i === 0 && !showBookmarks && !searchMode}
+                      onBookmark={toggleBookmark}
+                      bookmarks={bookmarks}
+                      index={i}
+                      onCompare={handleCompare}
+                    />
+                  ) : (
+                    <ArticleCard
+                      key={item.data.id}
+                      article={item.data}
+                      featured={i === 0 && !showBookmarks && !searchMode}
+                      onBookmark={toggleBookmark}
+                      isBookmarked={bookmarks.has(item.data.id)}
+                      index={i}
+                      onCompare={handleCompare}
+                    />
+                  )
+                )}
               </div>
             )}
 

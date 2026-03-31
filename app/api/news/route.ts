@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getArticlesByCategory, getLastRefreshed } from "@/lib/db";
-import type { CategoryId, Article, NewsApiResponse, NewsApiError } from "@/lib/types";
+import { getStoriesWithArticles, getLastRefreshed } from "@/lib/db";
+import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
 // ─── Valid Categories ───────────────────────────────────
 
@@ -24,12 +24,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [rows, lastRefreshed] = await Promise.all([
-      getArticlesByCategory(category),
+    const [{ stories: dbStories, storyArticles, standaloneArticles }, lastRefreshed] = await Promise.all([
+      getStoriesWithArticles(category),
       getLastRefreshed(category),
     ]);
 
-    const articles: Article[] = rows.map((row) => ({
+    // Map standalone articles
+    const articles: Article[] = standaloneArticles.map((row) => ({
       id: row.id,
       title: row.title,
       summary: row.summary || "",
@@ -41,8 +42,55 @@ export async function GET(request: NextRequest) {
       readTime: row.read_time || 1,
     }));
 
+    // Map stories with nested articles
+    const stories: Story[] = dbStories.map((s) => {
+      const childRows = storyArticles[s.id] || [];
+      const childArticles: Article[] = childRows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        summary: row.summary || "",
+        sourceUrl: row.source_url,
+        sourceName: row.source_name,
+        publishedDate: row.published_date ? row.published_date.toISOString() : null,
+        imageUrl: row.image_url,
+        category: row.category as CategoryId,
+        readTime: row.read_time || 1,
+      }));
+
+      // Parse JSONB framings
+      const rawFramings = Array.isArray(s.framings) ? s.framings : [];
+      const framings: StoryFraming[] = (rawFramings as Record<string, string>[]).map((f) => ({
+        sourceName: f.source_name || "",
+        framing: f.framing || "",
+        tone: (f.tone || "neutral") as StoryFraming["tone"],
+      }));
+
+      // Parse JSONB entities
+      const rawEntities = Array.isArray(s.entities) ? s.entities : [];
+      const entities: EntitySet[] = (rawEntities as Record<string, unknown>[]).map((e) => ({
+        people: (e.people as string[]) || [],
+        organizations: (e.organizations as string[]) || [],
+        locations: (e.locations as string[]) || [],
+        eventDescription: (e.event_description as string) || "",
+      }));
+
+      return {
+        id: s.id,
+        headline: s.headline,
+        summary: s.summary,
+        category: s.category as CategoryId,
+        framings,
+        entities,
+        articleCount: s.article_count,
+        imageUrl: s.representative_image_url,
+        publishedDate: s.published_date ? s.published_date.toISOString() : null,
+        articles: childArticles,
+      };
+    });
+
     return NextResponse.json<NewsApiResponse>({
       articles,
+      stories,
       cached: false,
       fetchedAt: lastRefreshed ? lastRefreshed.toISOString() : new Date().toISOString(),
     });
