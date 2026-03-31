@@ -131,4 +131,18 @@ export const SLOW_THRESHOLD_MS = 3_000;
 export const STORAGE_KEYS = {
   bookmarks: "sift-bookmarks",
   theme: "sift-theme",
+  customTopics: "sift-custom-topics",
 } as const;
+
+// ─── Custom Topic Colors ────────────────────────────────
+// Distinct from category colors. One per max custom topic slot.
+
+export const CUSTOM_TOPIC_COLORS: { hex: string; rgb: string }[] = [
+  { hex: "#8b5cf6", rgb: "139,92,246" },   // violet
+  { hex: "#06b6d4", rgb: "6,182,212" },     // cyan
+  { hex: "#f59e0b", rgb: "245,158,11" },    // amber
+  { hex: "#ec4899", rgb: "236,72,153" },    // pink
+  { hex: "#10b981", rgb: "16,185,129" },    // emerald
+];
+
+export const MAX_CUSTOM_TOPICS = 5;

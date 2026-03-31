@@ -162,6 +162,26 @@ export interface CompareSource {
   label: string;
 }
 
+// ─── Custom Topic Types ────────────────────────────────
+
+export interface CustomTopic {
+  id: string;
+  rawInput: string;
+  shortLabel: string;
+  icon: string;
+  searchQueries: string[];
+  description: string;
+  createdAt: string;
+  colorIndex: number;
+}
+
+export interface TopicGenerateResponse {
+  shortLabel: string;
+  icon: string;
+  searchQueries: string[];
+  description: string;
+}
+
 // ─── State Types ────────────────────────────────────────
 
 export interface ArticleCache {

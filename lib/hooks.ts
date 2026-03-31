@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS } from "./constants";
-import type { Article, Story, ArticleCache, StoryCache, CategoryId, NewsApiResponse, CompareResponse, CompareClaim, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
+import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS, MAX_CUSTOM_TOPICS } from "./constants";
+import type { Article, Story, ArticleCache, StoryCache, CategoryId, CustomTopic, NewsApiResponse, CompareResponse, CompareClaim, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
 import { readSSE } from "./sse";
 
 // ─── useLocalStorage ────────────────────────────────────
@@ -393,6 +393,81 @@ export function useTopicSearch() {
   }, []);
 
   return { ...state, search, clear };
+}
+
+// ─── useCustomTopics ────────────────────────────────────
+
+export function useCustomTopics(userId?: string | null) {
+  const [localTopics, setLocalTopics] = useLocalStorage<CustomTopic[]>(
+    STORAGE_KEYS.customTopics,
+    []
+  );
+  const [serverTopics, setServerTopics] = useState<CustomTopic[]>([]);
+  const [synced, setSynced] = useState(false);
+
+  const isSignedIn = !!userId;
+
+  // Fetch from server on mount when signed in
+  useEffect(() => {
+    if (!isSignedIn) {
+      setSynced(false);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/topics")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data: { topics: CustomTopic[] }) => {
+        if (!cancelled) {
+          setServerTopics(data.topics);
+          setSynced(true);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch custom topics:", err));
+    return () => { cancelled = true; };
+  }, [isSignedIn]);
+
+  const topics = isSignedIn && synced ? serverTopics : localTopics;
+
+  const add = useCallback(
+    (topic: CustomTopic) => {
+      if (topics.length >= MAX_CUSTOM_TOPICS) return;
+
+      if (isSignedIn) {
+        setServerTopics((prev) => [...prev, topic]);
+        fetch("/api/topics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic }),
+        }).catch((err) => console.error("Topic save error:", err));
+      } else {
+        setLocalTopics((prev) => [...prev, topic]);
+      }
+    },
+    [isSignedIn, topics.length, setLocalTopics]
+  );
+
+  const remove = useCallback(
+    (id: string) => {
+      if (isSignedIn) {
+        setServerTopics((prev) => prev.filter((t) => t.id !== id));
+        fetch("/api/topics", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        }).catch((err) => console.error("Topic delete error:", err));
+      } else {
+        setLocalTopics((prev) => prev.filter((t) => t.id !== id));
+      }
+    },
+    [isSignedIn, setLocalTopics]
+  );
+
+  return {
+    topics,
+    add,
+    remove,
+    canAdd: topics.length < MAX_CUSTOM_TOPICS,
+  };
 }
 
 // ─── useCompare ─────────────────────────────────────────
