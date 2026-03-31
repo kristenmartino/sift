@@ -235,7 +235,7 @@ export default function StoryCard({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onCompare(article.title);
+                      onCompare(article.title, article.sourceName);
                     }}
                     className="bg-transparent border-none p-0 cursor-pointer text-[10px] font-medium shrink-0 transition-colors duration-200"
                     style={{ color: "var(--accent)" }}
