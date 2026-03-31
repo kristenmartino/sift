@@ -162,6 +162,8 @@ export async function GET(request: NextRequest) {
           imageUrl: row.image_url,
           category: row.category as CategoryId,
           readTime: row.read_time || 1,
+          ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
+          ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
         }));
 
         // 4. Stream vector results immediately

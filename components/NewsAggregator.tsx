@@ -219,7 +219,7 @@ export default function NewsAggregator() {
     return articles[activeCategory] || [];
   }, [articles, activeCategory, showBookmarks, bookmarks, userId, bookmarkedArticles, searchMode, customTopicMode, topicArticles]);
 
-  // Build feed items: stories + standalone articles, sorted by date
+  // Build feed items: stories + standalone articles, ranked by importance * recency
   const feedItems = useMemo((): FeedItem[] => {
     // Stories only apply to category view (not bookmarks/search/custom topics)
     if (searchMode || showBookmarks || customTopicMode) {
@@ -232,15 +232,22 @@ export default function NewsAggregator() {
       ...currentArticles.map((a) => ({ type: "article" as const, data: a })),
     ];
 
-    // Sort by published date descending
-    items.sort((a, b) => {
-      const dateA = a.type === "story" ? a.data.publishedDate : a.data.publishedDate;
-      const dateB = b.type === "story" ? b.data.publishedDate : b.data.publishedDate;
-      if (!dateA && !dateB) return 0;
-      if (!dateA) return 1;
-      if (!dateB) return -1;
-      return new Date(dateB).getTime() - new Date(dateA).getTime();
-    });
+    // Rank by composite score: (importance + source_boost) * recency_decay
+    const now = Date.now();
+    function rankScore(item: FeedItem): number {
+      const pubDate = item.data.publishedDate;
+      const ageHours = pubDate ? (now - new Date(pubDate).getTime()) / 3_600_000 : 48;
+      const decay = Math.exp(-ageHours / 24);
+
+      if (item.type === "story") {
+        const sourceBoost = Math.min((item.data.articleCount - 1), 4) * 0.5;
+        return (3 + sourceBoost) * decay;
+      }
+      const importance = item.data.importanceScore ?? 3;
+      return importance * decay;
+    }
+
+    items.sort((a, b) => rankScore(b) - rankScore(a));
 
     return items;
   }, [currentArticles, stories, activeCategory, searchMode, showBookmarks, customTopicMode]);
