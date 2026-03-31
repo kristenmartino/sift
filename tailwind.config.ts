@@ -26,8 +26,12 @@ const config: Config = {
           technology: "#2563eb",
           business: "#059669",
           science: "#7c3aed",
+          energy: "#0d9488",
           world: "#d97706",
           health: "#db2777",
+          politics: "#6366f1",
+          sports: "#0891b2",
+          entertainment: "#e11d48",
         },
       },
       keyframes: {
