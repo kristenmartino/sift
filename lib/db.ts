@@ -33,7 +33,7 @@ export async function getArticlesByCategory(
        AND LOWER(summary) NOT LIKE 'unable to provide%'
      ORDER BY
        COALESCE(importance_score, 3)::float *
-       EXP(-EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0)
+       EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
      DESC NULLS LAST
      LIMIT $2`,
     [category, limit]
@@ -73,7 +73,7 @@ export async function getStoriesWithArticles(
        WHERE category = $1 AND synthesis_status = 'complete'
        ORDER BY
          COALESCE(article_count, 1)::float *
-         EXP(-EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0)
+         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 20`,
       [category]
@@ -99,7 +99,7 @@ export async function getStoriesWithArticles(
          AND LOWER(summary) NOT LIKE 'unable to provide%'
        ORDER BY
          COALESCE(importance_score, 3)::float *
-         EXP(-EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0)
+         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 50`,
       [category]
@@ -118,7 +118,7 @@ export async function getStoriesWithArticles(
          AND LOWER(summary) NOT LIKE 'unable to provide%'
        ORDER BY
          COALESCE(importance_score, 3)::float *
-         EXP(-EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0)
+         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 50`,
       [category]
