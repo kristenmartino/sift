@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
+import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
 import type { ArticleCardProps } from "@/lib/types";
@@ -135,7 +136,7 @@ export default function ArticleCard({
                 className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200"
                 style={{ color: "var(--accent)" }}
               >
-                Compare coverage
+                {COPY.compare.button}
               </button>
             </>
           )}

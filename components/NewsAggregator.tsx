@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { CATEGORIES, COMPARE_SOURCES, DEFAULT_COMPARE_SOURCES } from "@/lib/constants";
+import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
@@ -163,7 +164,7 @@ export default function NewsAggregator() {
           >
             <SiftLogo variant="full" size={28} />
             <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--accent)] opacity-80">
-              AI-Curated
+              {COPY.header.tagline}
             </span>
           </div>
 
@@ -312,7 +313,7 @@ export default function NewsAggregator() {
                   type="text"
                   value={compareInputValue}
                   onChange={(e) => setCompareInputValue(e.target.value)}
-                  placeholder={'Compare coverage across sources\u2026 e.g. "Federal Reserve rate decision"'}
+                  placeholder={COPY.compare.placeholder}
                   maxLength={200}
                   autoFocus
                   className="w-full px-4 py-2 pr-12 rounded-full text-sm font-body transition-all duration-200 outline-none"
@@ -389,11 +390,11 @@ export default function NewsAggregator() {
               <div className="text-center py-20 px-5 animate-fade-slide-in">
                 <div className="text-4xl mb-5 animate-spin-slow inline-block">⇌</div>
                 <p className="text-base font-semibold text-[var(--text-secondary)]">
-                  Comparing coverage across sources...
+                  {COPY.compare.loading}
                 </p>
                 {compareSlow && (
                   <p className="text-sm mt-3 text-[var(--text-muted)] animate-fade-slide-in">
-                    Searching multiple news outlets — this takes 10–20 seconds
+                    {COPY.compare.slow}
                   </p>
                 )}
               </div>
@@ -427,10 +428,10 @@ export default function NewsAggregator() {
               <div className="text-center py-20 px-5 text-[var(--text-muted)]">
                 <div className="text-5xl mb-4 opacity-30">⇌</div>
                 <p className="text-base font-semibold text-[var(--text-secondary)]">
-                  Multi-Source Comparison
+                  {COPY.compare.emptyTitle}
                 </p>
                 <p className="text-sm mt-2">
-                  Enter a topic above to compare how different news outlets cover it
+                  {COPY.compare.emptyBody}
                 </p>
               </div>
             )}
@@ -442,14 +443,14 @@ export default function NewsAggregator() {
               <div>
                 <h2 className="font-heading text-[22px] font-bold text-[var(--text)] tracking-tight">
                   {searchMode
-                    ? (topicQuery ? `Results for \u201c${topicQuery}\u201d` : "Search Topics")
+                    ? (topicQuery ? COPY.search.resultsFor(topicQuery) : COPY.articles.searchTopics)
                     : showBookmarks
-                      ? "Saved Articles"
+                      ? COPY.bookmarks.title
                       : activeCatLabel}
                 </h2>
                 {lastUpdated && !showBookmarks && !searchMode && (
                   <p className="text-xs mt-1" style={{ color: refreshed ? "var(--accent)" : "var(--text-muted)" }}>
-                    {refreshed ? "Updated just now" : `Updated ${timeAgo(lastUpdated.toISOString())}`}
+                    {refreshed ? COPY.articles.updated : `Updated ${timeAgo(lastUpdated.toISOString())}`}
                   </p>
                 )}
               </div>
@@ -472,8 +473,8 @@ export default function NewsAggregator() {
                 {(searchMode ? topicSlow : slow) && (
                   <p className="text-center mt-6 text-sm text-[var(--text-muted)] animate-fade-slide-in">
                     {searchMode
-                      ? "Searching articles\u2026 this may take a moment"
-                      : "Still searching\u2026 this can take up to 30 seconds"}
+                      ? COPY.loading.slowTopic
+                      : COPY.loading.slow}
                   </p>
                 )}
               </div>
@@ -482,7 +483,7 @@ export default function NewsAggregator() {
             {/* Error */}
             {(searchMode ? topicError : error) && !(searchMode ? topicLoading : loading) && !hasData && (
               <ErrorState
-                message={(searchMode ? topicError : error) || "Something went wrong"}
+                message={(searchMode ? topicError : error) || COPY.error.body}
                 onRetry={() =>
                   searchMode && topicQuery
                     ? searchTopic(topicQuery)
@@ -496,10 +497,10 @@ export default function NewsAggregator() {
               <div className="text-center py-20 px-5 text-[var(--text-muted)]">
                 <div className="text-5xl mb-4 opacity-30">☆</div>
                 <p className="text-base font-semibold text-[var(--text-secondary)]">
-                  No saved articles yet
+                  {COPY.bookmarks.emptyTitle}
                 </p>
                 <p className="text-sm mt-2">
-                  Click the star on any article to save it for later
+                  {COPY.bookmarks.emptyBody}
                 </p>
               </div>
             )}
@@ -525,7 +526,7 @@ export default function NewsAggregator() {
             {loading && hasData && (
               <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-6 py-2.5 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2.5 shadow-lg z-50 animate-fade-slide-in">
                 <span className="animate-spin-slow inline-block">↻</span>
-                Fetching latest stories…
+                {COPY.loading.refresh}
               </div>
             )}
           </>
@@ -535,7 +536,7 @@ export default function NewsAggregator() {
       {/* ── Footer ──────────────────────────────────── */}
       <footer className="border-t border-[var(--border)] py-6 px-6 text-center text-xs text-[var(--text-muted)] max-w-[1200px] mx-auto">
         <SiftLogo variant="full" size={14} />
-        {" — "}AI-curated news powered by Claude. Articles link to original sources.
+        {" \u2014 "}{COPY.footer.main}
       </footer>
     </div>
   );
