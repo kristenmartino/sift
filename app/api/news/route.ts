@@ -11,6 +11,22 @@ function cleanSummary(raw: string | null): string {
   return raw.replace(/<cite[^>]*>|<\/cite>/g, "");
 }
 
+function cleanImageUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    // Contentful CDN (VentureBeat etc): upgrade tiny thumbnails to usable size
+    if (url.hostname.includes("ctfassets.net")) {
+      url.searchParams.set("w", "800");
+      url.searchParams.set("q", "80");
+      return url.toString();
+    }
+    return raw;
+  } catch {
+    return raw;
+  }
+}
+
 // ─── Valid Categories ───────────────────────────────────
 
 const VALID_CATEGORIES = new Set<string>([
@@ -46,7 +62,7 @@ export async function GET(request: NextRequest) {
       sourceUrl: row.source_url,
       sourceName: row.source_name,
       publishedDate: row.published_date ? row.published_date.toISOString() : null,
-      imageUrl: row.image_url,
+      imageUrl: cleanImageUrl(row.image_url),
       category: row.category as CategoryId,
       readTime: row.read_time || 1,
       ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
@@ -63,7 +79,7 @@ export async function GET(request: NextRequest) {
         sourceUrl: row.source_url,
         sourceName: row.source_name,
         publishedDate: row.published_date ? row.published_date.toISOString() : null,
-        imageUrl: row.image_url,
+        imageUrl: cleanImageUrl(row.image_url),
         category: row.category as CategoryId,
         readTime: row.read_time || 1,
         ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
@@ -95,7 +111,7 @@ export async function GET(request: NextRequest) {
         framings,
         entities,
         articleCount: s.article_count,
-        imageUrl: s.representative_image_url,
+        imageUrl: cleanImageUrl(s.representative_image_url),
         publishedDate: s.published_date ? s.published_date.toISOString() : null,
         articles: childArticles,
       };
