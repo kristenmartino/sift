@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { useTheme } from "@/lib/hooks";
+import SiftLogo from "./SiftLogo";
 import type { CategoryId } from "@/lib/types";
 
 // ─── Feature cards data ─────────────────────────────────
@@ -112,9 +113,7 @@ export default function LandingPage() {
       >
         <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="font-heading text-xl font-bold tracking-tight text-[var(--text)]">
-              Sift
-            </span>
+            <SiftLogo variant="full" size={20} />
             <span
               className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-widest"
               style={{
@@ -343,7 +342,7 @@ export default function LandingPage() {
 
       {/* ── Footer ────────────────────────────────── */}
       <footer className="border-t border-[var(--border)] py-6 px-6 text-center text-xs text-[var(--text-muted)] max-w-[1200px] mx-auto">
-        <span className="font-heading font-semibold">Sift</span>
+        <SiftLogo variant="full" size={14} />
         {" — "}AI-curated news powered by Claude. Articles link to original sources.
       </footer>
     </div>

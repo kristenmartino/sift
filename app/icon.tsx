@@ -17,17 +17,15 @@ export default function Icon() {
           borderRadius: 6,
         }}
       >
-        <span
-          style={{
-            fontSize: 22,
-            fontWeight: 700,
-            color: "#fff",
-            fontFamily: "Georgia, serif",
-            lineHeight: 1,
-          }}
+        {/* Diamond mark — ◆ */}
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="#fff"
         >
-          S
-        </span>
+          <path d="M12 2L22 12L12 22L2 12Z" />
+        </svg>
       </div>
     ),
     { ...size },
