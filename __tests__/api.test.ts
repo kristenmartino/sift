@@ -8,15 +8,18 @@
  */
 
 import { NextRequest } from "next/server";
-import type { DbArticle } from "@/lib/db";
+import type { DbArticle, DbStory, DbStoryArticle } from "@/lib/db";
 
 // ─── Mock DB ────────────────────────────────────────────
 
-const mockGetArticlesByCategory = jest.fn<Promise<DbArticle[]>, [string, number?]>();
+const mockGetStoriesWithArticles = jest.fn<
+  Promise<{ stories: DbStory[]; storyArticles: Record<string, DbStoryArticle[]>; standaloneArticles: DbArticle[] }>,
+  [string]
+>();
 const mockGetLastRefreshed = jest.fn<Promise<Date | null>, [string]>();
 
 jest.mock("@/lib/db", () => ({
-  getArticlesByCategory: (...args: [string, number?]) => mockGetArticlesByCategory(...args),
+  getStoriesWithArticles: (...args: [string]) => mockGetStoriesWithArticles(...args),
   getLastRefreshed: (...args: [string]) => mockGetLastRefreshed(...args),
 }));
 
@@ -53,6 +56,14 @@ const MOCK_DB_ROWS: DbArticle[] = [
 
 const MOCK_LAST_REFRESHED = new Date("2026-03-28T12:00:00Z");
 
+function makeDefaultReturn(standaloneArticles: DbArticle[] = MOCK_DB_ROWS) {
+  return {
+    stories: [] as DbStory[],
+    storyArticles: {} as Record<string, DbStoryArticle[]>,
+    standaloneArticles,
+  };
+}
+
 function makeRequest(category?: string) {
   const url = category
     ? `http://localhost/api/news?category=${category}`
@@ -63,9 +74,9 @@ function makeRequest(category?: string) {
 // ─── Setup ──────────────────────────────────────────────
 
 beforeEach(() => {
-  mockGetArticlesByCategory.mockReset();
+  mockGetStoriesWithArticles.mockReset();
   mockGetLastRefreshed.mockReset();
-  mockGetArticlesByCategory.mockResolvedValue(MOCK_DB_ROWS);
+  mockGetStoriesWithArticles.mockResolvedValue(makeDefaultReturn());
   mockGetLastRefreshed.mockResolvedValue(MOCK_LAST_REFRESHED);
 });
 
@@ -94,7 +105,7 @@ describe("GET /api/news", () => {
         const res = await GET(makeRequest(cat));
         expect(res.status).toBe(200);
       }
-      expect(mockGetArticlesByCategory).toHaveBeenCalledTimes(7);
+      expect(mockGetStoriesWithArticles).toHaveBeenCalledTimes(7);
     });
   });
 
@@ -107,6 +118,14 @@ describe("GET /api/news", () => {
       expect(body.articles).toHaveLength(2);
       expect(body.articles[0].title).toBe("Test Article 1");
       expect(body.articles[1].title).toBe("Test Article 2");
+    });
+
+    it("returns stories array in response", async () => {
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.stories).toBeDefined();
+      expect(Array.isArray(body.stories)).toBe(true);
     });
 
     it("maps DB columns to camelCase API fields", async () => {
@@ -141,7 +160,7 @@ describe("GET /api/news", () => {
     });
 
     it("handles empty result set", async () => {
-      mockGetArticlesByCategory.mockResolvedValue([]);
+      mockGetStoriesWithArticles.mockResolvedValue(makeDefaultReturn([]));
       const res = await GET(makeRequest("energy"));
       const body = await res.json();
 
@@ -150,9 +169,9 @@ describe("GET /api/news", () => {
     });
 
     it("falls back to empty string for null summary", async () => {
-      mockGetArticlesByCategory.mockResolvedValue([
-        { ...MOCK_DB_ROWS[0], summary: null },
-      ]);
+      mockGetStoriesWithArticles.mockResolvedValue(
+        makeDefaultReturn([{ ...MOCK_DB_ROWS[0], summary: null }])
+      );
       const res = await GET(makeRequest("technology"));
       const body = await res.json();
 
@@ -160,9 +179,9 @@ describe("GET /api/news", () => {
     });
 
     it("handles null published_date", async () => {
-      mockGetArticlesByCategory.mockResolvedValue([
-        { ...MOCK_DB_ROWS[0], published_date: null },
-      ]);
+      mockGetStoriesWithArticles.mockResolvedValue(
+        makeDefaultReturn([{ ...MOCK_DB_ROWS[0], published_date: null }])
+      );
       const res = await GET(makeRequest("technology"));
       const body = await res.json();
 
@@ -170,19 +189,52 @@ describe("GET /api/news", () => {
     });
 
     it("defaults readTime to 1 when read_time is 0", async () => {
-      mockGetArticlesByCategory.mockResolvedValue([
-        { ...MOCK_DB_ROWS[0], read_time: 0 },
-      ]);
+      mockGetStoriesWithArticles.mockResolvedValue(
+        makeDefaultReturn([{ ...MOCK_DB_ROWS[0], read_time: 0 }])
+      );
       const res = await GET(makeRequest("technology"));
       const body = await res.json();
 
       expect(body.articles[0].readTime).toBe(1);
     });
+
+    it("maps stories with framings and entities", async () => {
+      mockGetStoriesWithArticles.mockResolvedValue({
+        stories: [{
+          id: "story1",
+          headline: "Test Story",
+          summary: "A synthesized summary.",
+          category: "technology",
+          framings: [{ source_name: "Reuters", framing: "Focuses on timeline", tone: "neutral" }],
+          entities: [{ people: ["Alice"], organizations: ["Acme"], locations: ["NYC"], event_description: "test event" }],
+          article_count: 2,
+          representative_image_url: null,
+          published_date: new Date("2026-03-28T10:00:00Z"),
+          synthesis_status: "complete",
+        }],
+        storyArticles: {
+          story1: [
+            { ...MOCK_DB_ROWS[0], story_id: "story1" },
+            { ...MOCK_DB_ROWS[1], story_id: "story1" },
+          ],
+        },
+        standaloneArticles: [],
+      });
+
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.stories).toHaveLength(1);
+      expect(body.stories[0].headline).toBe("Test Story");
+      expect(body.stories[0].framings[0].sourceName).toBe("Reuters");
+      expect(body.stories[0].entities[0].people).toEqual(["Alice"]);
+      expect(body.stories[0].articles).toHaveLength(2);
+    });
   });
 
   describe("Error handling", () => {
     it("returns 500 when database query fails", async () => {
-      mockGetArticlesByCategory.mockRejectedValue(new Error("connection refused"));
+      mockGetStoriesWithArticles.mockRejectedValue(new Error("connection refused"));
       const res = await GET(makeRequest("technology"));
       const body = await res.json();
 
@@ -193,9 +245,9 @@ describe("GET /api/news", () => {
   });
 
   describe("Query parameters", () => {
-    it("passes category to getArticlesByCategory", async () => {
+    it("passes category to getStoriesWithArticles", async () => {
       await GET(makeRequest("science"));
-      expect(mockGetArticlesByCategory).toHaveBeenCalledWith("science");
+      expect(mockGetStoriesWithArticles).toHaveBeenCalledWith("science");
     });
 
     it("passes category to getLastRefreshed", async () => {

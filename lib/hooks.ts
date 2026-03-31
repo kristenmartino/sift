@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS } from "./constants";
-import type { Article, ArticleCache, CategoryId, NewsApiResponse, CompareResponse, CompareClaim, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
+import type { Article, Story, ArticleCache, StoryCache, CategoryId, NewsApiResponse, CompareResponse, CompareClaim, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
 import { readSSE } from "./sse";
 
 // ─── useLocalStorage ────────────────────────────────────
@@ -142,6 +142,7 @@ export function useTheme() {
 
 interface NewsLoaderState {
   articles: ArticleCache;
+  stories: StoryCache;
   loading: boolean;
   error: string | null;
   slow: boolean;
@@ -151,6 +152,7 @@ interface NewsLoaderState {
 export function useNewsLoader() {
   const [state, setState] = useState<NewsLoaderState>({
     articles: {},
+    stories: {},
     loading: false,
     error: null,
     slow: false,
@@ -200,13 +202,14 @@ export function useNewsLoader() {
 
       const data: NewsApiResponse = await res.json();
 
-      if (data.articles.length === 0) {
+      if (data.articles.length === 0 && (!data.stories || data.stories.length === 0)) {
         throw new Error("No articles returned");
       }
 
       setState((s) => ({
         ...s,
         articles: { ...s.articles, [category]: data.articles },
+        stories: { ...s.stories, [category]: data.stories || [] },
         lastUpdated: new Date(data.fetchedAt),
       }));
       fetchedRef.current.add(category);
