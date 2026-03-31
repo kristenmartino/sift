@@ -202,6 +202,28 @@ describe("GET /api/news", () => {
       expect(body.articles[0].readTime).toBe(1);
     });
 
+    it("upgrades low-quality Contentful image URLs", async () => {
+      mockGetStoriesWithArticles.mockResolvedValue(
+        makeDefaultReturn([{
+          ...MOCK_DB_ROWS[0],
+          image_url: "https://images.ctfassets.net/abc/photo.jpg?w=300&q=30",
+        }])
+      );
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.articles[0].imageUrl).toContain("w=800");
+      expect(body.articles[0].imageUrl).toContain("q=80");
+      expect(body.articles[0].imageUrl).not.toContain("w=300");
+    });
+
+    it("passes through non-Contentful image URLs unchanged", async () => {
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.articles[1].imageUrl).toBe("https://img.bbc.com/photo.jpg");
+    });
+
     it("maps stories with framings and entities", async () => {
       mockGetStoriesWithArticles.mockResolvedValue({
         stories: [{
