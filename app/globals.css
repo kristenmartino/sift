@@ -49,6 +49,12 @@ html[data-theme="light"] {
   --pill-text: #ffffff;
 }
 
+/* ─── Theme Transition ─────────────────────────────────── */
+/* Smooth cross-fade when toggling between Late Edition / Newsprint */
+html {
+  transition: background-color 0.3s ease, color 0.2s ease;
+}
+
 /* ─── Base Reset ───────────────────────────────────────── */
 * {
   box-sizing: border-box;
@@ -62,6 +68,7 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease;
 }
 
 /* ─── Scrollbar ────────────────────────────────────────── */
@@ -97,4 +104,60 @@ a:focus-visible {
 }
 .skip-nav:focus {
   left: 0;
+}
+
+/* ─── Theme Transition on Cards & Elements ────────────── */
+/* Smooth background transitions when switching themes */
+header,
+main,
+footer,
+article,
+[style*="background: var(--card-bg)"],
+[style*="background: var(--nav-bg)"] {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
+}
+
+/* ─── Bookmark Pop Animation ──────────────────────────── */
+@keyframes bookmark-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  60%  { transform: scale(0.95); }
+  100% { transform: scale(1.15); }
+}
+@keyframes bookmark-burst {
+  0%   { opacity: 1; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+
+/* ─── Card Entrance Stagger (fan-out) ─────────────────── */
+@keyframes card-enter-left {
+  from { opacity: 0; transform: translateY(16px) translateX(-8px); }
+  to   { opacity: 1; transform: translateY(0) translateX(0); }
+}
+@keyframes card-enter-right {
+  from { opacity: 0; transform: translateY(16px) translateX(8px); }
+  to   { opacity: 1; transform: translateY(0) translateX(0); }
+}
+
+/* ─── Branded Refresh Spinner ─────────────────────────── */
+@keyframes sift-refresh {
+  0%   { transform: rotate(0deg) scale(1); opacity: 0.5; }
+  50%  { transform: rotate(180deg) scale(1.1); opacity: 1; }
+  100% { transform: rotate(360deg) scale(1); opacity: 0.5; }
+}
+
+/* ─── Story Expand Animation ──────────────────────────── */
+@keyframes story-expand {
+  from { max-height: 0; opacity: 0; transform: translateY(-8px); }
+  to   { max-height: 500px; opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Category Fade Transition ────────────────────────── */
+@keyframes category-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; transform: translateY(4px); }
+}
+@keyframes category-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

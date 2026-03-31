@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
 import type { ArticleCardProps } from "@/lib/types";
+
+// Fan-out stagger: even-indexed cards drift from left, odd from right
+function getEntranceStyle(index: number): React.CSSProperties {
+  if (index === 0) return {}; // first card: center (default fade-slide-in)
+  const direction = index % 2 === 0 ? "card-enter-left" : "card-enter-right";
+  return {
+    animation: `${direction} 0.5s ease-out both`,
+    animationDelay: `${index * 60}ms`,
+  };
+}
 
 export default function ArticleCard({
   article,
@@ -16,9 +26,25 @@ export default function ArticleCard({
   onCompare,
 }: ArticleCardProps) {
   const [hovered, setHovered] = useState(false);
+  const [bookmarkAnimating, setBookmarkAnimating] = useState(false);
+  const prevBookmarked = useRef(isBookmarked);
   const cat = CATEGORIES.find((c) => c.id === article.category) || CATEGORIES[0];
   const color = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.top;
   const hasImage = !!article.imageUrl;
+
+  // Trigger pop animation when bookmark state changes to true
+  useEffect(() => {
+    if (isBookmarked && !prevBookmarked.current) {
+      setBookmarkAnimating(true);
+      const timer = setTimeout(() => setBookmarkAnimating(false), 400);
+      return () => clearTimeout(timer);
+    }
+    prevBookmarked.current = isBookmarked;
+  }, [isBookmarked]);
+
+  const entranceStyle = index === 0
+    ? { animationDelay: "0ms" }
+    : getEntranceStyle(index);
 
   return (
     <article
@@ -26,23 +52,34 @@ export default function ArticleCard({
       onMouseLeave={() => setHovered(false)}
       className={`
         bg-[var(--card-bg)] rounded-[14px] overflow-hidden cursor-pointer
-        border border-[var(--border)] animate-fade-slide-in
+        border border-[var(--border)] ${index === 0 ? "animate-fade-slide-in" : ""}
         ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
       `}
       style={{
-        transition: "transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)",
+        position: "relative",
+        transition: "transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1), background-color 0.3s ease, border-color 0.3s ease",
         transform: hovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: hovered
           ? "0 20px 60px var(--shadow-hover)"
           : "0 2px 16px var(--shadow)",
-        animationDelay: `${index * 60}ms`,
         // Text-first card: thin accent bar at top when no image
         borderTop: !hasImage ? `3px solid ${color.hex}` : undefined,
+        ...entranceStyle,
       }}
       onClick={() =>
         article.sourceUrl && window.open(article.sourceUrl, "_blank", "noopener")
       }
     >
+      {/* Hover glow — accent-colored bar at top edge */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[2px] transition-opacity duration-300 pointer-events-none"
+        style={{
+          background: color.hex,
+          opacity: hovered ? 0.6 : 0,
+          zIndex: 1,
+        }}
+      />
+
       {/* Image area — only rendered if article has an image */}
       {hasImage && (
         <CardImage
@@ -77,13 +114,25 @@ export default function ArticleCard({
               onBookmark(article.id);
             }}
             aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-            className="bg-transparent border-none cursor-pointer text-lg p-1 transition-all duration-200"
+            className={`bg-transparent border-none cursor-pointer text-lg p-1 relative ${
+              bookmarkAnimating ? "animate-bookmark-pop" : "transition-all duration-200"
+            }`}
             style={{
               color: isBookmarked ? "#f59e0b" : "var(--text-muted)",
-              transform: isBookmarked ? "scale(1.15)" : "scale(1)",
+              transform: !bookmarkAnimating && isBookmarked ? "scale(1.15)" : !bookmarkAnimating ? "scale(1)" : undefined,
             }}
           >
             {isBookmarked ? "\u2605" : "\u2606"}
+            {/* Particle burst ring */}
+            {bookmarkAnimating && (
+              <span
+                className="absolute inset-0 rounded-full pointer-events-none"
+                style={{
+                  border: "2px solid #f59e0b",
+                  animation: "bookmark-burst 0.4s ease-out forwards",
+                }}
+              />
+            )}
           </button>
         </div>
 
