@@ -1,7 +1,7 @@
 # Sift — Architecture Decision Register
 
-**Last updated:** March 28, 2026
-**Status:** All decisions locked — ready to build
+**Last updated:** March 31, 2026
+**Status:** All decisions implemented — production live at siftnews.kristenmartino.ai
 
 ---
 
@@ -10,8 +10,8 @@
 | # | Decision | Choice | Cost | Status |
 |---|----------|--------|------|--------|
 | D1 | Content engine | RSS hybrid (RSS discovery + Claude Haiku summaries) | ~$4/mo | SETTLED |
-| D2 | Hosting | Vercel Pro (frontend) + Railway (Python backend) | $25/mo | SETTLED |
-| D3 | Caching / persistence | Vercel Postgres + pgvector as source of truth | $0-20/mo | SETTLED |
+| D2 | Hosting | Vercel (frontend) + Railway (Python backend) | ~$5/mo | SETTLED |
+| D3 | Caching / persistence | Neon Postgres + pgvector as source of truth | $0 (free tier) | SETTLED |
 | D4 | Prompt strategy | "Summarize" framing with structured subtopics | $0 | SETTLED |
 | D5 | Card design | Mixed — RSS images when available, text-first accent bar when not | $0 | SETTLED |
 | D6 | Content source identity | Anthropic API (not NewsAPI) — this IS the product | $0 | SETTLED |
@@ -24,7 +24,7 @@
 | D13 | Streaming | Build as part of initial launch (SSE article delivery) | $0 | SETTLED |
 | D14 | Embedding provider | Voyage AI (free 50M tokens/mo) | $0 | SETTLED |
 | D15 | Image handling | RSS feed images only — no OG scraping, no proxy | $0 | SETTLED |
-| D16 | Background refresh | Vercel Cron (every 10-15 min on Pro plan) | $0 (included) | SETTLED |
+| D16 | Background refresh | Railway asyncio scheduler (every 10 min) + Vercel cron fallback | $0 | SETTLED |
 | D17 | Model selection | Haiku 4.5 (upgrade to Sonnet is one-line change) | ~$4/mo | SETTLED |
 
 **Total estimated monthly cost: ~$30-50/mo**
@@ -181,7 +181,7 @@ Now applied specifically to the summary step: Claude receives article titles and
 Vercel Cron (every 10-15 min)
   → POST /pipeline/refresh to Railway
   → LangGraph pipeline:
-      1. Fetch RSS feeds for all 7 categories
+      1. Fetch RSS feeds for all 10 categories
       2. Deduplicate against existing articles in Postgres
       3. Batch new articles → Claude Haiku for summaries
       4. Batch new articles → Voyage AI for embeddings
@@ -301,9 +301,10 @@ RSS feeds include image URLs via `enclosure`, `media:content`, or `media:thumbna
 ---
 
 ### D16. Background refresh
-**Decision:** Vercel Cron (included with Pro plan)
+**Decision:** Railway asyncio scheduler (primary) + Vercel cron route (fallback)
+**Changed from:** Vercel Cron (requires Pro plan)
 
-Triggers the pipeline endpoint on Railway every 10-15 minutes. Content is always fresh in Postgres. User requests never trigger AI calls.
+Railway's FastAPI service runs an asyncio background task that refreshes every 10 minutes in production. A Vercel cron route also exists as a manual fallback. This avoids the $20/mo Vercel Pro requirement.
 
 ---
 
@@ -314,44 +315,45 @@ With the RSS hybrid, Claude is only summarizing, not searching. Haiku is suffici
 
 ---
 
-## Cost summary
+## Cost summary (actual, March 2026)
 
 | Component | Monthly cost |
 |-----------|-------------|
-| Vercel Pro | $20 |
-| Railway (Python service) | $5 |
-| Vercel Postgres (Neon free tier) | $0 |
-| Claude Haiku API (~7 cats × 6 refreshes/hr × $0.003) | ~$4 |
+| Vercel (Hobby plan) | $0 |
+| Railway (Python service) | ~$5 |
+| Neon Postgres (free tier) | $0 |
+| Claude Haiku 4.5 API (~10 cats x 6 refreshes/hr) | ~$4 |
 | Voyage AI embeddings (free tier) | $0 |
 | Clerk auth (free to 10K MAU) | $0 |
-| Sentry (free to 5K events/mo) | $0 |
-| Domain (siftnews.ai) | ~$1.25 |
-| **Total** | **~$30/mo** |
+| Domain (subdomain of kristenmartino.ai) | $0 |
+| **Total** | **~$9/mo** |
 
 ---
 
-## Build sequence
+## Build sequence (actual)
+
+All phases complete. Production live at siftnews.kristenmartino.ai as of March 31, 2026.
 
 ```
-Week 1:  Postgres schema + Python FastAPI + LangGraph pipeline
-         RSS feed integration + Claude summary step
-         Voyage AI embedding step
-         Vercel Cron trigger
+Phase 1:  Postgres schema + Python FastAPI + LangGraph pipeline     ✓
+          RSS feed integration (100+ feeds, 10 categories)          ✓
+          Claude Haiku summaries + Voyage AI embeddings              ✓
 
-Week 2:  Next.js API routes (DB reads only)
-         Card redesign (text-first + RSS images)
-         Clerk auth integration
-         SSE streaming for article delivery
+Phase 2:  Next.js API routes rewrite (Postgres reads)               ✓
+          Card redesign (text-first + RSS images)                    ✓
+          Clerk auth + bookmarks sync                                ✓
+          SSE streaming for topic search                             ✓
+          3 new categories (politics, sports, entertainment)         ✓
 
-Week 3:  LangGraph comparison workflow
-         Custom topics (vector search + fallback)
-         Landing page + favicon + OG image
-         Sentry + Vercel Analytics
+Phase 3:  LangGraph comparison workflow (web search fan-out)        ✓
+          Topic search (vector + web search fallback)               ✓
+          Landing page + OG image + favicon                         ✓
+          Dark/light themes (Newsprint / Late Edition)              ✓
 
-Week 4:  QA all 7 categories + custom topics
-         Mobile testing
-         Deploy to production
-         Share with 10 people
+Phase 4:  Deploy to production (Vercel + Railway + Neon)            ✓
+          CI/CD (GitHub Actions on both repos)                      ✓
+          DNS (siftnews.kristenmartino.ai)                          ✓
+          Brand identity (SiftLogo diamond mark, color story)       ✓
 ```
 
 ---
@@ -382,3 +384,35 @@ D7 (Pipeline) ──→ D8 (Postgres) ──→ D9 (Custom topics)
 
 All dependencies resolved. No blockers.
 ```
+
+---
+
+### D18. Database provider
+**Decision:** Neon free tier (standalone) instead of Vercel Postgres
+**Changed from:** Vercel Postgres (which is Neon under the hood)
+
+Standalone Neon gives more control: 0.5 GiB storage, pgvector native, connection pooling, auto-suspend. Both Vercel (pooled) and Railway (direct) connect to the same Neon instance. Pooled connection for serverless functions, direct for long-running Railway service.
+
+---
+
+### D19. Domain
+**Decision:** siftnews.kristenmartino.ai (subdomain) instead of siftnews.ai
+**Changed from:** siftnews.ai (separate domain)
+
+Uses existing portfolio domain via CNAME to Vercel. Zero cost, consistent branding under the portfolio umbrella.
+
+---
+
+### D20. Categories — expanded to 10
+**Decision:** Added Politics, Sports, Entertainment to the original 7
+
+Each category has 8-11 RSS feeds. Expanded total from ~56 feeds to 100+ feeds. Category colors have semantic meaning (e.g., energy = teal for sustainability, politics = indigo for authority).
+
+---
+
+### D21. Brand identity
+**Decision:** Named theme palettes + SVG diamond brand mark
+
+- Themes: "Late Edition" (dark, warm stone tones) and "Newsprint" (light, warm paper)
+- Brand mark: SVG diamond rendered at all sizes via SiftLogo component with full/compact/mark/wordmark variants
+- Category colors: each chosen for semantic meaning, not decoration

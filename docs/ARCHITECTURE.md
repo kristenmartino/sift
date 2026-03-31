@@ -1,7 +1,8 @@
 # Sift — Architecture
 
-**Version:** 2.0
-**Date:** March 28, 2026
+**Version:** 2.1
+**Date:** March 31, 2026
+**Live:** siftnews.kristenmartino.ai
 
 ---
 
@@ -13,7 +14,7 @@
                     └────────────┬─────────────┘
                                  │
                     ┌────────────▼─────────────┐
-                    │     VERCEL PRO ($20/mo)   │
+                    │       VERCEL (Hobby)      │
                     │                           │
                     │  Next.js 15 (App Router)  │
                     │  ┌─────────────────────┐  │
@@ -32,8 +33,8 @@
               ┌──────────────────┼──────────────────┐
               ▼                                      ▼
 ┌─────────────────────────┐          ┌─────────────────────────┐
-│   RAILWAY ($5/mo)        │          │  VERCEL POSTGRES (free)  │
-│                          │          │  (Neon)                  │
+│   RAILWAY (~$5/mo)       │          │  NEON POSTGRES (free)    │
+│                          │          │  (standalone)            │
 │  FastAPI + LangGraph     │          │                          │
 │  ┌────────────────────┐  │          │  articles (+ pgvector)   │
 │  │ /pipeline/refresh  │──┼──────▶   │  custom_topics           │
@@ -61,7 +62,7 @@ User opens Sift → clicks "Technology"
       SELECT * FROM articles
       WHERE category = 'technology'
       ORDER BY published_date DESC
-      LIMIT 7
+      LIMIT 10
   → Returns JSON in <50ms
   → Client renders article cards with staggered animation
 ```
@@ -93,17 +94,14 @@ User types "AI policy in European healthcare"
 
 ---
 
-## Data flow: background pipeline (every 10-15 min)
+## Data flow: background pipeline (every 10 min)
 
 ```
-Vercel Cron fires
-  → GET /api/cron/refresh (Next.js)
-  → Verifies CRON_SECRET
-  → POST to Railway: /pipeline/refresh
+Railway asyncio scheduler fires (or Vercel cron fallback)
   → LangGraph pipeline workflow:
 
       ┌──────────┐
-      │ fetch_rss │  Fetch all RSS feeds (~28 feeds, <2s total)
+      │ fetch_rss │  Fetch all RSS feeds (~100+ feeds, <5s total)
       └─────┬─────┘
             ▼
       ┌────────────┐
@@ -172,7 +170,7 @@ User clicks "Compare coverage" on a story
 | AI out of request path | Background pipeline generates; API routes serve from DB |
 | Right tool for each job | Next.js for frontend + simple reads; LangGraph for multi-step workflows |
 | Single source of truth | Postgres stores everything; no in-memory cache to lose |
-| Cost scales with content, not users | Claude costs are fixed (~$4/mo for pipeline). 1 user or 10,000 users costs the same. |
+| Cost scales with content, not users | Claude costs are fixed (~$4/mo for pipeline). 1 user or 10,000 users costs the same. Total: ~$9/mo. |
 | Progressive enhancement | Fixed categories work without auth. Custom topics and comparison require sign-in. |
 | Graceful degradation | If pipeline fails, articles are stale but still served. If comparison fails, user gets an error, not a crash. |
 
@@ -188,9 +186,9 @@ User clicks "Compare coverage" on a story
 | AI (summaries) | Claude Haiku 4.5 | Cheapest, fast enough for news summaries |
 | AI (search) | Claude + web_search | Used in comparison workflow and custom topic fallback |
 | Embeddings | Voyage AI (voyage-3-lite) | Free 50M tokens/mo, high-quality retrieval embeddings |
-| Database | PostgreSQL + pgvector | Relational + vector search in one; managed by Neon |
+| Database | Neon PostgreSQL + pgvector | Relational + vector search in one; auto-suspend, pooled connections |
 | Auth | Clerk | 5-min setup, free to 10K MAU, polished UI |
-| Hosting (web) | Vercel Pro | Cron, analytics, preview deploys, CDN |
+| Hosting (web) | Vercel (Hobby) | Preview deploys, CDN, auto-deploy from GitHub |
 | Hosting (api) | Railway | Persistent process for LangGraph, $5/mo |
 | Monitoring | Sentry + Vercel Analytics | Errors + usage, both free tier |
 
@@ -200,7 +198,7 @@ User clicks "Compare coverage" on a story
 
 | Users | What changes | Cost |
 |-------|-------------|------|
-| 1-1K | Nothing. Current architecture handles it. | ~$30/mo |
+| 1-1K | Nothing. Current architecture handles it. | ~$9/mo |
 | 1K-10K | Add Postgres connection pooling (PgBouncer). Increase pipeline frequency. | ~$50/mo |
 | 10K-50K | Upgrade Neon plan. Add Redis for hot cache layer. Multiple Railway instances. | ~$200/mo |
 | 50K+ | Dedicated Postgres. Background workers on dedicated compute. You have revenue. | $500+ |
