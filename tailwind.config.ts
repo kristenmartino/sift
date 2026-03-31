@@ -46,11 +46,29 @@ const config: Config = {
         spin: {
           to: { transform: "rotate(360deg)" },
         },
+        "bookmark-pop": {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.35)" },
+          "60%": { transform: "scale(0.95)" },
+          "100%": { transform: "scale(1.15)" },
+        },
+        "sift-refresh": {
+          "0%": { transform: "rotate(0deg) scale(1)", opacity: "0.5" },
+          "50%": { transform: "rotate(180deg) scale(1.1)", opacity: "1" },
+          "100%": { transform: "rotate(360deg) scale(1)", opacity: "0.5" },
+        },
+        "category-fade-in": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         shimmer: "shimmer 1.8s ease-in-out infinite",
         "fade-slide-in": "fade-slide-in 0.5s ease-out both",
         "spin-slow": "spin 1s linear infinite",
+        "bookmark-pop": "bookmark-pop 0.4s cubic-bezier(0.16,1,0.3,1) both",
+        "sift-refresh": "sift-refresh 1.2s ease-in-out infinite",
+        "category-fade-in": "category-fade-in 0.3s ease-out both",
       },
     },
   },
