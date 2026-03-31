@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStoriesWithArticles, getLastRefreshed } from "@/lib/db";
 import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
+const BAD_SUMMARIES = ["unable to provide summary"];
+
+function cleanSummary(raw: string | null): string {
+  if (!raw) return "";
+  if (BAD_SUMMARIES.some((b) => raw.toLowerCase().startsWith(b))) return "";
+  return raw;
+}
+
 // ─── Valid Categories ───────────────────────────────────
 
 const VALID_CATEGORIES = new Set<string>([
@@ -33,13 +41,15 @@ export async function GET(request: NextRequest) {
     const articles: Article[] = standaloneArticles.map((row) => ({
       id: row.id,
       title: row.title,
-      summary: row.summary || "",
+      summary: cleanSummary(row.summary),
       sourceUrl: row.source_url,
       sourceName: row.source_name,
       publishedDate: row.published_date ? row.published_date.toISOString() : null,
       imageUrl: row.image_url,
       category: row.category as CategoryId,
       readTime: row.read_time || 1,
+      ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
+      ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
     }));
 
     // Map stories with nested articles
@@ -48,13 +58,15 @@ export async function GET(request: NextRequest) {
       const childArticles: Article[] = childRows.map((row) => ({
         id: row.id,
         title: row.title,
-        summary: row.summary || "",
+        summary: cleanSummary(row.summary),
         sourceUrl: row.source_url,
         sourceName: row.source_name,
         publishedDate: row.published_date ? row.published_date.toISOString() : null,
         imageUrl: row.image_url,
         category: row.category as CategoryId,
         readTime: row.read_time || 1,
+        ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
+        ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
       }));
 
       // Parse JSONB framings
