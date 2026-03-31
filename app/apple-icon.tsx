@@ -17,17 +17,15 @@ export default function AppleIcon() {
           borderRadius: 36,
         }}
       >
-        <span
-          style={{
-            fontSize: 120,
-            fontWeight: 700,
-            color: "#fff",
-            fontFamily: "Georgia, serif",
-            lineHeight: 1,
-          }}
+        {/* Diamond mark — ◆ */}
+        <svg
+          width="120"
+          height="120"
+          viewBox="0 0 24 24"
+          fill="#fff"
         >
-          S
-        </span>
+          <path d="M12 2L22 12L12 22L2 12Z" />
+        </svg>
       </div>
     ),
     { ...size },
