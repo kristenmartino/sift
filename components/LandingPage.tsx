@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
+import { COPY } from "@/lib/copy";
 import { useTheme } from "@/lib/hooks";
 import SiftLogo from "./SiftLogo";
 import type { CategoryId } from "@/lib/types";
@@ -122,7 +123,7 @@ export default function LandingPage() {
                 border: "1px solid rgba(99,102,241,0.2)",
               }}
             >
-              AI-Curated
+              {COPY.header.tagline}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -343,7 +344,7 @@ export default function LandingPage() {
       {/* ── Footer ────────────────────────────────── */}
       <footer className="border-t border-[var(--border)] py-6 px-6 text-center text-xs text-[var(--text-muted)] max-w-[1200px] mx-auto">
         <SiftLogo variant="full" size={14} />
-        {" — "}AI-curated news powered by Claude. Articles link to original sources.
+        {" \u2014 "}{COPY.footer.main}
       </footer>
     </div>
   );
