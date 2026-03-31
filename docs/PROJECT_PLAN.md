@@ -1,55 +1,50 @@
 # Sift — Project Plan & Status
 
 **Date:** February 23, 2026
-**Last Updated:** March 28, 2026
-**Status:** Week 1 complete — Python pipeline live, 479 articles in Postgres, starting Week 2
-**Stack:** Next.js 15 / TypeScript / Tailwind CSS / Python FastAPI + LangGraph / Postgres + pgvector
+**Last Updated:** March 31, 2026
+**Status:** Production live at siftnews.kristenmartino.ai — all features shipped
+**Stack:** Next.js 15 / TypeScript / Tailwind CSS / Python FastAPI + LangGraph / Neon Postgres + pgvector
 
 ---
 
-## Current state
+## Current state — Production (March 31, 2026)
 
-### v1.5 frontend (sift/) — working, pending v2 rewrite
-
-The Next.js app is live on `localhost:3000` with Claude `web_search` as the content engine. All 7 categories load AI-generated summaries. This will be rewritten in Week 2 to read from Postgres instead.
+### Frontend (sift/) — live on Vercel
 
 | Layer | Implementation | Status |
 |-------|---------------|--------|
-| UI Framework | React components in Next.js App Router | Working |
-| State Management | Custom hooks + localStorage | Working |
-| API Integration | Server-side Claude `web_search` | Working (to be replaced) |
-| Styling | Tailwind CSS + CSS custom properties | Working |
-| Caching | In-memory Map + persistent disk (`/tmp/sift-cache/`) | Working (to be replaced) |
-| Image pipeline | Claude → OG scraping → HEAD validation | Working (to be simplified) |
-| Testing | Jest + RTL, 80 test cases | Passing |
-| Dark/light mode | CSS variables + localStorage toggle | Working |
-| Bookmarks | localStorage persistence | Working |
+| UI Framework | React + Next.js 15 App Router | **Live** |
+| State Management | Custom hooks + localStorage + Clerk sync | **Live** |
+| API Integration | Postgres reads (categories), SSE streaming (topics), Railway proxy (compare) | **Live** |
+| Styling | Tailwind CSS + CSS custom properties (Newsprint/Late Edition themes) | **Live** |
+| Brand Identity | SiftLogo component (diamond mark, 4 variants) | **Live** |
+| Topic Search | Voyage AI embeddings + pgvector + Claude web search fallback | **Live** |
+| Multi-Source Compare | Proxied to Railway LangGraph workflow | **Live** |
+| Auth | Clerk (sign-in, bookmarks sync) | **Live** |
+| Testing | Jest + RTL | Passing |
+| CI/CD | GitHub Actions (tsc) + Vercel auto-deploy | **Live** |
 
-### v2 backend (sift-api/) — Week 1 complete
-
-The Python FastAPI + LangGraph pipeline service is built and tested end-to-end. Running locally on `localhost:8000` with Docker Postgres on `localhost:5432`.
+### Backend (sift-api/) — live on Railway
 
 | Layer | Implementation | Status |
 |-------|---------------|--------|
-| FastAPI server | Health endpoint, CORS, lifespan DB pool | **Done** |
-| Postgres schema | 4 tables: articles, custom_topics, bookmarks, pipeline_state | **Done** |
-| Docker Compose | pgvector/pgvector:pg16 on port 5432 | **Done** |
-| LangGraph pipeline | fetch_rss → deduplicate → summarize → embed → store | **Done** |
-| RSS feeds | 56 feeds across 7 categories | **Done** |
-| Claude summarization | Haiku 4.5 batch summaries, 3-strategy JSON parser | **Done** |
-| Voyage AI embeddings | voyage-3-lite, 1024-dim (needs API key) | **Scaffolded** |
-| Pipeline auth | X-Pipeline-Key header validation | **Done** |
-| Deduplication | Batch URL check against Postgres | **Done** |
-| Dockerfile + Railway config | Production-ready | **Done** |
-| Tests | 40 passing (RSS, summarizer, health, router) | **Passing** |
-| Git repo | 3 commits on main | **Done** |
+| FastAPI server | Health, CORS, lifespan DB pool, background scheduler | **Live** |
+| LangGraph pipeline | fetch_rss → deduplicate → summarize → embed → store | **Live** |
+| LangGraph compare | search_sources → extract_and_compare → format_response | **Live** |
+| RSS feeds | 100+ feeds across 10 categories | **Live** |
+| Claude Haiku 4.5 | Batch summaries + comparison analysis + web search | **Live** |
+| Voyage AI embeddings | voyage-3-lite, 1024-dim | **Live** |
+| Background refresh | asyncio scheduler, every 10 minutes | **Live** |
+| CI/CD | GitHub Actions (ruff + pytest) + Railway auto-deploy | **Live** |
 
-**Pipeline results (full run):**
-- 479 articles stored across all 7 categories
-- All with AI summaries from Claude Haiku
-- Zero errors
-- Deduplication verified: second run skips all existing articles
-- ~6.5 minutes for full 56-feed refresh
+### Database — Neon Postgres (free tier)
+
+| Table | Purpose | Status |
+|-------|---------|--------|
+| articles | News articles + embeddings + summaries | **Live** (IVFFlat index) |
+| custom_topics | User-defined topic queries | **Live** |
+| bookmarks | User bookmarks (Clerk ID) | **Live** |
+| pipeline_state | Last refresh timestamps | **Live** |
 
 ### File maps
 
@@ -102,38 +97,26 @@ sift-api/                      (16 source files, ~1,200 LOC)
 
 ---
 
-## v2 build sequence
+## Build sequence — all complete
 
 | # | Task | Status |
 |---|------|--------|
 | 1 | Postgres schema + migrations | **Done** |
 | 2 | Python FastAPI service scaffold | **Done** |
 | 3 | LangGraph pipeline workflow (RSS → Claude → Voyage → store) | **Done** |
-| 4 | RSS feed integration (56 feeds, 7 categories) | **Done** |
-| 5 | Next.js API routes rewrite (Postgres reads) | Pending (Week 2) |
-| 6 | Card redesign — text-first + RSS images | Pending (Week 2) |
-| 7 | Vercel Cron configuration | Pending (Week 2) |
-| 8 | Clerk auth integration | Pending (Week 2) |
-| 9 | Custom topics — vector search + fallback | Pending (Week 3) |
-| 10 | SSE streaming for article delivery | Pending (Week 2) |
-| 11 | LangGraph comparison workflow | Pending (Week 3) |
-| 12 | Landing page at siftnews.ai | Pending (Week 3) |
-
----
-
-## What's next: Week 2
-
-Rewrite the Next.js frontend to read from Postgres instead of calling Claude directly. This is the core v2 shift — AI moves out of the request path.
-
-**Key changes:**
-1. **New `lib/db.ts`** — Postgres client (Neon serverless driver or @vercel/postgres)
-2. **Rewrite `app/api/news/route.ts`** — `SELECT * FROM articles WHERE category = $1 ORDER BY published_date DESC LIMIT 7` instead of Claude web_search
-3. **Add `app/api/cron/refresh/route.ts`** — Vercel Cron handler that triggers Railway pipeline
-4. **Remove `lib/cache.ts`** — Postgres is the cache now
-5. **Simplify `CardImage.tsx`** — RSS images or text-first, no OG scraping
-6. **Update `ArticleCard.tsx`** — text-first variant for articles without images
-7. **Add Clerk auth** — ClerkProvider, middleware, sign-in/sign-up pages
-8. **Update tests** — adapt to Postgres reads instead of Claude mocks
+| 4 | RSS feed integration (100+ feeds, 10 categories) | **Done** |
+| 5 | Next.js API routes rewrite (Postgres reads) | **Done** |
+| 6 | Card redesign — text-first + RSS images | **Done** |
+| 7 | Background refresh (Railway asyncio scheduler) | **Done** |
+| 8 | Clerk auth integration | **Done** |
+| 9 | Custom topics — vector search + web search fallback (SSE) | **Done** |
+| 10 | SSE streaming for topic search | **Done** |
+| 11 | LangGraph comparison workflow | **Done** |
+| 12 | Landing page | **Done** |
+| 13 | 3 new categories (politics, sports, entertainment) | **Done** |
+| 14 | Production deploy (Vercel + Railway + Neon) | **Done** |
+| 15 | CI/CD (GitHub Actions both repos) | **Done** |
+| 16 | Brand identity (B4 color story + B2 SiftLogo) | **Done** |
 
 ---
 
@@ -170,3 +153,9 @@ Rewrite the Next.js frontend to read from Postgres instead of calling Claude dir
 | 3/28/26 | Persistent disk cache | Cold start: 20s → <400ms |
 | 3/28/26 | v2: RSS hybrid + Postgres + LangGraph | Background pipeline, <50ms reads (see DECISIONS.md) |
 | 3/28/26 | 56 RSS feeds (expanded from 28) | Added Axios, Hacker News, Economist, ArXiv, etc. |
+| 3/29/26 | Neon Postgres (standalone) over Vercel Postgres | More control, same tech, free tier |
+| 3/29/26 | Railway asyncio scheduler over Vercel Cron | Avoids Pro plan requirement |
+| 3/30/26 | 10 categories (added politics, sports, entertainment) | Broader coverage, portfolio showcase |
+| 3/30/26 | Production deploy: Vercel + Railway + Neon | siftnews.kristenmartino.ai live |
+| 3/31/26 | B4: Named color palettes (Newsprint / Late Edition) | Warm editorial tones, semantic category colors |
+| 3/31/26 | B2: SiftLogo diamond mark component | Replaces hardcoded text everywhere |
