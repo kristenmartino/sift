@@ -28,6 +28,8 @@ export interface Article {
   imageUrl: string | null;
   category: CategoryId;
   readTime: number;
+  whyItMatters?: string;
+  importanceScore?: number;
 }
 
 // ─── Story Types ────────────────────────────────────────

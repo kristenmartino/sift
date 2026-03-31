@@ -38,6 +38,8 @@ const MOCK_DB_ROWS: DbArticle[] = [
     category: "technology",
     published_date: new Date("2026-03-28T10:00:00Z"),
     read_time: 2,
+    why_it_matters: null,
+    importance_score: null,
     created_at: new Date("2026-03-28T10:00:00Z"),
   },
   {
@@ -50,6 +52,8 @@ const MOCK_DB_ROWS: DbArticle[] = [
     category: "technology",
     published_date: new Date("2026-03-28T08:00:00Z"),
     read_time: 3,
+    why_it_matters: null,
+    importance_score: null,
     created_at: new Date("2026-03-28T08:00:00Z"),
   },
 ];

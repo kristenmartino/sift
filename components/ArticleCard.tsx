@@ -155,15 +155,21 @@ export default function ArticleCard({
           className="text-[var(--text-secondary)] leading-relaxed"
           style={{
             fontSize: featured ? 15 : 13.5,
-            display: "-webkit-box",
-            WebkitLineClamp: featured ? 4 : 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
             flex: 1,
           }}
         >
           {article.summary}
         </p>
+
+        {/* Why it matters */}
+        {article.whyItMatters && (
+          <p
+            className="text-[13px] italic leading-snug"
+            style={{ color: color.hex, opacity: 0.75 }}
+          >
+            {article.whyItMatters}
+          </p>
+        )}
 
         {/* Meta */}
         <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-[var(--text-muted)] font-medium flex-wrap">
