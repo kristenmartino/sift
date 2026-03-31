@@ -56,20 +56,20 @@ Demonstrate the complete product development lifecycle: requirements analysis, a
 
 **Shipped product:**
 
-Sift is a fully functional AI-curated news aggregator serving 7 categories with real-time content generated from live web search. The interface features a responsive card grid with article images, gradient fallbacks, dark/light themes, persistent bookmarks, and staggered loading animations. Articles link to original sources. The product runs locally with a single `npm run dev` command and is deployment-ready for Vercel.
+Sift is a production AI-curated news aggregator live at siftnews.kristenmartino.ai, serving 10 categories with 100+ RSS sources, AI summaries from Claude Haiku 4.5, vector-powered topic search, and multi-source comparison. The interface features text-first article cards with RSS images, named dark/light themes ("Late Edition" / "Newsprint"), persistent bookmarks with Clerk sync, SSE streaming for topic search, and a diamond brand mark. Articles link to original sources.
+
+**Architecture (v2):**
+
+The v2 architecture split the system into three services: Next.js frontend on Vercel (reads from Postgres, serves UI), Python FastAPI + LangGraph on Railway (background pipeline + comparison workflow), and Neon Postgres with pgvector (shared source of truth). Content pipeline runs every 10 minutes via asyncio scheduler. User requests are pure database reads (<50ms). Multi-source comparison uses a LangGraph workflow with fan-out web search across outlets. Topic search uses Voyage AI embeddings with pgvector cosine similarity and Claude web search fallback. Total cost: ~$9/month.
 
 **Technical outcomes:**
 
-The codebase grew from 831 lines in a single file to 1,786 lines across 22 source files — a clean decomposition that separated concerns without overengineering. The server-side API route includes 5-minute response caching, IP-based rate limiting, and typed error responses. The test suite covers the three areas with highest defect density: utility functions (25 tests), API response parsing (10 tests), and component rendering (3 tests). TypeScript catches type errors at build time. The JSON parser handles 14 distinct input patterns including model refusals and truncated responses.
+Two repositories totaling ~5,000+ lines across 50+ source files. The Next.js frontend includes 7 custom hooks, SSE streaming, Clerk auth, and CI via GitHub Actions. The Python backend includes two LangGraph workflows (pipeline + comparison), 100+ RSS feeds, and CI with ruff + pytest. Neon Postgres stores articles with 1024-dim Voyage AI embeddings and an IVFFlat index for fast similarity search. 21 architectural decisions documented with rationale.
 
-**Measurable improvements over prototype:**
+**Measurable improvements over v1 prototype:**
 
-Security: API key exposure eliminated (moved server-side). Reliability: silent failures eliminated (every error path surfaces to the user). Performance: server-side caching reduces redundant API calls by ~80% during repeat visits. Persistence: bookmarks and theme survive page refresh. Testability: 30+ automated tests versus zero.
-
-**Product development artifacts:**
-
-The project includes a comprehensive audit document covering current state assessment, bug inventory with severity ratings, technical debt remediation plan, prioritized feature backlog (15 features across 3 tiers), testing strategy, deployment checklist, and 6-week execution timeline. An architecture document details the hybrid Next.js + LangGraph design with deployment topology, workflow diagrams, and implementation phasing. A decision log captures every significant technical choice with rationale and revisit triggers.
+Architecture: AI moved from request path to background pipeline (<50ms reads vs 10-20s Claude calls). Scale: 7 categories → 10 categories, ~56 RSS feeds → 100+ feeds. Features: added topic search (vector + fallback), multi-source comparison (LangGraph fan-out), landing page, brand identity. Cost: reduced from projected ~$30/mo to actual ~$9/mo by using Vercel Hobby + Neon free tier + Railway asyncio scheduler. Deployment: full CI/CD with auto-deploy on both repos.
 
 **Key lessons documented:**
 
-The single most impactful lesson was that API behavior discovery should happen before integration, not during debugging. A 2-hour spike on the Anthropic web_search tool's response format and refusal patterns would have prevented 6+ hours of debugging caused by compounding failures from an untested prompt change. The second lesson was that prompt engineering is product design — the shift from "format as JSON" to "summarize in your own words" wasn't a technical fix, it was a reframing of what we were asking the AI to do, and it only worked because I understood the model's behavior at the product level, not just the API level.
+The single most impactful lesson was that API behavior discovery should happen before integration, not during debugging. A 2-hour spike on the Anthropic web_search tool's response format and refusal patterns would have prevented 6+ hours of debugging caused by compounding failures from an untested prompt change. The second lesson was that prompt engineering is product design — the shift from "format as JSON" to "summarize in your own words" wasn't a technical fix, it was a reframing of what we were asking the AI to do. The third lesson was about deployment: Railway auto-injects PORT environment variables that override user settings, and model IDs like `claude-haiku-4-5-20251001` require the full date suffix — both discovered through production debugging.

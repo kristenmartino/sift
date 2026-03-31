@@ -1,21 +1,22 @@
 # Sift — Product Requirements Document
 
-**Version:** 2.0
-**Date:** March 28, 2026
+**Version:** 2.1
+**Date:** March 31, 2026
 **Author:** Martino
-**Domain:** siftnews.ai
+**Domain:** siftnews.kristenmartino.ai
+**Status:** Production live
 
 ---
 
 ## Vision
 
-Sift is a news reader where AI does the reading for you. Open it, see 5 stories that matter across any topic, each with a concise summary written for comprehension — not a headline written for clicks. Close it. 60 seconds. That's the experience.
+Sift is a news reader where AI does the reading for you. Open it, see the top stories across 10 categories, each with a concise summary written for comprehension — not a headline written for clicks. Search any topic, compare coverage across outlets. Close it. 60 seconds. That's the experience.
 
 ## Value proposition
 
-**For users:** "Open Sift. In 60 seconds, know what's happening across tech, business, science, energy, world news, and health. Create your own topics — 'AI in healthcare,' 'Florida utilities,' anything. Every summary is AI-written. Every comparison is multi-source."
+**For users:** "Open Sift. In 60 seconds, know what's happening across 10 categories — tech, business, science, energy, world, health, politics, sports, entertainment, and curated top stories. Search any topic. Compare how different outlets cover the same story. Every summary is AI-written."
 
-**For hiring managers:** "I built a hybrid AI system from 0 to 1: Next.js frontend on Vercel, Python/LangGraph backend on Railway, Postgres with pgvector, background content pipeline, multi-source comparison via fan-out search, custom topics via vector similarity — all for $30/month."
+**For hiring managers:** "I built a hybrid AI system from 0 to 1: Next.js frontend on Vercel, Python/LangGraph backend on Railway, Neon Postgres with pgvector, background content pipeline with 100+ RSS feeds, multi-source comparison via fan-out web search, topic search via vector similarity with SSE streaming — all for ~$9/month."
 
 ---
 
@@ -41,13 +42,13 @@ Sift is a news reader where AI does the reading for you. Open it, see 5 stories 
 
 Two services, one database:
 
-- **Next.js on Vercel Pro** — frontend, API routes (Postgres reads), Clerk auth, Vercel Cron
-- **Python FastAPI + LangGraph on Railway** — background pipeline (RSS → Claude → Voyage → Postgres), multi-source comparison
-- **Vercel Postgres (Neon) + pgvector** — single source of truth for articles, embeddings, custom topics, bookmarks
+- **Next.js on Vercel** — frontend, API routes (Postgres reads), Clerk auth, SSE streaming
+- **Python FastAPI + LangGraph on Railway** — background pipeline (RSS → Claude → Voyage → Postgres), multi-source comparison, asyncio scheduler
+- **Neon Postgres + pgvector** — single source of truth for articles, embeddings, custom topics, bookmarks
 
-Content pipeline runs every 10-15 minutes via Vercel Cron. User requests never touch Claude — they read from Postgres in <50ms.
+Content pipeline runs every 10 minutes via Railway's background scheduler. User requests never touch Claude — they read from Postgres in <50ms.
 
-Total cost: ~$30/month.
+Total cost: ~$9/month.
 
 Full technical details: SIFT_ARCHITECTURE_v2.md and SIFT_TECHNICAL_SPEC.md.
 
@@ -62,7 +63,7 @@ Full technical details: SIFT_ARCHITECTURE_v2.md and SIFT_TECHNICAL_SPEC.md.
 | S0 | Postgres schema + migrations | 2 hr |
 | S1 | Python FastAPI service scaffold on Railway | 3 hr |
 | S2 | LangGraph pipeline workflow (RSS → Claude → Voyage → store) | 6 hr |
-| S3 | RSS feed integration (28 feeds, 7 categories) | 4 hr |
+| S3 | RSS feed integration (100+ feeds, 10 categories) | 4 hr |
 | S4 | Next.js API routes rewrite (Postgres reads) | 3 hr |
 | S5 | Card redesign — text-first + RSS images | 3 hr |
 | S6 | Vercel Cron configuration | 30 min |
@@ -76,7 +77,7 @@ Full technical details: SIFT_ARCHITECTURE_v2.md and SIFT_TECHNICAL_SPEC.md.
 | T2 | SSE streaming for article delivery | 4 hr |
 | T3 | LangGraph comparison workflow | 6 hr |
 | T4 | Bookmarks synced to Postgres (via Clerk user ID) | 2 hr |
-| T5 | Landing page at siftnews.ai | 4 hr |
+| T5 | Landing page at siftnews.kristenmartino.ai | 4 hr |
 
 ### Tier 2 — Differentiation (Week 3-4)
 

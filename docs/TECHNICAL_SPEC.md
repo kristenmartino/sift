@@ -1,8 +1,9 @@
 # Sift — Technical Specification
 
-**Version:** 1.0
-**Date:** March 28, 2026
-**Companion doc:** SIFT_DECISIONS_v2.md (all architectural decisions)
+**Version:** 1.1
+**Date:** March 31, 2026
+**Companion doc:** DECISIONS.md (all architectural decisions)
+**Live:** siftnews.kristenmartino.ai
 
 ---
 
@@ -12,9 +13,9 @@ Two services + one database:
 
 | Service | Platform | Language | Purpose |
 |---------|----------|----------|---------|
-| sift-web | Vercel Pro | TypeScript (Next.js 15) | Frontend, API routes (DB reads), Clerk auth, Vercel Cron trigger |
-| sift-api | Railway | Python (FastAPI + LangGraph) | Background pipeline, multi-source comparison |
-| sift-db | Vercel Postgres (Neon) | PostgreSQL 16 + pgvector | Shared database, single source of truth |
+| sift-web | Vercel (Hobby) | TypeScript (Next.js 15) | Frontend, API routes (DB reads), Clerk auth, SSE streaming |
+| sift-api | Railway | Python (FastAPI + LangGraph) | Background pipeline (10-min scheduler), multi-source comparison |
+| sift-db | Neon (free tier) | PostgreSQL 17 + pgvector | Shared database, single source of truth |
 
 ---
 
@@ -112,7 +113,7 @@ CREATE TABLE pipeline_state (
 
 ## 3. API Contract — sift-api (Python / Railway)
 
-Base URL: `https://sift-api.up.railway.app` (or custom domain)
+Base URL: `https://sift-api-production.up.railway.app`
 
 ### POST /pipeline/refresh
 
@@ -386,7 +387,7 @@ Feeds to be consumed by the background pipeline. Grouped by category. Each feed 
 | Fierce Healthcare | `https://www.fiercehealthcare.com/rss/xml` | RSS 2.0 |
 | CDC MMWR | `https://tools.cdc.gov/api/v2/resources/media/342778.rss` | RSS 2.0 |
 
-**Total: 56 feeds across 7 categories.**
+**Total: 100+ feeds across 10 categories.** (Politics, Sports, and Entertainment feeds added March 2026.)
 
 **Image extraction from RSS:**
 Most RSS feeds include images via one of these tags:
@@ -446,7 +447,7 @@ VOYAGE_API_KEY=va-...
 PIPELINE_API_KEY=shared-secret-for-pipeline-trigger
 
 # App
-PORT=8000
+PORT=8080  # Railway auto-injects this; do not hardcode 8000
 ENVIRONMENT=production
 LOG_LEVEL=info
 ```
@@ -532,14 +533,6 @@ httpx>=0.28.0
 - `app/sign-up/[[...sign-up]]/page.tsx` — Clerk sign-up page
 - `middleware.ts` — Clerk auth middleware
 
-### vercel.json (Cron configuration):
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/refresh",
-      "schedule": "*/10 * * * *"
-    }
-  ]
-}
-```
+### Background refresh
+
+Pipeline refresh runs via Railway's asyncio background scheduler (every 10 minutes in production). A Vercel cron route (`/api/cron/refresh`) exists as a manual fallback but is not actively scheduled (avoids Vercel Pro requirement). `vercel.json` is empty (`{}`).
