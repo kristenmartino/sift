@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { COMPARE_SOURCES } from "@/lib/constants";
+import { COPY } from "@/lib/copy";
 import type { CompareClaim } from "@/lib/types";
 
 const MAX_SOURCES = 5;
@@ -97,7 +98,7 @@ export default function CompareView({
                 border: "1px solid rgba(99,102,241,0.2)",
               }}
             >
-              Multi-Source Comparison
+              {COPY.compare.emptyTitle}
             </span>
           </div>
           <h2 className="font-heading text-[22px] font-bold text-[var(--text)] tracking-tight">
@@ -242,7 +243,7 @@ export default function CompareView({
         }}
       >
         <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">
-          Compare Another Topic
+          {COPY.compare.another}
         </h3>
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input
@@ -250,7 +251,7 @@ export default function CompareView({
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Enter a topic to compare across sources..."
+            placeholder={COPY.compare.anotherPlaceholder}
             maxLength={200}
             className="flex-1 px-4 py-2 rounded-full text-sm font-body transition-all duration-200 outline-none"
             style={{
