@@ -26,6 +26,10 @@
 | D15 | Image handling | RSS feed images only — no OG scraping, no proxy | $0 | SETTLED |
 | D16 | Background refresh | Railway asyncio scheduler (every 10 min) + Vercel cron fallback | $0 | SETTLED |
 | D17 | Model selection | Haiku 4.5 (upgrade to Sonnet is one-line change) | ~$4/mo | SETTLED |
+| D22 | Compare source picker | Collapsed-by-default chip selector, 12 curated outlets | $0 | SETTLED |
+| D23 | Compare source list | Curated outlets, not freeform input | $0 | SETTLED |
+| D24 | Compare source limits | Min 2, max 5 sources per comparison | $0 | SETTLED |
+| D25 | Per-source timeout | 20s timeout per source in compare workflow | $0 | SETTLED |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -416,3 +420,35 @@ Each category has 8-11 RSS feeds. Expanded total from ~56 feeds to 100+ feeds. C
 - Themes: "Late Edition" (dark, warm stone tones) and "Newsprint" (light, warm paper)
 - Brand mark: SVG diamond rendered at all sizes via SiftLogo component with full/compact/mark/wordmark variants
 - Category colors: each chosen for semantic meaning, not decoration
+
+### D22. Compare source picker — collapsed by default
+**Decision:** Add a chip selector UI for choosing which outlets to compare, collapsed behind a "Comparing: Reuters, BBC, AP — Change" toggle.
+
+- Default 3 sources (Reuters, BBC, AP) preserves current behavior — zero friction for quick comparisons
+- Expanded state shows 12 curated outlets as toggleable chips
+- Alternative considered: always-visible source grid. Rejected because it clutters the compare form for the common case (most users accept defaults)
+- Alternative considered: freeform text input. Rejected because Claude web_search reliability varies with arbitrary outlet names
+
+### D23. Compare source list — curated, not freeform
+**Decision:** 12 pre-selected outlets spanning wire services (Reuters, AP), broadcast (BBC, CNN, Al Jazeera, NPR), print (Guardian, NYT, Washington Post, Economist, FT), and digital-native (Axios).
+
+- Each outlet tested against Claude's `web_search` tool for reliable results
+- Geographic and editorial diversity: US, UK, Middle East, wire services
+- Matches sources already in the RSS feed list for consistency
+- Labels are abbreviated for chip display (NYT, AP, Wash. Post, FT, Economist)
+
+### D24. Compare source limits — min 2, max 5
+**Decision:** Minimum 2 sources (comparison needs at least 2), maximum 5 (caps latency and cost).
+
+- Each source triggers a Claude web_search call (~$0.004 each)
+- 5 sources run in parallel but Claude rate limits may serialize them
+- Backend already validates `len(sources) > 5` → 400 error
+- Frontend disables unselected chips when 5 are selected, disables submit when < 2
+
+### D25. Per-source timeout — 20 seconds
+**Decision:** Wrap each source's Claude API call in `asyncio.wait_for(_, timeout=20)`.
+
+- Without per-source timeout, one slow/stuck source blocks the entire comparison
+- 20s is generous for a single web_search + summary call (typically 5-12s)
+- On timeout, source returns empty and is logged as an error — remaining sources still produce results
+- Graceful degradation: 3/5 sources succeeding is better than 0/5 from a global timeout
