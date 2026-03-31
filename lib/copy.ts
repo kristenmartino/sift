@@ -46,5 +46,17 @@ export const COPY = {
   articles: {
     updated: "Updated just now",
     searchTopics: "Search Topics",
+    emptyTitle: "No stories yet for this topic",
+    emptyBody: "Check back in a bit \u2014 the AI is still looking.",
+  },
+  notFound: {
+    title: "This page wandered off",
+    body: "We looked everywhere \u2014 even had the AI search for it. Let\u2019s get you back to the stories.",
+    button: "Back to Sift",
+  },
+  searchEmpty: {
+    title: "Nothing matched that search",
+    body: "Try different words \u2014 or let the AI surprise you.",
+    button: "Browse today\u2019s stories",
   },
 } as const;
