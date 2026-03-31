@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { CATEGORIES, COMPARE_SOURCES, DEFAULT_COMPARE_SOURCES } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
@@ -36,7 +36,10 @@ export default function NewsAggregator() {
   const [selectedSources, setSelectedSources] = useState<string[]>([...DEFAULT_COMPARE_SOURCES]);
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
 
+  const [categoryFading, setCategoryFading] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
+  const pillContainerRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
   const [loadingBookmarks, setLoadingBookmarks] = useState(false);
 
@@ -73,6 +76,35 @@ export default function NewsAggregator() {
   useEffect(() => {
     loadCategory(activeCategory);
   }, [activeCategory, loadCategory]);
+
+  // Category switch with fade-out/fade-in
+  const switchCategory = useCallback((catId: CategoryId) => {
+    if (catId === activeCategory) return;
+    setCategoryFading(true);
+    // Brief fade-out, then switch & fade-in
+    setTimeout(() => {
+      setActiveCategory(catId);
+      setCategoryFading(false);
+    }, 120);
+  }, [activeCategory]);
+
+  // Position the sliding indicator under the active pill
+  const updateIndicator = useCallback(() => {
+    const container = pillContainerRef.current;
+    if (!container) return;
+    const activeBtn = container.querySelector<HTMLButtonElement>("[data-active='true']");
+    if (!activeBtn) { setIndicatorStyle(null); return; }
+    const containerRect = container.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    setIndicatorStyle({
+      left: btnRect.left - containerRect.left,
+      width: btnRect.width,
+    });
+  }, []);
+
+  useEffect(() => {
+    updateIndicator();
+  }, [activeCategory, showBookmarks, searchMode, compareMode, updateIndicator]);
 
   // Fetch full bookmarked articles from DB when viewing bookmarks (signed in)
   useEffect(() => {
@@ -234,8 +266,8 @@ export default function NewsAggregator() {
                 color: refreshed ? "var(--accent)" : "var(--text-secondary)",
               }}
             >
-              <span className={loading ? "animate-spin-slow inline-block" : "inline-block"}>
-                {refreshed ? "✓" : "↻"}
+              <span className={loading ? "animate-sift-refresh inline-block" : "inline-block"}>
+                {refreshed ? "✓" : loading ? "◆" : "↻"}
               </span>
             </button>
 
@@ -253,15 +285,16 @@ export default function NewsAggregator() {
           </div>
         </div>
 
-        {/* Category pills */}
+        {/* Category pills with sliding indicator */}
         {!showBookmarks && !searchMode && !compareMode && (
-          <div className="max-w-[1200px] mx-auto px-6 pb-3 flex gap-1.5 overflow-x-auto">
+          <div ref={pillContainerRef} className="max-w-[1200px] mx-auto px-6 pb-3 flex gap-1.5 overflow-x-auto relative">
             {CATEGORIES.map((cat) => {
               const active = activeCategory === cat.id;
               return (
                 <button
                   key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
+                  data-active={active}
+                  onClick={() => switchCategory(cat.id)}
                   className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] whitespace-nowrap cursor-pointer transition-all duration-200 font-body"
                   style={{
                     background: active ? "var(--pill-active)" : "transparent",
@@ -275,6 +308,18 @@ export default function NewsAggregator() {
                 </button>
               );
             })}
+            {/* Sliding indicator under active pill */}
+            {indicatorStyle && (
+              <div
+                className="absolute bottom-0 h-[2px] rounded-full"
+                style={{
+                  left: indicatorStyle.left,
+                  width: indicatorStyle.width,
+                  background: "var(--accent)",
+                  transition: "left 0.3s cubic-bezier(0.16,1,0.3,1), width 0.3s cubic-bezier(0.16,1,0.3,1)",
+                }}
+              />
+            )}
           </div>
         )}
 
@@ -389,7 +434,7 @@ export default function NewsAggregator() {
             {/* Compare loading */}
             {compareLoading && (
               <div className="text-center py-20 px-5 animate-fade-slide-in">
-                <div className="text-4xl mb-5 animate-spin-slow inline-block">⇌</div>
+                <div className="text-4xl mb-5 animate-sift-refresh inline-block text-[var(--accent)]">◆</div>
                 <p className="text-base font-semibold text-[var(--text-secondary)]">
                   {COPY.compare.loading}
                 </p>
@@ -505,9 +550,16 @@ export default function NewsAggregator() {
               />
             )}
 
-            {/* Articles grid */}
+            {/* Articles grid — fades on category switch */}
             {hasData && (
-              <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
+              <div
+                className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5"
+                style={{
+                  transition: "opacity 0.12s ease-out, transform 0.12s ease-out",
+                  opacity: categoryFading ? 0 : 1,
+                  transform: categoryFading ? "translateY(4px)" : "translateY(0)",
+                }}
+              >
                 {currentArticles.map((article, i) => (
                   <ArticleCard
                     key={article.id}
@@ -525,7 +577,7 @@ export default function NewsAggregator() {
             {/* Loading toast for refresh */}
             {loading && hasData && (
               <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-6 py-2.5 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2.5 shadow-lg z-50 animate-fade-slide-in">
-                <span className="animate-spin-slow inline-block">↻</span>
+                <span className="animate-sift-refresh inline-block text-[var(--accent)]">◆</span>
                 {COPY.loading.refresh}
               </div>
             )}

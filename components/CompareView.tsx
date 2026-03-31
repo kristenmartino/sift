@@ -203,7 +203,13 @@ export default function CompareView({
 
               {/* Disputed details */}
               {isExpanded && isDisputed && (
-                <div className="mt-3 pt-3 border-t border-[var(--border)] text-xs space-y-1.5 animate-fade-slide-in">
+                <div
+                  className="mt-3 pt-3 border-t border-[var(--border)] text-xs space-y-1.5"
+                  style={{
+                    animation: "story-expand 0.3s ease-out both",
+                    overflow: "hidden",
+                  }}
+                >
                   {claim.sources_for && claim.sources_for.length > 0 && (
                     <div className="flex items-start gap-2">
                       <span className="font-semibold" style={{ color: "#059669" }}>For:</span>
