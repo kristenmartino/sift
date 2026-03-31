@@ -25,7 +25,7 @@ export const metadata: Metadata = {
       "AI-curated news summaries from 100+ sources. Get the key points in 60 seconds.",
   },
   other: {
-    "theme-color": "#0a0a0f",
+    "theme-color": "#0c0a09",
     "color-scheme": "dark light",
   },
 };

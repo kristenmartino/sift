@@ -6,8 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Sift",
     start_url: "/news",
     display: "standalone",
-    background_color: "#0a0a0f",
-    theme_color: "#6366f1",
+    background_color: "#0c0a09",
+    theme_color: "#4338ca",
     icons: [
       { src: "/favicon.svg", sizes: "any", type: "image/svg+xml" },
     ],
