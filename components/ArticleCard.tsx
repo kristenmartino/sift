@@ -180,7 +180,7 @@ export default function ArticleCard({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onCompare(article.title);
+                  onCompare(article.title, article.sourceName);
                 }}
                 className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200"
                 style={{ color: "var(--accent)" }}

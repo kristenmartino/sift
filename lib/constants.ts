@@ -62,22 +62,64 @@ export const GRADIENTS: Record<CategoryId, string> = {
 
 // ─── Compare Sources ────────────────────────────────────
 
+// Sources organized by type. Claude web_search works with any outlet name,
+// but these are the ones with the most reliable, distinctive coverage.
 export const COMPARE_SOURCES = [
+  // Wire services & general news
   { key: "reuters", label: "Reuters" },
   { key: "bbc", label: "BBC" },
   { key: "associated press", label: "AP" },
   { key: "cnn", label: "CNN" },
+  { key: "npr", label: "NPR" },
+  { key: "al jazeera", label: "Al Jazeera" },
+  { key: "france 24", label: "France 24" },
+  // Print / longform
   { key: "the guardian", label: "The Guardian" },
   { key: "the new york times", label: "NYT" },
   { key: "the washington post", label: "Wash. Post" },
-  { key: "al jazeera", label: "Al Jazeera" },
-  { key: "npr", label: "NPR" },
-  { key: "axios", label: "Axios" },
-  { key: "the economist", label: "Economist" },
+  { key: "the atlantic", label: "The Atlantic" },
+  { key: "vox", label: "Vox" },
+  { key: "politico", label: "Politico" },
+  { key: "the hill", label: "The Hill" },
+  // Business & finance
+  { key: "bloomberg", label: "Bloomberg" },
   { key: "financial times", label: "FT" },
+  { key: "the economist", label: "Economist" },
+  { key: "cnbc", label: "CNBC" },
+  { key: "fortune", label: "Fortune" },
+  { key: "axios", label: "Axios" },
+  // Technology
+  { key: "techcrunch", label: "TechCrunch" },
+  { key: "the verge", label: "The Verge" },
+  { key: "wired", label: "Wired" },
+  { key: "ars technica", label: "Ars Technica" },
+  // Science & health
+  { key: "nature", label: "Nature" },
+  { key: "new scientist", label: "New Scientist" },
+  { key: "stat news", label: "STAT News" },
+  // Energy & climate
+  { key: "canary media", label: "Canary Media" },
+  { key: "inside climate news", label: "Inside Climate" },
+  // World affairs
+  { key: "foreign policy", label: "Foreign Policy" },
+  { key: "south china morning post", label: "SCMP" },
 ] as const;
 
-export const DEFAULT_COMPARE_SOURCES = ["reuters", "bbc", "associated press"];
+// Category-aware defaults: top 5 most relevant sources per category
+export const CATEGORY_COMPARE_DEFAULTS: Record<CategoryId, string[]> = {
+  top:            ["reuters", "bbc", "npr", "the guardian", "axios"],
+  technology:     ["techcrunch", "the verge", "wired", "ars technica", "cnbc"],
+  business:       ["bloomberg", "financial times", "cnbc", "fortune", "reuters"],
+  science:        ["nature", "new scientist", "reuters", "bbc", "the guardian"],
+  energy:         ["canary media", "inside climate news", "bloomberg", "reuters", "the economist"],
+  world:          ["al jazeera", "bbc", "france 24", "the guardian", "foreign policy"],
+  health:         ["stat news", "npr", "reuters", "bbc", "the guardian"],
+  politics:       ["politico", "the hill", "axios", "npr", "the washington post"],
+  sports:         ["bbc", "reuters", "cnn", "the guardian", "france 24"],
+  entertainment:  ["the verge", "bbc", "the guardian", "wired", "cnn"],
+};
+
+export const DEFAULT_COMPARE_SOURCES = CATEGORY_COMPARE_DEFAULTS.top;
 
 // ─── Timing ─────────────────────────────────────────────
 
