@@ -8,6 +8,7 @@ import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
 import SkeletonCard from "./SkeletonCard";
+import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
 import TopicSearch from "./TopicSearch";
 import CompareView from "./CompareView";
@@ -425,15 +426,10 @@ export default function NewsAggregator() {
 
             {/* Compare empty state (input shown, no results yet) */}
             {!compareLoading && !compareError && !compareComparison && (
-              <div className="text-center py-20 px-5 text-[var(--text-muted)]">
-                <div className="text-5xl mb-4 opacity-30">⇌</div>
-                <p className="text-base font-semibold text-[var(--text-secondary)]">
-                  {COPY.compare.emptyTitle}
-                </p>
-                <p className="text-sm mt-2">
-                  {COPY.compare.emptyBody}
-                </p>
-              </div>
+              <EmptyState
+                title={COPY.compare.emptyTitle}
+                body={COPY.compare.emptyBody}
+              />
             )}
           </>
         ) : (
@@ -494,15 +490,19 @@ export default function NewsAggregator() {
 
             {/* Empty bookmarks */}
             {showBookmarks && !hasData && !loading && !loadingBookmarks && (
-              <div className="text-center py-20 px-5 text-[var(--text-muted)]">
-                <div className="text-5xl mb-4 opacity-30">☆</div>
-                <p className="text-base font-semibold text-[var(--text-secondary)]">
-                  {COPY.bookmarks.emptyTitle}
-                </p>
-                <p className="text-sm mt-2">
-                  {COPY.bookmarks.emptyBody}
-                </p>
-              </div>
+              <EmptyState
+                title={COPY.bookmarks.emptyTitle}
+                body={COPY.bookmarks.emptyBody}
+              />
+            )}
+
+            {/* Empty search results */}
+            {searchMode && !topicLoading && !topicError && !hasData && topicQuery && (
+              <EmptyState
+                title={COPY.searchEmpty.title}
+                body={COPY.searchEmpty.body}
+                action={{ label: COPY.searchEmpty.button, onClick: () => { setSearchMode(false); clearTopicSearch(); } }}
+              />
             )}
 
             {/* Articles grid */}
