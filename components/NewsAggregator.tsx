@@ -2,20 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES } from "@/lib/constants";
+import { CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
-import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare } from "@/lib/hooks";
+import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare, useCustomTopics } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
 import StoryCard from "./StoryCard";
 import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
 import TopicSearch from "./TopicSearch";
+import TopicModal from "./TopicModal";
 import CompareView from "./CompareView";
 import SiftLogo from "./SiftLogo";
 import AuthButtons, { clerkEnabled } from "./AuthButtons";
-import type { Article, FeedItem, CategoryId } from "@/lib/types";
+import type { Article, CustomTopic, FeedItem, CategoryId } from "@/lib/types";
 
 // ─── Clerk user ID (safe when ClerkProvider absent) ─────
 
@@ -37,6 +38,9 @@ export default function NewsAggregator() {
   const [selectedSources, setSelectedSources] = useState<string[]>([...DEFAULT_COMPARE_SOURCES]);
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
 
+  const [activeCustomTopic, setActiveCustomTopic] = useState<CustomTopic | null>(null);
+  const [showTopicModal, setShowTopicModal] = useState(false);
+
   const [categoryFading, setCategoryFading] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
   const pillContainerRef = useRef<HTMLDivElement>(null);
@@ -48,6 +52,7 @@ export default function NewsAggregator() {
 
   const { articles, stories, loading, error, slow, lastUpdated, loadCategory } = useNewsLoader();
   const { bookmarks, toggle: toggleBookmark, count: bookmarkCount } = useBookmarks(userId);
+  const { topics: customTopics, add: addCustomTopic, remove: removeCustomTopic, canAdd: canAddTopic } = useCustomTopics(userId);
   const { dark: darkMode, toggle: toggleDark, mounted } = useTheme();
   const {
     articles: topicArticles,
@@ -80,14 +85,27 @@ export default function NewsAggregator() {
 
   // Category switch with fade-out/fade-in
   const switchCategory = useCallback((catId: CategoryId) => {
-    if (catId === activeCategory) return;
+    if (catId === activeCategory && !activeCustomTopic) return;
     setCategoryFading(true);
-    // Brief fade-out, then switch & fade-in
     setTimeout(() => {
       setActiveCategory(catId);
+      setActiveCustomTopic(null);
+      clearTopicSearch();
       setCategoryFading(false);
     }, 120);
-  }, [activeCategory]);
+  }, [activeCategory, activeCustomTopic, clearTopicSearch]);
+
+  // Switch to a custom topic
+  const switchToCustomTopic = useCallback((topic: CustomTopic) => {
+    if (activeCustomTopic?.id === topic.id) return;
+    setCategoryFading(true);
+    setTimeout(() => {
+      setActiveCustomTopic(topic);
+      setCategoryFading(false);
+      // Search using the first query (most specific)
+      searchTopic(topic.searchQueries[0]);
+    }, 120);
+  }, [activeCustomTopic, searchTopic]);
 
   // Position the sliding indicator under the active pill
   const updateIndicator = useCallback(() => {
@@ -105,7 +123,7 @@ export default function NewsAggregator() {
 
   useEffect(() => {
     updateIndicator();
-  }, [activeCategory, showBookmarks, searchMode, compareMode, updateIndicator]);
+  }, [activeCategory, activeCustomTopic, showBookmarks, searchMode, compareMode, updateIndicator]);
 
   // Fetch full bookmarked articles from DB when viewing bookmarks (signed in)
   useEffect(() => {
@@ -126,7 +144,11 @@ export default function NewsAggregator() {
   }, [showBookmarks, userId, bookmarks]);
 
   const handleRefresh = async () => {
-    await loadCategory(activeCategory, true);
+    if (activeCustomTopic) {
+      searchTopic(activeCustomTopic.searchQueries[0]);
+    } else {
+      await loadCategory(activeCategory, true);
+    }
     setRefreshed(true);
     setTimeout(() => setRefreshed(false), 2000);
   };
@@ -182,8 +204,10 @@ export default function NewsAggregator() {
     clearCompare();
   };
 
+  const customTopicMode = !!activeCustomTopic;
+
   const currentArticles = useMemo((): Article[] => {
-    if (searchMode) {
+    if (searchMode || customTopicMode) {
       return topicArticles;
     }
     if (showBookmarks) {
@@ -193,12 +217,12 @@ export default function NewsAggregator() {
       return Object.values(articles).flat().filter((a) => bookmarks.has(a.id));
     }
     return articles[activeCategory] || [];
-  }, [articles, activeCategory, showBookmarks, bookmarks, userId, bookmarkedArticles, searchMode, topicArticles]);
+  }, [articles, activeCategory, showBookmarks, bookmarks, userId, bookmarkedArticles, searchMode, customTopicMode, topicArticles]);
 
   // Build feed items: stories + standalone articles, sorted by date
   const feedItems = useMemo((): FeedItem[] => {
-    // Stories only apply to category view (not bookmarks/search)
-    if (searchMode || showBookmarks) {
+    // Stories only apply to category view (not bookmarks/search/custom topics)
+    if (searchMode || showBookmarks || customTopicMode) {
       return currentArticles.map((a) => ({ type: "article" as const, data: a }));
     }
 
@@ -219,7 +243,7 @@ export default function NewsAggregator() {
     });
 
     return items;
-  }, [currentArticles, stories, activeCategory, searchMode, showBookmarks]);
+  }, [currentArticles, stories, activeCategory, searchMode, showBookmarks, customTopicMode]);
 
   const hasData = feedItems.length > 0;
   const activeCatLabel = CATEGORIES.find((c) => c.id === activeCategory)?.label;
@@ -244,7 +268,7 @@ export default function NewsAggregator() {
         <div className="max-w-[1200px] mx-auto px-6 py-3.5 flex items-center justify-between">
           <div
             className="flex items-baseline gap-3 cursor-pointer"
-            onClick={() => { setShowBookmarks(false); setSearchMode(false); clearTopicSearch(); exitCompareMode(); setActiveCategory("top"); }}
+            onClick={() => { setShowBookmarks(false); setSearchMode(false); clearTopicSearch(); exitCompareMode(); setActiveCustomTopic(null); setActiveCategory("top"); }}
           >
             <SiftLogo variant="full" size={28} />
             <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--accent)] opacity-80">
@@ -341,7 +365,7 @@ export default function NewsAggregator() {
         {!showBookmarks && !searchMode && !compareMode && (
           <div ref={pillContainerRef} className="max-w-[1200px] mx-auto px-6 pb-3 flex gap-1.5 overflow-x-auto relative">
             {CATEGORIES.map((cat) => {
-              const active = activeCategory === cat.id;
+              const active = activeCategory === cat.id && !activeCustomTopic;
               return (
                 <button
                   key={cat.id}
@@ -360,6 +384,60 @@ export default function NewsAggregator() {
                 </button>
               );
             })}
+
+            {/* Custom topic pills */}
+            {customTopics.map((topic) => {
+              const active = activeCustomTopic?.id === topic.id;
+              const color = CUSTOM_TOPIC_COLORS[topic.colorIndex % CUSTOM_TOPIC_COLORS.length];
+              return (
+                <button
+                  key={`custom-${topic.id}`}
+                  data-active={active}
+                  onClick={() => switchToCustomTopic(topic)}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] whitespace-nowrap cursor-pointer transition-all duration-200 font-body group relative"
+                  style={{
+                    background: active ? color.hex : "transparent",
+                    color: active ? "#fff" : "var(--text-muted)",
+                    border: active ? `1px solid ${color.hex}` : `1px solid rgba(${color.rgb}, 0.25)`,
+                    fontWeight: active ? 700 : 500,
+                  }}
+                >
+                  <span className="text-[10px]">{topic.icon}</span>
+                  {topic.shortLabel}
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (activeCustomTopic?.id === topic.id) {
+                        setActiveCustomTopic(null);
+                        clearTopicSearch();
+                      }
+                      removeCustomTopic(topic.id);
+                    }}
+                    className="text-[10px] opacity-0 group-hover:opacity-60 transition-opacity duration-150 ml-0.5 cursor-pointer"
+                    style={{ color: active ? "#fff" : "var(--text-muted)" }}
+                  >
+                    &times;
+                  </span>
+                </button>
+              );
+            })}
+
+            {/* Add topic button */}
+            {canAddTopic && (
+              <button
+                onClick={() => setShowTopicModal(true)}
+                className="flex items-center justify-center w-8 h-8 rounded-full text-sm cursor-pointer transition-all duration-200 shrink-0"
+                style={{
+                  background: "transparent",
+                  border: "1px dashed var(--border)",
+                  color: "var(--text-muted)",
+                }}
+                aria-label="Add custom topic"
+              >
+                +
+              </button>
+            )}
+
             {/* Sliding indicator under active pill */}
             {indicatorStyle && (
               <div
@@ -367,7 +445,9 @@ export default function NewsAggregator() {
                 style={{
                   left: indicatorStyle.left,
                   width: indicatorStyle.width,
-                  background: "var(--accent)",
+                  background: activeCustomTopic
+                    ? CUSTOM_TOPIC_COLORS[activeCustomTopic.colorIndex % CUSTOM_TOPIC_COLORS.length].hex
+                    : "var(--accent)",
                   transition: "left 0.3s cubic-bezier(0.16,1,0.3,1), width 0.3s cubic-bezier(0.16,1,0.3,1)",
                 }}
               />
@@ -539,9 +619,16 @@ export default function NewsAggregator() {
                     ? (topicQuery ? COPY.search.resultsFor(topicQuery) : COPY.articles.searchTopics)
                     : showBookmarks
                       ? COPY.bookmarks.title
-                      : activeCatLabel}
+                      : activeCustomTopic
+                        ? `${activeCustomTopic.icon} ${activeCustomTopic.shortLabel}`
+                        : activeCatLabel}
                 </h2>
-                {lastUpdated && !showBookmarks && !searchMode && (
+                {activeCustomTopic && (
+                  <p className="text-xs mt-1 text-[var(--text-muted)]">
+                    {activeCustomTopic.description}
+                  </p>
+                )}
+                {lastUpdated && !showBookmarks && !searchMode && !customTopicMode && (
                   <p className="text-xs mt-1" style={{ color: refreshed ? "var(--accent)" : "var(--text-muted)" }}>
                     {refreshed ? COPY.articles.updated : `Updated ${timeAgo(lastUpdated.toISOString())}`}
                   </p>
@@ -555,7 +642,7 @@ export default function NewsAggregator() {
             </div>
 
             {/* Loading skeleton */}
-            {((searchMode ? topicLoading : loading) && !hasData && !(searchMode ? topicError : error)) && (
+            {(((searchMode || customTopicMode) ? topicLoading : loading) && !hasData && !((searchMode || customTopicMode) ? topicError : error)) && (
               <div>
                 <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
                   <SkeletonCard featured />
@@ -563,9 +650,9 @@ export default function NewsAggregator() {
                     <SkeletonCard key={i} />
                   ))}
                 </div>
-                {(searchMode ? topicSlow : slow) && (
+                {((searchMode || customTopicMode) ? topicSlow : slow) && (
                   <p className="text-center mt-6 text-sm text-[var(--text-muted)] animate-fade-slide-in">
-                    {searchMode
+                    {(searchMode || customTopicMode)
                       ? COPY.loading.slowTopic
                       : COPY.loading.slow}
                   </p>
@@ -574,13 +661,15 @@ export default function NewsAggregator() {
             )}
 
             {/* Error */}
-            {(searchMode ? topicError : error) && !(searchMode ? topicLoading : loading) && !hasData && (
+            {((searchMode || customTopicMode) ? topicError : error) && !((searchMode || customTopicMode) ? topicLoading : loading) && !hasData && (
               <ErrorState
-                message={(searchMode ? topicError : error) || COPY.error.body}
+                message={((searchMode || customTopicMode) ? topicError : error) || COPY.error.body}
                 onRetry={() =>
-                  searchMode && topicQuery
-                    ? searchTopic(topicQuery)
-                    : loadCategory(activeCategory, true)
+                  activeCustomTopic
+                    ? searchTopic(activeCustomTopic.searchQueries[0])
+                    : searchMode && topicQuery
+                      ? searchTopic(topicQuery)
+                      : loadCategory(activeCategory, true)
                 }
               />
             )}
@@ -593,8 +682,16 @@ export default function NewsAggregator() {
               />
             )}
 
+            {/* Empty custom topic results */}
+            {customTopicMode && !topicLoading && !topicError && !hasData && (
+              <EmptyState
+                title={COPY.articles.emptyTitle}
+                body={COPY.articles.emptyBody}
+              />
+            )}
+
             {/* Empty search results */}
-            {searchMode && !topicLoading && !topicError && !hasData && topicQuery && (
+            {searchMode && !customTopicMode && !topicLoading && !topicError && !hasData && topicQuery && (
               <EmptyState
                 title={COPY.searchEmpty.title}
                 body={COPY.searchEmpty.body}
@@ -617,7 +714,7 @@ export default function NewsAggregator() {
                     <StoryCard
                       key={`story-${item.data.id}`}
                       story={item.data}
-                      featured={i === 0 && !showBookmarks && !searchMode}
+                      featured={i === 0 && !showBookmarks && !searchMode && !customTopicMode}
                       onBookmark={toggleBookmark}
                       bookmarks={bookmarks}
                       index={i}
@@ -627,7 +724,7 @@ export default function NewsAggregator() {
                     <ArticleCard
                       key={item.data.id}
                       article={item.data}
-                      featured={i === 0 && !showBookmarks && !searchMode}
+                      featured={i === 0 && !showBookmarks && !searchMode && !customTopicMode}
                       onBookmark={toggleBookmark}
                       isBookmarked={bookmarks.has(item.data.id)}
                       index={i}
@@ -648,6 +745,21 @@ export default function NewsAggregator() {
           </>
         )}
       </main>
+
+      {/* ── Topic Modal ─────────────────────────────── */}
+      {showTopicModal && (
+        <TopicModal
+          onClose={() => setShowTopicModal(false)}
+          onAdd={(topic) => {
+            addCustomTopic(topic);
+            setShowTopicModal(false);
+            // Switch to the new topic immediately
+            setTimeout(() => switchToCustomTopic(topic), 150);
+          }}
+          existingTopics={customTopics}
+          colorIndex={customTopics.length}
+        />
+      )}
 
       {/* ── Footer ──────────────────────────────────── */}
       <footer className="border-t border-[var(--border)] py-6 px-6 text-center text-xs text-[var(--text-muted)] max-w-[1200px] mx-auto">

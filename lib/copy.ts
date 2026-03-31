@@ -60,6 +60,17 @@ export const COPY = {
     body: "We looked everywhere \u2014 even had the AI search for it. Let\u2019s get you back to the stories.",
     button: "Back to Sift",
   },
+  topics: {
+    modalTitle: "What do you want to track?",
+    modalPlaceholder: "e.g. Florida utilities, AI in healthcare, Series A funding",
+    generating: "Interpreting your topic\u2026",
+    previewTitle: "Here\u2019s what I\u2019ll track",
+    previewQueries: "Search queries",
+    confirm: "Add topic",
+    cancel: "Cancel",
+    edit: "Edit",
+    maxReached: "You\u2019ve hit the 5-topic limit. Remove one to add another.",
+  },
   searchEmpty: {
     title: "Nothing matched that search",
     body: "Try different words \u2014 or let the AI surprise you.",

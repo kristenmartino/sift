@@ -210,4 +210,43 @@ export async function insertArticle(article: {
   );
 }
 
+// ─── Custom Topics ────────────────────────────────────
+
+export interface DbCustomTopic {
+  id: string;
+  user_id: string;
+  name: string;
+  query: string; // JSON-encoded CustomTopic data
+  created_at: Date;
+}
+
+export async function getCustomTopics(userId: string): Promise<DbCustomTopic[]> {
+  const result = await pool.query<DbCustomTopic>(
+    "SELECT id, user_id, name, query, created_at FROM custom_topics WHERE user_id = $1 ORDER BY created_at ASC",
+    [userId]
+  );
+  return result.rows;
+}
+
+export async function saveCustomTopic(
+  id: string,
+  userId: string,
+  name: string,
+  topicJson: string
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO custom_topics (id, user_id, name, query)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (user_id, name) DO UPDATE SET query = $4`,
+    [id, userId, name, topicJson]
+  );
+}
+
+export async function deleteCustomTopic(id: string, userId: string): Promise<void> {
+  await pool.query(
+    "DELETE FROM custom_topics WHERE id = $1 AND user_id = $2",
+    [id, userId]
+  );
+}
+
 export default pool;
