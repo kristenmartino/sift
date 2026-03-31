@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { COPY } from "@/lib/copy";
 
 interface TopicSearchProps {
   onSearch: (query: string) => void;
@@ -52,7 +53,7 @@ export default function TopicSearch({
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={'Search any topic\u2026 e.g. "AI policy in healthcare"'}
+            placeholder={COPY.search.placeholder}
             maxLength={200}
             className="w-full px-4 py-2 pr-12 rounded-full text-sm font-body transition-all duration-200 outline-none"
             style={{
@@ -107,14 +108,14 @@ export default function TopicSearch({
             </span>
           ) : (
             <span className="text-[var(--text-muted)]">
-              No matches found
+              {COPY.search.noResults}
             </span>
           )}
           {fallbackUsed && (
             <span className="text-[var(--text-muted)] italic">
               {resultCount === 0
-                ? "— searching the web in background, try again shortly"
-                : "Supplemented with web search"}
+                ? COPY.search.fallbackSearching
+                : COPY.search.fallbackUsed}
             </span>
           )}
         </div>
