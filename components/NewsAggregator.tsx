@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, COMPARE_SOURCES, DEFAULT_COMPARE_SOURCES } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
@@ -31,6 +31,8 @@ export default function NewsAggregator() {
   const [searchMode, setSearchMode] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [compareInputValue, setCompareInputValue] = useState("");
+  const [selectedSources, setSelectedSources] = useState<string[]>([...DEFAULT_COMPARE_SOURCES]);
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
 
   const [refreshed, setRefreshed] = useState(false);
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
@@ -94,12 +96,24 @@ export default function NewsAggregator() {
     setTimeout(() => setRefreshed(false), 2000);
   };
 
-  const handleCompare = (topic: string) => {
+  const toggleSource = (key: string) => {
+    setSelectedSources((prev) => {
+      if (prev.includes(key)) return prev.filter((s) => s !== key);
+      if (prev.length >= 5) return prev;
+      return [...prev, key];
+    });
+  };
+
+  const selectedLabels = selectedSources
+    .map((key) => COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key)
+    .join(", ");
+
+  const handleCompare = (topic: string, sources?: string[]) => {
     setCompareMode(true);
     setShowBookmarks(false);
     setSearchMode(false);
     clearTopicSearch();
-    runCompare(topic);
+    runCompare(topic, sources || selectedSources);
   };
 
   const exitCompareMode = () => {
@@ -281,7 +295,7 @@ export default function NewsAggregator() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const trimmed = compareInputValue.trim();
-                if (trimmed.length >= 3) handleCompare(trimmed);
+                if (trimmed.length >= 3 && selectedSources.length >= 2) handleCompare(trimmed, selectedSources);
               }}
               className="flex items-center gap-2"
             >
@@ -322,6 +336,45 @@ export default function NewsAggregator() {
                 </button>
               </div>
             </form>
+            <div className="mt-2 ml-11">
+              <button
+                type="button"
+                onClick={() => setSourcesExpanded(!sourcesExpanded)}
+                className="text-xs text-[var(--text-muted)] cursor-pointer bg-transparent border-none p-0 transition-colors duration-200"
+                style={{ color: sourcesExpanded ? "var(--accent)" : undefined }}
+              >
+                Comparing: {selectedLabels} {sourcesExpanded ? "▴" : "▾"}
+              </button>
+              {sourcesExpanded && (
+                <div className="flex flex-wrap gap-1.5 mt-2 animate-fade-slide-in">
+                  {COMPARE_SOURCES.map((source) => {
+                    const isSelected = selectedSources.includes(source.key);
+                    const atMax = selectedSources.length >= 5;
+                    const disabled = !isSelected && atMax;
+                    return (
+                      <button
+                        key={source.key}
+                        type="button"
+                        onClick={() => !disabled && toggleSource(source.key)}
+                        className="px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-all duration-200 border"
+                        style={{
+                          background: isSelected ? "var(--accent)" : "transparent",
+                          color: isSelected ? "#fff" : disabled ? "var(--text-muted)" : "var(--text-secondary)",
+                          borderColor: isSelected ? "var(--accent)" : "var(--border)",
+                          opacity: disabled ? 0.4 : 1,
+                          cursor: disabled ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {source.label}
+                      </button>
+                    );
+                  })}
+                  <span className="text-[10px] text-[var(--text-muted)] self-center ml-1">
+                    {selectedSources.length}/5
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </header>
@@ -364,6 +417,8 @@ export default function NewsAggregator() {
                 durationMs={compareDuration!}
                 onCompareAnother={handleCompare}
                 onClose={exitCompareMode}
+                selectedSources={selectedSources}
+                onToggleSource={toggleSource}
               />
             )}
 

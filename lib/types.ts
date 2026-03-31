@@ -113,6 +113,13 @@ export interface ErrorStateProps {
   onRetry: () => void;
 }
 
+// ─── Compare Source Types ───────────────────────────────
+
+export interface CompareSource {
+  key: string;
+  label: string;
+}
+
 // ─── State Types ────────────────────────────────────────
 
 export interface ArticleCache {
