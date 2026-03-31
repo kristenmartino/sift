@@ -7,7 +7,8 @@ const BAD_SUMMARIES = ["unable to provide summary"];
 function cleanSummary(raw: string | null): string {
   if (!raw) return "";
   if (BAD_SUMMARIES.some((b) => raw.toLowerCase().startsWith(b))) return "";
-  return raw;
+  // Strip <cite> tags leaked from Claude web_search responses
+  return raw.replace(/<cite[^>]*>|<\/cite>/g, "");
 }
 
 // ─── Valid Categories ───────────────────────────────────
