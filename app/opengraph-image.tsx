@@ -15,7 +15,7 @@ export default function OGImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0a0a0f",
+          background: "#0c0a09",
           fontFamily: "Georgia, serif",
         }}
       >
@@ -24,7 +24,7 @@ export default function OGImage() {
           style={{
             width: 60,
             height: 4,
-            background: "#6366f1",
+            background: "#818cf8",
             borderRadius: 2,
             marginBottom: 32,
           }}
@@ -66,7 +66,7 @@ export default function OGImage() {
             letterSpacing: "0.05em",
           }}
         >
-          100+ sources &middot; 7 categories &middot; Updated every 10 min
+          100+ sources &middot; 10 categories &middot; Updated every 10 min
         </span>
       </div>
     ),
