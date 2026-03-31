@@ -15,6 +15,8 @@ export interface DbArticle {
   category: string;
   published_date: Date | null;
   read_time: number;
+  why_it_matters: string | null;
+  importance_score: number | null;
   created_at: Date;
 }
 
@@ -24,10 +26,15 @@ export async function getArticlesByCategory(
 ): Promise<DbArticle[]> {
   const result = await pool.query<DbArticle>(
     `SELECT id, title, summary, source_url, source_name, image_url,
-            category, published_date, read_time, created_at
+            category, published_date, read_time, why_it_matters, importance_score, created_at
      FROM articles
      WHERE category = $1 AND from_search = false
-     ORDER BY published_date DESC NULLS LAST
+       AND summary IS NOT NULL AND summary != ''
+       AND LOWER(summary) NOT LIKE 'unable to provide%'
+     ORDER BY
+       COALESCE(importance_score, 3)::float *
+       EXP(-EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0)
+     DESC NULLS LAST
      LIMIT $2`,
     [category, limit]
   );
@@ -64,7 +71,10 @@ export async function getStoriesWithArticles(
               article_count, representative_image_url, published_date, synthesis_status
        FROM stories
        WHERE category = $1 AND synthesis_status = 'complete'
-       ORDER BY published_date DESC NULLS LAST
+       ORDER BY
+         COALESCE(article_count, 1)::float *
+         EXP(-EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0)
+       DESC NULLS LAST
        LIMIT 20`,
       [category]
     );
@@ -82,10 +92,15 @@ export async function getStoriesWithArticles(
   try {
     const articlesResult = await pool.query<DbStoryArticle>(
       `SELECT id, title, summary, source_url, source_name, image_url,
-              category, published_date, read_time, created_at, story_id
+              category, published_date, read_time, why_it_matters, importance_score, created_at, story_id
        FROM articles
        WHERE category = $1 AND from_search = false
-       ORDER BY published_date DESC NULLS LAST
+         AND summary IS NOT NULL AND summary != ''
+         AND LOWER(summary) NOT LIKE 'unable to provide%'
+       ORDER BY
+         COALESCE(importance_score, 3)::float *
+         EXP(-EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0)
+       DESC NULLS LAST
        LIMIT 50`,
       [category]
     );
@@ -96,10 +111,15 @@ export async function getStoriesWithArticles(
     if (!msg.includes("story_id")) throw err;
     const fallback = await pool.query<DbArticle>(
       `SELECT id, title, summary, source_url, source_name, image_url,
-              category, published_date, read_time, created_at
+              category, published_date, read_time, why_it_matters, importance_score, created_at
        FROM articles
        WHERE category = $1 AND from_search = false
-       ORDER BY published_date DESC NULLS LAST
+         AND summary IS NOT NULL AND summary != ''
+         AND LOWER(summary) NOT LIKE 'unable to provide%'
+       ORDER BY
+         COALESCE(importance_score, 3)::float *
+         EXP(-EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0)
+       DESC NULLS LAST
        LIMIT 50`,
       [category]
     );
@@ -167,7 +187,7 @@ export async function removeBookmark(userId: string, articleId: string): Promise
 export async function getBookmarkedArticles(userId: string): Promise<DbArticle[]> {
   const result = await pool.query<DbArticle>(
     `SELECT a.id, a.title, a.summary, a.source_url, a.source_name, a.image_url,
-            a.category, a.published_date, a.read_time, a.created_at
+            a.category, a.published_date, a.read_time, a.why_it_matters, a.importance_score, a.created_at
      FROM articles a
      JOIN bookmarks b ON b.article_id = a.id
      WHERE b.user_id = $1
@@ -191,7 +211,7 @@ export async function searchArticlesByEmbedding(
   const vectorStr = `[${embedding.join(",")}]`;
   const result = await pool.query<DbArticle & { similarity: number }>(
     `SELECT id, title, summary, source_url, source_name, image_url,
-            category, published_date, read_time, created_at,
+            category, published_date, read_time, why_it_matters, importance_score, created_at,
             1 - (embedding <=> $1::vector) AS similarity
      FROM articles
      WHERE embedding IS NOT NULL
