@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { COMPARE_SOURCES } from "@/lib/constants";
 import type { CompareClaim } from "@/lib/types";
+
+const MAX_SOURCES = 5;
+const MIN_SOURCES = 2;
 
 interface CompareViewProps {
   topic: string;
@@ -9,8 +13,10 @@ interface CompareViewProps {
   sourcesChecked: string[];
   claims: CompareClaim[];
   durationMs: number;
-  onCompareAnother: (topic: string) => void;
+  onCompareAnother: (topic: string, sources: string[]) => void;
   onClose: () => void;
+  selectedSources: string[];
+  onToggleSource: (key: string) => void;
 }
 
 const AGREEMENT_STYLES: Record<string, { label: string; bg: string; color: string; border: string; dot: string }> = {
@@ -52,20 +58,27 @@ export default function CompareView({
   durationMs,
   onCompareAnother,
   onClose,
+  selectedSources,
+  onToggleSource,
 }: CompareViewProps) {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [expandedClaim, setExpandedClaim] = useState<number | null>(null);
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  const selectedLabels = selectedSources
+    .map((key) => COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key)
+    .join(", ");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = inputValue.trim();
-    if (trimmed.length >= 3) {
-      onCompareAnother(trimmed);
+    if (trimmed.length >= 3 && selectedSources.length >= MIN_SOURCES) {
+      onCompareAnother(trimmed, selectedSources);
       setInputValue("");
     }
   };
@@ -248,18 +261,59 @@ export default function CompareView({
           />
           <button
             type="submit"
-            disabled={inputValue.trim().length < 3}
+            disabled={inputValue.trim().length < 3 || selectedSources.length < MIN_SOURCES}
             aria-label="Compare"
             className="flex items-center justify-center w-9 h-9 rounded-full text-sm cursor-pointer transition-all duration-200 shrink-0"
             style={{
-              background: inputValue.trim().length >= 3 ? "var(--accent)" : "transparent",
-              color: inputValue.trim().length >= 3 ? "#fff" : "var(--text-muted)",
-              border: `1px solid ${inputValue.trim().length >= 3 ? "var(--accent)" : "var(--border)"}`,
+              background: inputValue.trim().length >= 3 && selectedSources.length >= MIN_SOURCES ? "var(--accent)" : "transparent",
+              color: inputValue.trim().length >= 3 && selectedSources.length >= MIN_SOURCES ? "#fff" : "var(--text-muted)",
+              border: `1px solid ${inputValue.trim().length >= 3 && selectedSources.length >= MIN_SOURCES ? "var(--accent)" : "var(--border)"}`,
             }}
           >
             &rarr;
           </button>
         </form>
+
+        {/* Source picker */}
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setSourcesExpanded(!sourcesExpanded)}
+            className="text-xs text-[var(--text-muted)] cursor-pointer bg-transparent border-none p-0 transition-colors duration-200"
+            style={{ color: sourcesExpanded ? "var(--accent)" : undefined }}
+          >
+            Comparing: {selectedLabels} {sourcesExpanded ? "▴" : "▾"}
+          </button>
+          {sourcesExpanded && (
+            <div className="flex flex-wrap gap-1.5 mt-2 animate-fade-slide-in">
+              {COMPARE_SOURCES.map((source) => {
+                const isSelected = selectedSources.includes(source.key);
+                const atMax = selectedSources.length >= MAX_SOURCES;
+                const disabled = !isSelected && atMax;
+                return (
+                  <button
+                    key={source.key}
+                    type="button"
+                    onClick={() => !disabled && onToggleSource(source.key)}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-all duration-200 border"
+                    style={{
+                      background: isSelected ? "var(--accent)" : "transparent",
+                      color: isSelected ? "#fff" : disabled ? "var(--text-muted)" : "var(--text-secondary)",
+                      borderColor: isSelected ? "var(--accent)" : "var(--border)",
+                      opacity: disabled ? 0.4 : 1,
+                      cursor: disabled ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {source.label}
+                  </button>
+                );
+              })}
+              <span className="text-[10px] text-[var(--text-muted)] self-center ml-1">
+                {selectedSources.length}/{MAX_SOURCES} selected
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

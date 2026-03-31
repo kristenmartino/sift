@@ -60,6 +60,25 @@ export const GRADIENTS: Record<CategoryId, string> = {
   entertainment: "linear-gradient(135deg, #200a15 0%, #2e1020 50%, #3d0f25 100%)",
 };
 
+// ─── Compare Sources ────────────────────────────────────
+
+export const COMPARE_SOURCES = [
+  { key: "reuters", label: "Reuters" },
+  { key: "bbc", label: "BBC" },
+  { key: "associated press", label: "AP" },
+  { key: "cnn", label: "CNN" },
+  { key: "the guardian", label: "The Guardian" },
+  { key: "the new york times", label: "NYT" },
+  { key: "the washington post", label: "Wash. Post" },
+  { key: "al jazeera", label: "Al Jazeera" },
+  { key: "npr", label: "NPR" },
+  { key: "axios", label: "Axios" },
+  { key: "the economist", label: "Economist" },
+  { key: "financial times", label: "FT" },
+] as const;
+
+export const DEFAULT_COMPARE_SOURCES = ["reuters", "bbc", "associated press"];
+
 // ─── Timing ─────────────────────────────────────────────
 
 export const API_TIMEOUT_MS = 10_000; // 10s — DB reads are fast, no need for 90s
