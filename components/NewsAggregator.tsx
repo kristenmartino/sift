@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { CATEGORIES, COMPARE_SOURCES, DEFAULT_COMPARE_SOURCES } from "@/lib/constants";
+import { CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare } from "@/lib/hooks";
@@ -143,12 +143,37 @@ export default function NewsAggregator() {
     .map((key) => COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key)
     .join(", ");
 
-  const handleCompare = (topic: string, sources?: string[]) => {
+  const startCompare = (topic: string, sources: string[]) => {
     setCompareMode(true);
     setShowBookmarks(false);
     setSearchMode(false);
     clearTopicSearch();
-    runCompare(topic, sources || selectedSources);
+    runCompare(topic, sources);
+  };
+
+  const handleCompareFromArticle = (topic: string, sourceName?: string) => {
+    // Start with category-aware defaults
+    const categoryDefaults = CATEGORY_COMPARE_DEFAULTS[activeCategory] || DEFAULT_COMPARE_SOURCES;
+    let sources = [...categoryDefaults];
+
+    // Ensure the article's own source is included
+    if (sourceName) {
+      const nameLower = sourceName.toLowerCase();
+      const alreadyIncluded = sources.some((key) => {
+        const cs = COMPARE_SOURCES.find((s) => s.key === key);
+        if (cs) return nameLower.includes(cs.key) || cs.key.includes(nameLower) || nameLower === cs.label.toLowerCase();
+        return key === nameLower;
+      });
+      if (!alreadyIncluded) {
+        const match = COMPARE_SOURCES.find(
+          (s) => nameLower.includes(s.key) || s.key.includes(nameLower) || nameLower === s.label.toLowerCase()
+        );
+        sources = [match?.key || nameLower, ...sources].slice(0, 5);
+      }
+    }
+
+    setSelectedSources(sources);
+    startCompare(topic, sources);
   };
 
   const exitCompareMode = () => {
@@ -268,6 +293,7 @@ export default function NewsAggregator() {
                   setShowBookmarks(false);
                   setSearchMode(false);
                   clearTopicSearch();
+                  setSelectedSources([...(CATEGORY_COMPARE_DEFAULTS[activeCategory] || DEFAULT_COMPARE_SOURCES)]);
                 }
               }}
               aria-label="Compare coverage"
@@ -368,7 +394,7 @@ export default function NewsAggregator() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const trimmed = compareInputValue.trim();
-                if (trimmed.length >= 3 && selectedSources.length >= 2) handleCompare(trimmed, selectedSources);
+                if (trimmed.length >= 3 && selectedSources.length >= 2) startCompare(trimmed, selectedSources);
               }}
               className="flex items-center gap-2"
             >
@@ -488,7 +514,7 @@ export default function NewsAggregator() {
                 sourcesChecked={compareSources}
                 claims={compareClaims}
                 durationMs={compareDuration!}
-                onCompareAnother={handleCompare}
+                onCompareAnother={startCompare}
                 onClose={exitCompareMode}
                 selectedSources={selectedSources}
                 onToggleSource={toggleSource}
@@ -595,7 +621,7 @@ export default function NewsAggregator() {
                       onBookmark={toggleBookmark}
                       bookmarks={bookmarks}
                       index={i}
-                      onCompare={handleCompare}
+                      onCompare={handleCompareFromArticle}
                     />
                   ) : (
                     <ArticleCard
@@ -605,7 +631,7 @@ export default function NewsAggregator() {
                       onBookmark={toggleBookmark}
                       isBookmarked={bookmarks.has(item.data.id)}
                       index={i}
-                      onCompare={handleCompare}
+                      onCompare={handleCompareFromArticle}
                     />
                   )
                 )}
