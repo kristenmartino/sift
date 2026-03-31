@@ -10,6 +10,7 @@ import SkeletonCard from "./SkeletonCard";
 import ErrorState from "./ErrorState";
 import TopicSearch from "./TopicSearch";
 import CompareView from "./CompareView";
+import SiftLogo from "./SiftLogo";
 import AuthButtons, { clerkEnabled } from "./AuthButtons";
 import type { Article, CategoryId } from "@/lib/types";
 
@@ -146,9 +147,7 @@ export default function NewsAggregator() {
             className="flex items-baseline gap-3 cursor-pointer"
             onClick={() => { setShowBookmarks(false); setSearchMode(false); clearTopicSearch(); exitCompareMode(); setActiveCategory("top"); }}
           >
-            <h1 className="font-heading text-[28px] font-extrabold tracking-tight text-[var(--text)] leading-none">
-              Sift
-            </h1>
+            <SiftLogo variant="full" size={28} />
             <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--accent)] opacity-80">
               AI-Curated
             </span>
@@ -480,7 +479,7 @@ export default function NewsAggregator() {
 
       {/* ── Footer ──────────────────────────────────── */}
       <footer className="border-t border-[var(--border)] py-6 px-6 text-center text-xs text-[var(--text-muted)] max-w-[1200px] mx-auto">
-        <span className="font-heading font-semibold">Sift</span>
+        <SiftLogo variant="full" size={14} />
         {" — "}AI-curated news powered by Claude. Articles link to original sources.
       </footer>
     </div>

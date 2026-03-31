@@ -19,16 +19,16 @@ export default function OGImage() {
           fontFamily: "Georgia, serif",
         }}
       >
-        {/* Accent line */}
-        <div
-          style={{
-            width: 60,
-            height: 4,
-            background: "#818cf8",
-            borderRadius: 2,
-            marginBottom: 32,
-          }}
-        />
+        {/* Diamond mark */}
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="#818cf8"
+          style={{ marginBottom: 24 }}
+        >
+          <path d="M12 2L22 12L12 22L2 12Z" />
+        </svg>
 
         {/* Wordmark */}
         <span
