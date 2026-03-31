@@ -13,7 +13,7 @@ const FEATURES = [
     title: "AI-Written Summaries",
     description:
       "Every article distilled into a concise summary by Claude. Get the key points without clicking through.",
-    accent: "#6366f1",
+    accent: "#818cf8",
   },
   {
     icon: "◆",
@@ -41,7 +41,7 @@ const FEATURES = [
     title: "Synced Bookmarks",
     description:
       "Save articles to read later. Sign in to sync bookmarks across devices, or use local storage.",
-    accent: "#ea580c",
+    accent: "#d97706",
   },
   {
     icon: "↻",
