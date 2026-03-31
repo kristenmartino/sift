@@ -56,36 +56,62 @@ export interface DbStoryArticle extends DbArticle {
 export async function getStoriesWithArticles(
   category: string
 ): Promise<{ stories: DbStory[]; storyArticles: Record<string, DbStoryArticle[]>; standaloneArticles: DbArticle[] }> {
-  // 1. Get stories for this category
-  const storiesResult = await pool.query<DbStory>(
-    `SELECT id, headline, summary, category, framings, entities,
-            article_count, representative_image_url, published_date, synthesis_status
-     FROM stories
-     WHERE category = $1 AND synthesis_status = 'complete'
-     ORDER BY published_date DESC NULLS LAST
-     LIMIT 20`,
-    [category]
-  );
-  const stories = storiesResult.rows;
+  // 1. Try to get stories (gracefully handle missing table)
+  let stories: DbStory[] = [];
+  try {
+    const storiesResult = await pool.query<DbStory>(
+      `SELECT id, headline, summary, category, framings, entities,
+              article_count, representative_image_url, published_date, synthesis_status
+       FROM stories
+       WHERE category = $1 AND synthesis_status = 'complete'
+       ORDER BY published_date DESC NULLS LAST
+       LIMIT 20`,
+      [category]
+    );
+    stories = storiesResult.rows;
+  } catch (err) {
+    // stories table may not exist yet — fall back to articles-only
+    const msg = String(err);
+    if (!msg.includes("does not exist")) throw err;
+  }
+
   const storyIds = stories.map((s) => s.id);
 
-  // 2. Get all articles for this category (with story_id)
-  const articlesResult = await pool.query<DbStoryArticle>(
-    `SELECT id, title, summary, source_url, source_name, image_url,
-            category, published_date, read_time, created_at, story_id
-     FROM articles
-     WHERE category = $1 AND from_search = false
-     ORDER BY published_date DESC NULLS LAST
-     LIMIT 50`,
-    [category]
-  );
+  // 2. Get all articles for this category (with story_id if column exists)
+  let articlesRows: DbStoryArticle[] = [];
+  try {
+    const articlesResult = await pool.query<DbStoryArticle>(
+      `SELECT id, title, summary, source_url, source_name, image_url,
+              category, published_date, read_time, created_at, story_id
+       FROM articles
+       WHERE category = $1 AND from_search = false
+       ORDER BY published_date DESC NULLS LAST
+       LIMIT 50`,
+      [category]
+    );
+    articlesRows = articlesResult.rows;
+  } catch (err) {
+    // story_id column may not exist — retry without it
+    const msg = String(err);
+    if (!msg.includes("story_id")) throw err;
+    const fallback = await pool.query<DbArticle>(
+      `SELECT id, title, summary, source_url, source_name, image_url,
+              category, published_date, read_time, created_at
+       FROM articles
+       WHERE category = $1 AND from_search = false
+       ORDER BY published_date DESC NULLS LAST
+       LIMIT 50`,
+      [category]
+    );
+    return { stories: [], storyArticles: {}, standaloneArticles: fallback.rows };
+  }
 
   // 3. Partition into story-grouped and standalone
   const storyArticles: Record<string, DbStoryArticle[]> = {};
   const standaloneArticles: DbArticle[] = [];
   const storyIdSet = new Set(storyIds);
 
-  for (const row of articlesResult.rows) {
+  for (const row of articlesRows) {
     if (row.story_id && storyIdSet.has(row.story_id)) {
       if (!storyArticles[row.story_id]) storyArticles[row.story_id] = [];
       storyArticles[row.story_id].push(row);
