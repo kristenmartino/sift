@@ -10,6 +10,12 @@ const SIMILARITY_THRESHOLD = 0.35;
 const MIN_STRONG_RESULTS = 3;
 const MAX_RESULTS = 10;
 
+function getVoyageApiKey(): string {
+  const key = process.env.VOYAGE_API_KEY;
+  if (!key) throw new Error("VOYAGE_API_KEY environment variable is not set");
+  return key;
+}
+
 // ─── Category classification for fallback articles ──────
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
@@ -45,7 +51,7 @@ async function getCategoryEmbeddings(): Promise<{ embeddings: number[][]; catego
   const res = await fetch("https://api.voyageai.com/v1/embeddings", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
+      Authorization: `Bearer ${getVoyageApiKey()}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ input: texts, model: "voyage-3-lite", input_type: "document" }),
@@ -92,23 +98,29 @@ function classifyCategory(articleEmbedding: number[], catEmbeddings: number[][],
 const embeddingCache = new Map<string, { embedding: number[]; ts: number }>();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
+function normalizeQuery(query: string): string {
+  return query.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 function getCachedEmbedding(query: string): number[] | null {
-  const entry = embeddingCache.get(query.toLowerCase());
+  const key = normalizeQuery(query);
+  const entry = embeddingCache.get(key);
   if (!entry) return null;
   if (Date.now() - entry.ts > CACHE_TTL_MS) {
-    embeddingCache.delete(query.toLowerCase());
+    embeddingCache.delete(key);
     return null;
   }
   return entry.embedding;
 }
 
 function setCachedEmbedding(query: string, embedding: number[]) {
+  const key = normalizeQuery(query);
   // Cap cache size to prevent unbounded growth
   if (embeddingCache.size > 500) {
     const oldest = embeddingCache.keys().next().value;
     if (oldest) embeddingCache.delete(oldest);
   }
-  embeddingCache.set(query.toLowerCase(), { embedding, ts: Date.now() });
+  embeddingCache.set(key, { embedding, ts: Date.now() });
 }
 
 // ─── SSE Helpers ────────────────────────────────────────
@@ -251,7 +263,7 @@ async function embedQuery(text: string): Promise<number[]> {
   const res = await fetch("https://api.voyageai.com/v1/embeddings", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
+      Authorization: `Bearer ${getVoyageApiKey()}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -354,7 +366,7 @@ If you truly cannot find any articles, respond with an empty array: []`,
     const embRes = await fetch("https://api.voyageai.com/v1/embeddings", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
+        Authorization: `Bearer ${getVoyageApiKey()}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

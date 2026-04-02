@@ -5,6 +5,12 @@ import { rateLimit } from "@/lib/rate-limit";
 import { checkCsrf } from "@/lib/security";
 
 const SIFT_API_URL = process.env.SIFT_API_URL || "http://localhost:8000";
+try {
+  const u = new URL(SIFT_API_URL);
+  if (!["http:", "https:"].includes(u.protocol)) throw new Error("bad protocol");
+} catch {
+  throw new Error(`Invalid SIFT_API_URL: ${SIFT_API_URL}`);
+}
 const COMPARE_TIMEOUT_MS = 60_000;
 
 const compareSchema = z.object({
