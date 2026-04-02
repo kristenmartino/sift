@@ -88,27 +88,27 @@ export async function GET(request: NextRequest) {
         ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
       }));
 
-      // Parse JSONB framings
+      // Parse JSONB framings (sanitize external text)
       const rawFramings = Array.isArray(s.framings) ? s.framings : [];
       const framings: StoryFraming[] = (rawFramings as Record<string, string>[]).map((f) => ({
-        sourceName: f.source_name || "",
-        framing: f.framing || "",
+        sourceName: stripHtml(f.source_name || ""),
+        framing: stripHtml(f.framing || ""),
         tone: (f.tone || "neutral") as StoryFraming["tone"],
       }));
 
-      // Parse JSONB entities
+      // Parse JSONB entities (sanitize external text)
       const rawEntities = Array.isArray(s.entities) ? s.entities : [];
       const entities: EntitySet[] = (rawEntities as Record<string, unknown>[]).map((e) => ({
-        people: (e.people as string[]) || [],
-        organizations: (e.organizations as string[]) || [],
-        locations: (e.locations as string[]) || [],
-        eventDescription: (e.event_description as string) || "",
+        people: ((e.people as string[]) || []).map(stripHtml),
+        organizations: ((e.organizations as string[]) || []).map(stripHtml),
+        locations: ((e.locations as string[]) || []).map(stripHtml),
+        eventDescription: stripHtml((e.event_description as string) || ""),
       }));
 
       return {
         id: s.id,
-        headline: s.headline,
-        summary: s.summary,
+        headline: stripHtml(s.headline),
+        summary: stripHtml(s.summary),
         category: s.category as CategoryId,
         framings,
         entities,
