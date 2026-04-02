@@ -1,30 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import type { TopicGenerateResponse } from "@/lib/types";
+import { rateLimit } from "@/lib/rate-limit";
+import { checkCsrf } from "@/lib/security";
+
+const generateSchema = z.object({
+  rawTopic: z.string().min(2).max(200),
+  existingTopics: z.array(z.string().max(200)).max(20).optional().default([]),
+});
 
 export async function POST(request: NextRequest) {
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
+
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { rawTopic?: string; existingTopics?: string[] };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  // Rate limit: 10 requests per minute per user
+  const rl = rateLimit(`generate:${userId}`, { maxRequests: 10, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } }
+    );
   }
 
-  const rawTopic = body.rawTopic?.trim();
-  if (!rawTopic || rawTopic.length < 2 || rawTopic.length > 200) {
+  let body: z.infer<typeof generateSchema>;
+  try {
+    body = generateSchema.parse(await request.json());
+  } catch {
     return NextResponse.json(
-      { error: "Topic must be 2-200 characters" },
+      { error: "Invalid input: rawTopic (2-200 chars) is required" },
       { status: 400 }
     );
   }
 
-  const existingTopics = body.existingTopics || [];
+  const rawTopic = body.rawTopic.trim();
+  const existingTopics = body.existingTopics;
 
   try {
     const anthropic = new Anthropic();
@@ -41,7 +57,8 @@ export async function POST(request: NextRequest) {
         {
           role: "user",
           content: `You are helping a user create a personalized news topic for a news aggregator.
-They described their interest as: "${rawTopic}"
+They described their interest as:
+<user_input>${rawTopic}</user_input>
 ${existingClause}
 
 Generate a topic configuration:
