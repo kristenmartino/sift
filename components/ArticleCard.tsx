@@ -67,7 +67,7 @@ export default function ArticleCard({
         ...entranceStyle,
       }}
       onClick={() =>
-        article.sourceUrl && window.open(article.sourceUrl, "_blank", "noopener")
+        article.sourceUrl && window.open(article.sourceUrl, "_blank", "noopener,noreferrer")
       }
     >
       {/* Hover glow — accent-colored bar at top edge */}
