@@ -46,6 +46,14 @@ export async function GET(request: NextRequest) {
 
     const data = await res.json();
 
+    if (!res.ok) {
+      console.error("Pipeline returned error:", res.status, data);
+      return NextResponse.json(
+        { triggered: false, error: data.detail || "Pipeline error", status: res.status },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({
       triggered: true,
       timestamp: new Date().toISOString(),
