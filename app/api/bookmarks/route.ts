@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { z } from "zod";
 import {
   getBookmarks,
   addBookmark,
@@ -7,6 +8,11 @@ import {
   getBookmarkedArticles,
 } from "@/lib/db";
 import type { Article, CategoryId } from "@/lib/types";
+import { checkCsrf } from "@/lib/security";
+
+const bookmarkSchema = z.object({
+  articleId: z.string().min(1).max(200),
+});
 
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -46,15 +52,20 @@ export async function GET(request: NextRequest) {
 
 // POST /api/bookmarks — body { articleId }
 export async function POST(request: NextRequest) {
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
+
   const { userId } = await auth();
   if (!userId) return unauthorized();
 
   try {
-    const { articleId } = await request.json();
-    if (!articleId || typeof articleId !== "string") {
+    let body: z.infer<typeof bookmarkSchema>;
+    try {
+      body = bookmarkSchema.parse(await request.json());
+    } catch {
       return NextResponse.json({ error: "articleId required" }, { status: 400 });
     }
-    await addBookmark(userId, articleId);
+    await addBookmark(userId, body.articleId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Bookmarks POST error:", err);
@@ -64,15 +75,20 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/bookmarks — body { articleId }
 export async function DELETE(request: NextRequest) {
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
+
   const { userId } = await auth();
   if (!userId) return unauthorized();
 
   try {
-    const { articleId } = await request.json();
-    if (!articleId || typeof articleId !== "string") {
+    let body: z.infer<typeof bookmarkSchema>;
+    try {
+      body = bookmarkSchema.parse(await request.json());
+    } catch {
       return NextResponse.json({ error: "articleId required" }, { status: 400 });
     }
-    await removeBookmark(userId, articleId);
+    await removeBookmark(userId, body.articleId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Bookmarks DELETE error:", err);
