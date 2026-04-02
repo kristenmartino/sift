@@ -71,9 +71,15 @@ export function useBookmarks(userId?: string | null) {
   const ids = isSignedIn && synced ? serverIds : localIds;
   const bookmarkSet = useMemo(() => new Set(ids), [ids]);
 
+  const pendingRef = useRef<Set<string>>(new Set());
+
   const toggle = useCallback(
     (id: string) => {
       if (isSignedIn) {
+        // Prevent concurrent operations on the same bookmark
+        if (pendingRef.current.has(id)) return;
+        pendingRef.current.add(id);
+
         // Optimistic update
         setServerIds((prev) => {
           const set = new Set(prev);
@@ -88,7 +94,9 @@ export function useBookmarks(userId?: string | null) {
             method: removing ? "DELETE" : "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ articleId: id }),
-          }).catch((err) => console.error("Bookmark sync error:", err));
+          })
+            .catch((err) => console.error("Bookmark sync error:", err))
+            .finally(() => pendingRef.current.delete(id));
           return [...set];
         });
       } else {

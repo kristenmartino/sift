@@ -88,22 +88,28 @@ export async function GET(request: NextRequest) {
         ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
       }));
 
-      // Parse JSONB framings (sanitize external text)
+      // Parse JSONB framings (validate types, sanitize external text)
       const rawFramings = Array.isArray(s.framings) ? s.framings : [];
-      const framings: StoryFraming[] = (rawFramings as Record<string, string>[]).map((f) => ({
-        sourceName: stripHtml(f.source_name || ""),
-        framing: stripHtml(f.framing || ""),
-        tone: (f.tone || "neutral") as StoryFraming["tone"],
-      }));
+      const framings: StoryFraming[] = (rawFramings as unknown[])
+        .filter((f): f is Record<string, unknown> => typeof f === "object" && f !== null)
+        .map((f) => ({
+          sourceName: stripHtml(String(f.source_name ?? "")),
+          framing: stripHtml(String(f.framing ?? "")),
+          tone: (typeof f.tone === "string" ? f.tone : "neutral") as StoryFraming["tone"],
+        }));
 
-      // Parse JSONB entities (sanitize external text)
+      // Parse JSONB entities (validate types, sanitize external text)
       const rawEntities = Array.isArray(s.entities) ? s.entities : [];
-      const entities: EntitySet[] = (rawEntities as Record<string, unknown>[]).map((e) => ({
-        people: ((e.people as string[]) || []).map(stripHtml),
-        organizations: ((e.organizations as string[]) || []).map(stripHtml),
-        locations: ((e.locations as string[]) || []).map(stripHtml),
-        eventDescription: stripHtml((e.event_description as string) || ""),
-      }));
+      const toStrings = (v: unknown): string[] =>
+        Array.isArray(v) ? v.filter((s): s is string => typeof s === "string").map(stripHtml) : [];
+      const entities: EntitySet[] = (rawEntities as unknown[])
+        .filter((e): e is Record<string, unknown> => typeof e === "object" && e !== null)
+        .map((e) => ({
+          people: toStrings(e.people),
+          organizations: toStrings(e.organizations),
+          locations: toStrings(e.locations),
+          eventDescription: stripHtml(String(e.event_description ?? "")),
+        }));
 
       return {
         id: s.id,
