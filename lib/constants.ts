@@ -12,7 +12,7 @@ export const CATEGORIES: Category[] = [
   { id: "health", label: "Health", icon: "✦" },
   { id: "politics", label: "Politics", icon: "⚖" },
   { id: "sports", label: "Sports", icon: "⬢" },
-  { id: "entertainment", label: "Entertainment", icon: "♦" },
+  { id: "entertainment", label: "Entertainment", icon: "▶" },
 ];
 
 export const VALID_CATEGORIES = new Set<CategoryId>([
