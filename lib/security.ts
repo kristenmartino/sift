@@ -15,7 +15,7 @@ export function checkCsrf(request: NextRequest): NextResponse | null {
   // If present, use it as the primary CSRF check.
   const secFetchSite = request.headers.get("sec-fetch-site");
   if (secFetchSite) {
-    if (secFetchSite === "same-origin" || secFetchSite === "same-site" || secFetchSite === "none") {
+    if (secFetchSite === "same-origin" || secFetchSite === "none") {
       return null;
     }
     // "cross-site" — block

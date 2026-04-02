@@ -21,7 +21,8 @@ import crypto from "crypto";
 
 const CONCURRENCY = 10; // Concurrent Claude calls
 const VOYAGE_BATCH_SIZE = 50; // Embed in batches
-const DB_URL = process.env.DATABASE_URL || "postgresql://sift:sift@localhost:5432/siftdb";
+const DB_URL = process.env.DATABASE_URL;
+if (!DB_URL) { console.error("DATABASE_URL is required"); process.exit(1); }
 const VOYAGE_KEY = process.env.VOYAGE_API_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
