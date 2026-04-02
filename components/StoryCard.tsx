@@ -205,7 +205,7 @@ export default function StoryCard({
                 style={{ background: "var(--bg)" }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(article.sourceUrl, "_blank", "noopener");
+                  window.open(article.sourceUrl, "_blank", "noopener,noreferrer");
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.background = "var(--card-bg)";
