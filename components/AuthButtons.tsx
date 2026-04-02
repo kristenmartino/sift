@@ -22,6 +22,7 @@ function ClerkAuthButtons() {
           border: "1px solid var(--border)",
           color: "var(--text-secondary)",
         }}
+        title="Sign in to sync bookmarks and custom topics across devices"
       >
         Sign in
       </button>

@@ -86,10 +86,10 @@ const TECH_STACK = [
 ];
 
 const ARCHITECTURE_POINTS = [
-  "AI runs in the background pipeline, not in the request path — reads are < 50ms",
-  "Cost scales with content volume, not user count",
-  "Graceful degradation: every feature works without auth, without AI, without search",
-  "56+ sources ingested, deduplicated, and ranked before you open the app",
+  "Articles load in under 50ms — AI processing happens in the background, not when you read",
+  "Works without an account — sign in only if you want bookmarks synced across devices",
+  "Graceful degradation: every feature works independently, so one slow service never blocks you",
+  "100+ sources ingested, deduplicated, and ranked before you open the app",
 ];
 
 // ─── Component ──────────────────────────────────────────
@@ -110,7 +110,7 @@ export default function LandingPage() {
       {/* ── Nav ───────────────────────────────────── */}
       <nav
         className="sticky top-0 z-50 border-b border-[var(--border)]"
-        style={{ background: "var(--nav-bg)", backdropFilter: "blur(12px)" }}
+        style={{ background: "var(--nav-bg)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}
       >
         <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -284,10 +284,10 @@ export default function LandingPage() {
       {/* ── Built for Production ──────────────────── */}
       <section className="max-w-[1200px] mx-auto px-6 pb-20">
         <h2 className="font-heading text-2xl font-bold text-center text-[var(--text)] mb-4">
-          Built for production
+          Built to be fast and reliable
         </h2>
         <p className="text-center text-sm text-[var(--text-secondary)] mb-12 max-w-[500px] mx-auto">
-          Not a demo. A real system designed for reliability, speed, and cost-efficiency.
+          A real system designed for speed, reliability, and always-fresh content.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10 max-w-[700px] mx-auto">
           {TECH_STACK.map((tech) => (
@@ -342,9 +342,30 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ────────────────────────────────── */}
-      <footer className="border-t border-[var(--border)] py-6 px-6 text-center text-xs text-[var(--text-muted)] max-w-[1200px] mx-auto">
-        <SiftLogo variant="full" size={14} />
-        {" \u2014 "}{COPY.footer.main}
+      <footer className="border-t border-[var(--border)] py-10 px-6 max-w-[1200px] mx-auto">
+        <div className="flex flex-col md:flex-row md:justify-between gap-6 mb-6">
+          <div className="flex flex-col gap-2">
+            <SiftLogo variant="full" size={20} />
+            <p className="text-xs text-[var(--text-muted)] max-w-[320px]">
+              {COPY.footer.main}
+            </p>
+          </div>
+          <div className="flex gap-8 text-xs">
+            <div className="flex flex-col gap-1.5">
+              <span className="font-semibold text-[var(--text-secondary)]">Product</span>
+              <Link href="/news" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] transition-colors">News Feed</Link>
+              <Link href="/news?view=bookmarks" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] transition-colors">Bookmarks</Link>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="font-semibold text-[var(--text-secondary)]">Legal</span>
+              <Link href="/privacy" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] transition-colors">Privacy</Link>
+              <Link href="/terms" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] transition-colors">Terms</Link>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-[var(--border)] pt-4 text-xs text-[var(--text-muted)] text-center">
+          &copy; {new Date().getFullYear()} Sift. Every story links to the original.
+        </div>
       </footer>
     </div>
   );
