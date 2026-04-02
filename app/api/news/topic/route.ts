@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { searchArticlesByEmbedding, insertArticle } from "@/lib/db";
 import { stableHash, estimateReadTime } from "@/lib/utils";
 import type { Article, CategoryId } from "@/lib/types";
+import { rateLimit } from "@/lib/rate-limit";
 
 const SIMILARITY_THRESHOLD = 0.35;
 const MIN_STRONG_RESULTS = 3;
@@ -129,6 +130,16 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Rate limit by IP: 20 searches per minute
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rl = rateLimit(`topic-search:${ip}`, { maxRequests: 20, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } }
+    );
+  }
+
   const stream = new ReadableStream({
     async start(controller) {
       let totalArticles = 0;
@@ -211,7 +222,7 @@ export async function GET(request: NextRequest) {
       } catch (err) {
         console.error("Topic search error:", err);
         controller.enqueue(
-          sseEvent("error", { message: String(err) })
+          sseEvent("error", { message: "Topic search failed" })
         );
       } finally {
         controller.close();
@@ -271,7 +282,8 @@ async function webSearchFallback(query: string): Promise<Article[]> {
     messages: [
       {
         role: "user",
-        content: `Search the web for recent news articles related to: "${query}"
+        content: `Search the web for recent news articles related to:
+<user_query>${query}</user_query>
 
 If the query is vague or broad (like a single word), interpret it generously — find interesting recent news stories that relate to the theme.
 

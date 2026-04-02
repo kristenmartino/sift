@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const SIFT_API_URL = process.env.SIFT_API_URL || "http://localhost:8000";
-const SIFT_API_KEY = process.env.SIFT_API_KEY || "dev-key";
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret in production
+  // Verify cron secret — always required
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret) {
+    console.error("CRON_SECRET environment variable is not set");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const siftApiKey = process.env.SIFT_API_KEY;
+  if (!siftApiKey) {
+    console.error("SIFT_API_KEY environment variable is not set");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   }
 
   try {
@@ -18,7 +25,7 @@ export async function GET(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Pipeline-Key": SIFT_API_KEY,
+        "X-Pipeline-Key": siftApiKey,
       },
       body: JSON.stringify({}),
       signal: AbortSignal.timeout(300_000), // 5 min timeout for full pipeline
@@ -35,7 +42,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error("Pipeline trigger failed:", err);
     return NextResponse.json(
-      { triggered: false, error: String(err) },
+      { triggered: false, error: "Pipeline trigger failed" },
       { status: 502 }
     );
   }
