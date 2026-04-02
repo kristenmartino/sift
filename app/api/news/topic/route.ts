@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { searchArticlesByEmbedding, insertArticle } from "@/lib/db";
 import { stableHash, estimateReadTime } from "@/lib/utils";
+import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -130,13 +131,18 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Rate limit by IP: 20 searches per minute
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const rl = rateLimit(`topic-search:${ip}`, { maxRequests: 20, windowMs: 60_000 });
-  if (!rl.allowed) {
+  // Rate limit by IP + global fallback to prevent abuse
+  // Use x-real-ip (set by reverse proxy) over x-forwarded-for (user-spoofable)
+  const ip = request.headers.get("x-real-ip")
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || "unknown";
+  const perIp = rateLimit(`topic-search:${ip}`, { maxRequests: 20, windowMs: 60_000 });
+  const global = rateLimit("topic-search:global", { maxRequests: 200, windowMs: 60_000 });
+  if (!perIp.allowed || !global.allowed) {
+    const retryMs = Math.max(perIp.retryAfterMs, global.retryAfterMs);
     return NextResponse.json(
       { error: "Too many requests" },
-      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } }
+      { status: 429, headers: { "Retry-After": String(Math.ceil(retryMs / 1000)) } }
     );
   }
 
@@ -383,32 +389,39 @@ If you truly cannot find any articles, respond with an empty array: []`,
     const a = parsed[i];
     if (!a.title || !a.source_url) continue;
 
+    // Sanitize external data before storage and display
+    const safeTitle = stripHtml(a.title);
+    const safeSummary = stripHtml(a.summary || "");
+    const safeSourceUrl = sanitizeUrl(a.source_url);
+    const safeSourceName = stripHtml(a.source_name || "Web");
+    if (!safeTitle || !safeSourceUrl) continue;
+
     const category: CategoryId =
       catData && embeddings[i]
         ? classifyCategory(embeddings[i], catData.embeddings, catData.categories)
         : ("top" as CategoryId);
 
-    const id = stableHash(a.source_url + a.title);
+    const id = stableHash(safeSourceUrl + safeTitle);
     articles.push({
       id,
-      title: a.title,
-      summary: a.summary || "",
-      sourceUrl: a.source_url,
-      sourceName: a.source_name || "Web",
+      title: safeTitle,
+      summary: safeSummary,
+      sourceUrl: safeSourceUrl,
+      sourceName: safeSourceName,
       publishedDate: new Date().toISOString(),
       imageUrl: null,
       category,
-      readTime: estimateReadTime(a.summary),
+      readTime: estimateReadTime(safeSummary),
     });
 
     // Store in Postgres (fire and forget)
     if (embeddings[i]) {
       insertArticle({
         id,
-        title: a.title,
-        summary: a.summary || "",
-        source_url: a.source_url,
-        source_name: a.source_name || "Web",
+        title: safeTitle,
+        summary: safeSummary,
+        source_url: safeSourceUrl,
+        source_name: safeSourceName,
         category,
         embedding: embeddings[i],
         published_date: new Date(),
