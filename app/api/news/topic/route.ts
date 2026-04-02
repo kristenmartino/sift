@@ -425,7 +425,7 @@ If you truly cannot find any articles, respond with an empty array: []`,
         category,
         embedding: embeddings[i],
         published_date: new Date(),
-        read_time: estimateReadTime(a.summary),
+        read_time: estimateReadTime(safeSummary),
       }).catch((err) =>
         console.error("Failed to store fallback article:", err)
       );
