@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error("Database query error:", err);
     return NextResponse.json<NewsApiError>(
-      { error: "Internal server error", details: String(err) },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

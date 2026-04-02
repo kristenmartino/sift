@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import Anthropic from "@anthropic-ai/sdk";
 import type { TopicGenerateResponse } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let body: { rawTopic?: string; existingTopics?: string[] };
   try {
     body = await request.json();
@@ -94,7 +100,7 @@ Respond with ONLY valid JSON, no explanation:
   } catch (err) {
     console.error("Topic generation error:", err);
     return NextResponse.json(
-      { error: "Failed to generate topic", details: String(err) },
+      { error: "Failed to generate topic" },
       { status: 500 }
     );
   }
