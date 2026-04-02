@@ -18,7 +18,7 @@ export async function* readSSE<T = unknown>(
       // Split on double-newline (SSE event boundary)
       const parts = buffer.split("\n\n");
       // Last element is incomplete — keep it in the buffer
-      buffer = parts.pop()!;
+      buffer = parts.pop() ?? "";
 
       for (const part of parts) {
         if (!part.trim()) continue;
@@ -28,7 +28,7 @@ export async function* readSSE<T = unknown>(
           if (line.startsWith("event: ")) {
             event = line.slice(7);
           } else if (line.startsWith("data: ")) {
-            dataStr += line.slice(6);
+            dataStr += (dataStr ? "\n" : "") + line.slice(6);
           }
         }
         if (dataStr) {

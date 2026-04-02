@@ -212,12 +212,21 @@ export interface DbArticleWithSimilarity extends DbArticle {
   similarity: number;
 }
 
+function toVectorString(embedding: number[]): string {
+  for (let i = 0; i < embedding.length; i++) {
+    if (typeof embedding[i] !== "number" || !Number.isFinite(embedding[i])) {
+      throw new Error(`Invalid embedding value at index ${i}: ${embedding[i]}`);
+    }
+  }
+  return `[${embedding.join(",")}]`;
+}
+
 export async function searchArticlesByEmbedding(
   embedding: number[],
   similarityThreshold = 0.35,
   limit = 10
 ): Promise<DbArticleWithSimilarity[]> {
-  const vectorStr = `[${embedding.join(",")}]`;
+  const vectorStr = toVectorString(embedding);
   const result = await pool.query<DbArticle & { similarity: number }>(
     `SELECT id, title, summary, source_url, source_name, image_url,
             category, published_date, read_time, why_it_matters, importance_score, created_at,
@@ -244,7 +253,7 @@ export async function insertArticle(article: {
   image_url?: string | null;
   read_time?: number;
 }): Promise<void> {
-  const vectorStr = `[${article.embedding.join(",")}]`;
+  const vectorStr = toVectorString(article.embedding);
   await pool.query(
     `INSERT INTO articles (id, title, summary, source_url, source_name, image_url,
                            category, published_date, embedding, read_time, from_search)
