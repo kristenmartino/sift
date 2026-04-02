@@ -8,7 +8,8 @@ config({ path: ".env.local" });
 
 import { Pool } from "pg";
 
-const DB_URL = process.env.DATABASE_URL || "postgresql://sift:sift@localhost:5432/siftdb";
+const DB_URL = process.env.DATABASE_URL;
+if (!DB_URL) { console.error("DATABASE_URL is required"); process.exit(1); }
 const CONCURRENCY = 20;
 const FETCH_TIMEOUT = 5000; // 5s per URL
 

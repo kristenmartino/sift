@@ -11,7 +11,8 @@ config({ path: ".env.local" });
 
 import { Pool } from "pg";
 
-const DB_URL = process.env.DATABASE_URL || "postgresql://sift:sift@localhost:5432/siftdb";
+const DB_URL = process.env.DATABASE_URL;
+if (!DB_URL) { console.error("DATABASE_URL is required"); process.exit(1); }
 const VOYAGE_KEY = process.env.VOYAGE_API_KEY;
 
 // The winning category must beat "top" by at least this margin
