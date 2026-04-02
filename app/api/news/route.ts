@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStoriesWithArticles, getLastRefreshed } from "@/lib/db";
+import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
 const BAD_SUMMARIES = ["unable to provide summary"];
@@ -7,23 +8,24 @@ const BAD_SUMMARIES = ["unable to provide summary"];
 function cleanSummary(raw: string | null): string {
   if (!raw) return "";
   if (BAD_SUMMARIES.some((b) => raw.toLowerCase().startsWith(b))) return "";
-  // Strip <cite> tags leaked from Claude web_search responses
-  return raw.replace(/<cite[^>]*>|<\/cite>/g, "");
+  return stripHtml(raw);
 }
 
 function cleanImageUrl(raw: string | null): string | null {
   if (!raw) return null;
+  const safe = sanitizeUrl(raw);
+  if (!safe) return null;
   try {
-    const url = new URL(raw);
+    const url = new URL(safe);
     // Contentful CDN (VentureBeat etc): upgrade tiny thumbnails to usable size
     if (url.hostname.includes("ctfassets.net")) {
       url.searchParams.set("w", "800");
       url.searchParams.set("q", "80");
       return url.toString();
     }
-    return raw;
+    return safe;
   } catch {
-    return raw;
+    return null;
   }
 }
 

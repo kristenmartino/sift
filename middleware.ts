@@ -7,8 +7,19 @@ const clerkEnabled = !!clerkPk && clerkPk.startsWith("pk_");
 
 const clerk = clerkEnabled ? clerkMiddleware() : undefined;
 
+// Paths that require auth — fail-closed if Clerk is misconfigured
+const PROTECTED_PREFIXES = ["/api/bookmarks", "/api/topics", "/api/compare"];
+
 export default function middleware(request: NextRequest) {
   if (clerk) return clerk(request, {} as any);
+
+  // Fail-closed: block protected API routes when Clerk is not configured
+  const path = request.nextUrl.pathname;
+  if (PROTECTED_PREFIXES.some((p) => path.startsWith(p))) {
+    console.error("Clerk is not configured — blocking protected route:", path);
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+
   return NextResponse.next();
 }
 
