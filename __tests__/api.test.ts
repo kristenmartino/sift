@@ -266,7 +266,7 @@ describe("GET /api/news", () => {
 
       expect(res.status).toBe(500);
       expect(body.error).toBe("Internal server error");
-      expect(body.details).toContain("connection refused");
+      expect(body.details).toBeUndefined();
     });
   });
 

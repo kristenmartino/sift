@@ -1,8 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { z } from "zod";
 import { getCustomTopics, saveCustomTopic, deleteCustomTopic } from "@/lib/db";
 import type { CustomTopic } from "@/lib/types";
 import { MAX_CUSTOM_TOPICS } from "@/lib/constants";
+import { checkCsrf } from "@/lib/security";
+
+const topicSchema = z.object({
+  topic: z.object({
+    id: z.string().min(1).max(200),
+    shortLabel: z.string().min(1).max(12),
+    icon: z.string().max(10).optional(),
+    searchQueries: z.array(z.string().max(500)).min(1).max(5),
+    description: z.string().max(500).optional(),
+    rawInput: z.string().max(200).optional(),
+    createdAt: z.string().optional(),
+    colorIndex: z.number().int().min(0).max(100).optional(),
+  }),
+});
+
+const deleteTopicSchema = z.object({
+  id: z.string().min(1).max(200),
+});
 
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,14 +59,20 @@ export async function GET() {
 
 // POST /api/topics — body { topic: CustomTopic }
 export async function POST(request: NextRequest) {
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
+
   const { userId } = await auth();
   if (!userId) return unauthorized();
 
   try {
-    const { topic } = (await request.json()) as { topic: CustomTopic };
-    if (!topic || !topic.id || !topic.shortLabel) {
+    let parsed: z.infer<typeof topicSchema>;
+    try {
+      parsed = topicSchema.parse(await request.json());
+    } catch {
       return NextResponse.json({ error: "Invalid topic" }, { status: 400 });
     }
+    const topic = parsed.topic as CustomTopic;
 
     // Check limit
     const existing = await getCustomTopics(userId);
@@ -68,14 +93,20 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/topics — body { id }
 export async function DELETE(request: NextRequest) {
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
+
   const { userId } = await auth();
   if (!userId) return unauthorized();
 
   try {
-    const { id } = (await request.json()) as { id: string };
-    if (!id) {
+    let body: z.infer<typeof deleteTopicSchema>;
+    try {
+      body = deleteTopicSchema.parse(await request.json());
+    } catch {
       return NextResponse.json({ error: "id required" }, { status: 400 });
     }
+    const { id } = body;
     await deleteCustomTopic(id, userId);
     return NextResponse.json({ ok: true });
   } catch (err) {
