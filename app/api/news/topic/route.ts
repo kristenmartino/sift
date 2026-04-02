@@ -6,6 +6,19 @@ import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 
+const BAD_SUMMARIES = ["unable to provide summary"];
+
+function cleanSummary(raw: string | null): string {
+  if (!raw) return "";
+  if (BAD_SUMMARIES.some((b) => raw.toLowerCase().startsWith(b))) return "";
+  return stripHtml(raw);
+}
+
+function cleanImageUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  return sanitizeUrl(raw);
+}
+
 const SIMILARITY_THRESHOLD = 0.35;
 const MIN_STRONG_RESULTS = 3;
 const MAX_RESULTS = 10;
@@ -182,13 +195,13 @@ export async function GET(request: NextRequest) {
         const articles: Article[] = rows.map((row) => ({
           id: row.id,
           title: row.title,
-          summary: row.summary || "",
+          summary: cleanSummary(row.summary),
           sourceUrl: row.source_url,
           sourceName: row.source_name,
           publishedDate: row.published_date
             ? row.published_date.toISOString()
             : null,
-          imageUrl: row.image_url,
+          imageUrl: cleanImageUrl(row.image_url),
           category: row.category as CategoryId,
           readTime: row.read_time || 1,
           ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),

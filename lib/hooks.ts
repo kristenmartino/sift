@@ -81,24 +81,39 @@ export function useBookmarks(userId?: string | null) {
         pendingRef.current.add(id);
 
         // Optimistic update
+        const wasBookmarked = bookmarkSet.has(id);
         setServerIds((prev) => {
           const set = new Set(prev);
-          const removing = set.has(id);
-          if (removing) {
+          if (wasBookmarked) {
             set.delete(id);
           } else {
             set.add(id);
           }
-          // Fire API call in background
-          fetch("/api/bookmarks", {
-            method: removing ? "DELETE" : "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ articleId: id }),
-          })
-            .catch((err) => console.error("Bookmark sync error:", err))
-            .finally(() => pendingRef.current.delete(id));
           return [...set];
         });
+        // Fire API call in background — revert on failure
+        fetch("/api/bookmarks", {
+          method: wasBookmarked ? "DELETE" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ articleId: id }),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          })
+          .catch((err) => {
+            console.error("Bookmark sync error:", err);
+            // Revert optimistic update
+            setServerIds((prev) => {
+              const set = new Set(prev);
+              if (wasBookmarked) {
+                set.add(id);
+              } else {
+                set.delete(id);
+              }
+              return [...set];
+            });
+          })
+          .finally(() => pendingRef.current.delete(id));
       } else {
         setLocalIds((prev) => {
           const set = new Set(prev);
@@ -111,7 +126,7 @@ export function useBookmarks(userId?: string | null) {
         });
       }
     },
-    [isSignedIn, setLocalIds]
+    [isSignedIn, setLocalIds, bookmarkSet]
   );
 
   return { bookmarks: bookmarkSet, toggle, count: ids.length };
@@ -288,7 +303,7 @@ export function useTopicSearch() {
       query,
     });
 
-    const slowTimer = setTimeout(
+    let slowTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(
       () => setState((s) => ({ ...s, slow: true })),
       SLOW_THRESHOLD_MS
     );
@@ -325,7 +340,7 @@ export function useTopicSearch() {
             // Keep loading, reset slow timer for fallback phase
             setState((s) => ({ ...s, slow: false }));
             clearTimeout(slowTimer);
-            setTimeout(
+            slowTimer = setTimeout(
               () => setState((s) => (s.loading ? { ...s, slow: true } : s)),
               SLOW_THRESHOLD_MS
             );
