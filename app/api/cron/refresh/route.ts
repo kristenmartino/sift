@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 
 const SIFT_API_URL = process.env.SIFT_API_URL || "http://localhost:8000";
+try {
+  const u = new URL(SIFT_API_URL);
+  if (!["http:", "https:"].includes(u.protocol)) throw new Error("bad protocol");
+} catch {
+  throw new Error(`Invalid SIFT_API_URL: ${SIFT_API_URL}`);
+}
 
 function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
