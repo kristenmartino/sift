@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 
 const SIFT_API_URL = process.env.SIFT_API_URL || "http://localhost:8000";
+
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function GET(request: NextRequest) {
   // Verify cron secret — always required
@@ -9,8 +15,9 @@ export async function GET(request: NextRequest) {
     console.error("CRON_SECRET environment variable is not set");
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   }
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  const authHeader = request.headers.get("authorization") || "";
+  const expected = `Bearer ${cronSecret}`;
+  if (!constantTimeEqual(authHeader, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

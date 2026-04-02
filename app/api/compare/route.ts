@@ -59,9 +59,11 @@ export async function POST(request: NextRequest) {
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => ({}));
+        console.error("Compare service error:", res.status, errorBody.detail);
+        const status = res.status >= 400 && res.status < 500 ? 400 : 502;
         return NextResponse.json(
-          { error: errorBody.detail || `Comparison service error (${res.status})` },
-          { status: res.status }
+          { error: "Comparison service unavailable" },
+          { status }
         );
       }
 
