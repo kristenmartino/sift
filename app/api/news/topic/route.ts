@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
       } catch (err) {
         console.error("Topic search error:", err);
         controller.enqueue(
-          sseEvent("error", { message: String(err) })
+          sseEvent("error", { message: "Topic search failed" })
         );
       } finally {
         controller.close();
