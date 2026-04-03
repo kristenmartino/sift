@@ -11,6 +11,7 @@ try {
 } catch {
   throw new Error(`Invalid SIFT_API_URL: ${SIFT_API_URL}`);
 }
+const SIFT_API_KEY = process.env.SIFT_API_KEY || "";
 const COMPARE_TIMEOUT_MS = 60_000;
 
 const compareSchema = z.object({
@@ -53,7 +54,10 @@ export async function POST(request: NextRequest) {
     try {
       const res = await fetch(`${SIFT_API_URL}/analyze/compare`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Pipeline-Key": SIFT_API_KEY,
+        },
         body: JSON.stringify({
           topic: body.topic.trim(),
           sources: body.sources || undefined,
