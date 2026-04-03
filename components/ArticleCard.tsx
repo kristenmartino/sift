@@ -51,7 +51,7 @@ export default function ArticleCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`
-        bg-[var(--card-bg)] rounded-[14px] overflow-hidden cursor-pointer
+        bg-[var(--card-bg)] rounded-[14px] overflow-hidden
         border border-[var(--border)] ${index === 0 ? "animate-fade-slide-in" : ""}
         ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
       `}
@@ -66,9 +66,6 @@ export default function ArticleCard({
         borderTop: !hasImage ? `3px solid ${color.hex}` : undefined,
         ...entranceStyle,
       }}
-      onClick={() =>
-        article.sourceUrl && window.open(article.sourceUrl, "_blank", "noopener,noreferrer")
-      }
     >
       {/* Hover glow — accent-colored bar at top edge */}
       <div
@@ -114,7 +111,7 @@ export default function ArticleCard({
               onBookmark(article.id);
             }}
             aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-            className={`bg-transparent border-none cursor-pointer text-lg p-1 relative ${
+            className={`bg-transparent border-none cursor-pointer text-lg p-1 relative z-[2] ${
               bookmarkAnimating ? "animate-bookmark-pop" : "transition-all duration-200"
             }`}
             style={{
@@ -136,9 +133,9 @@ export default function ArticleCard({
           </button>
         </div>
 
-        {/* Title */}
+        {/* Title — serves as the card's primary link */}
         <h3
-          className="font-heading font-bold leading-snug text-[var(--text)] tracking-tight"
+          className="font-heading font-bold leading-snug tracking-tight"
           style={{
             fontSize: featured ? 24 : 17,
             display: "-webkit-box",
@@ -147,7 +144,29 @@ export default function ArticleCard({
             overflow: "hidden",
           }}
         >
-          {article.title}
+          {article.sourceUrl ? (
+            <a
+              href={article.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--text)] no-underline hover:underline"
+              style={{
+                // Stretch link to cover entire card
+                position: "static",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Pseudo-element stretches to cover the card */}
+              <span
+                className="absolute inset-0 z-[1]"
+                aria-hidden="true"
+                style={{ position: "absolute" }}
+              />
+              {article.title}
+            </a>
+          ) : (
+            <span className="text-[var(--text)]">{article.title}</span>
+          )}
         </h3>
 
         {/* Summary */}
@@ -188,7 +207,7 @@ export default function ArticleCard({
                   e.stopPropagation();
                   onCompare(article.title, article.sourceName);
                 }}
-                className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200"
+                className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200 relative z-[2]"
                 style={{ color: "var(--accent)" }}
               >
                 {COPY.compare.button}

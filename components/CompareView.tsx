@@ -302,6 +302,8 @@ export default function CompareView({
                     key={source.key}
                     type="button"
                     onClick={() => !disabled && onToggleSource(source.key)}
+                    aria-disabled={disabled || undefined}
+                    tabIndex={disabled ? -1 : undefined}
                     className="px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-all duration-200 border"
                     style={{
                       background: isSelected ? "var(--accent)" : "transparent",

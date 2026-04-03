@@ -11,20 +11,27 @@ const BARS = [
   { h: "h-3", w: "w-[45%]" },
 ];
 
-export default function SkeletonCard({ featured }: SkeletonCardProps) {
+interface ExtendedSkeletonCardProps extends SkeletonCardProps {
+  hasImage?: boolean;
+}
+
+export default function SkeletonCard({ featured, hasImage = true }: ExtendedSkeletonCardProps) {
   return (
     <div
       className={`
         bg-[var(--card-bg)] rounded-[14px] overflow-hidden border border-[var(--border)]
-        ${featured ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
+        ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
       `}
+      style={!hasImage ? { borderTop: "3px solid var(--skeleton)" } : undefined}
     >
-      <div
-        className={`
-          bg-[var(--skeleton)] animate-shimmer
-          ${featured ? "min-h-[280px]" : "h-[140px]"}
-        `}
-      />
+      {hasImage && (
+        <div
+          className={`
+            bg-[var(--skeleton)] animate-shimmer
+            ${featured ? "min-h-[280px]" : "h-[140px]"}
+          `}
+        />
+      )}
       <div className={featured ? "p-8" : "p-5"}>
         {BARS.map((bar, i) => (
           <div
