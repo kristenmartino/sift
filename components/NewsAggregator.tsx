@@ -661,10 +661,17 @@ export default function NewsAggregator() {
 
             {/* Compare error */}
             {compareError && !compareLoading && (
-              <ErrorState
-                message={compareError}
-                onRetry={() => compareTopic && runCompare(compareTopic)}
-              />
+              compareError === "Unauthorized" ? (
+                <EmptyState
+                  title="Sign in to compare"
+                  body="Source comparison uses AI to cross-reference multiple outlets. Sign in to access this feature."
+                />
+              ) : (
+                <ErrorState
+                  message={compareError}
+                  onRetry={() => compareTopic && runCompare(compareTopic)}
+                />
+              )
             )}
 
             {/* Compare results */}
