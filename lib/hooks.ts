@@ -461,7 +461,16 @@ export function useCustomTopics(userId?: string | null) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ topic }),
-        }).catch((err) => console.error("Topic save error:", err));
+        }).then((res) => {
+          if (!res.ok) {
+            // Rollback optimistic update on failure
+            setServerTopics((prev) => prev.filter((t) => t.id !== topic.id));
+            console.error("Topic save failed:", res.status);
+          }
+        }).catch((err) => {
+          setServerTopics((prev) => prev.filter((t) => t.id !== topic.id));
+          console.error("Topic save error:", err);
+        });
       } else {
         setLocalTopics((prev) => [...prev, topic]);
       }
@@ -472,17 +481,27 @@ export function useCustomTopics(userId?: string | null) {
   const remove = useCallback(
     (id: string) => {
       if (isSignedIn) {
+        const snapshot = serverTopics;
         setServerTopics((prev) => prev.filter((t) => t.id !== id));
         fetch("/api/topics", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id }),
-        }).catch((err) => console.error("Topic delete error:", err));
+        }).then((res) => {
+          if (!res.ok) {
+            // Rollback: restore the removed topic
+            setServerTopics(snapshot);
+            console.error("Topic delete failed:", res.status);
+          }
+        }).catch((err) => {
+          setServerTopics(snapshot);
+          console.error("Topic delete error:", err);
+        });
       } else {
         setLocalTopics((prev) => prev.filter((t) => t.id !== id));
       }
     },
-    [isSignedIn, setLocalTopics]
+    [isSignedIn, serverTopics, setLocalTopics]
   );
 
   return {
