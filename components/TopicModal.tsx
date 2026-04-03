@@ -71,7 +71,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
     if (!preview) return;
 
     const topic: CustomTopic = {
-      id: crypto.randomUUID(),
+      id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36),
       rawInput: inputValue.trim(),
       shortLabel: preview.shortLabel,
       icon: preview.icon,
@@ -88,7 +88,10 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="topic-modal-title"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
@@ -97,7 +100,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-          <h2 className="font-heading text-lg font-bold text-[var(--text)]">
+          <h2 id="topic-modal-title" className="font-heading text-lg font-bold text-[var(--text)]">
             {step === "preview" ? COPY.topics.previewTitle : COPY.topics.modalTitle}
           </h2>
           <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import type { CardImageProps } from "@/lib/types";
 
 export default function CardImage({ src, alt, featured }: CardImageProps) {
@@ -23,16 +24,22 @@ export default function CardImage({ src, alt, featured }: CardImageProps) {
         minHeight: featured ? 280 : undefined,
       }}
     >
-      <img
+      <Image
         src={src}
         alt={alt || ""}
+        fill
+        sizes={featured ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 640px) 100vw, 340px"}
         referrerPolicy="no-referrer"
-        loading="lazy"
         onLoad={() => setStatus("loaded")}
         onError={() => setStatus("error")}
-        className="w-full h-full object-cover transition-opacity duration-500"
+        className="object-cover transition-opacity duration-500"
         style={{ opacity: status === "loaded" ? 1 : 0 }}
       />
+
+      {/* Shimmer placeholder while loading */}
+      {status === "loading" && (
+        <div className="absolute inset-0 bg-[var(--skeleton)] animate-shimmer" />
+      )}
 
       {/* Vignette overlay */}
       {status === "loaded" && (

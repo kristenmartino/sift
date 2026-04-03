@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
+import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare, useCustomTopics } from "@/lib/hooks";
@@ -30,8 +31,18 @@ function useClerkUserId(): string | null {
 // ─── Component ──────────────────────────────────────────
 
 export default function NewsAggregator() {
-  const [activeCategory, setActiveCategory] = useState<CategoryId>("top");
-  const [showBookmarks, setShowBookmarks] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Initialize state from URL params
+  const initialCategory = (() => {
+    const param = searchParams.get("category");
+    return param && VALID_CATEGORIES.has(param as CategoryId) ? param as CategoryId : "top";
+  })();
+  const initialView = searchParams.get("view");
+
+  const [activeCategory, setActiveCategory] = useState<CategoryId>(initialCategory);
+  const [showBookmarks, setShowBookmarks] = useState(initialView === "bookmarks");
   const [searchMode, setSearchMode] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [compareInputValue, setCompareInputValue] = useState("");
@@ -47,6 +58,7 @@ export default function NewsAggregator() {
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
   const [loadingBookmarks, setLoadingBookmarks] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<{ topic: CustomTopic; timer: ReturnType<typeof setTimeout> } | null>(null);
 
   const userId = useClerkUserId();
 
@@ -82,6 +94,18 @@ export default function NewsAggregator() {
   useEffect(() => {
     loadCategory(activeCategory);
   }, [activeCategory, loadCategory]);
+
+  // Sync state to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (showBookmarks) {
+      params.set("view", "bookmarks");
+    } else if (activeCategory !== "top") {
+      params.set("category", activeCategory);
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : "/news";
+    router.replace(newUrl, { scroll: false });
+  }, [activeCategory, showBookmarks, router]);
 
   // Category switch with fade-out/fade-in
   const switchCategory = useCallback((catId: CategoryId) => {
@@ -124,6 +148,23 @@ export default function NewsAggregator() {
   useEffect(() => {
     updateIndicator();
   }, [activeCategory, activeCustomTopic, showBookmarks, searchMode, compareMode, updateIndicator]);
+
+  // Cmd+K / Ctrl+K keyboard shortcut for search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchMode((prev) => {
+          if (prev) clearTopicSearch();
+          return !prev;
+        });
+        setShowBookmarks(false);
+        exitCompareMode();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [clearTopicSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch full bookmarked articles from DB when viewing bookmarks (signed in)
   useEffect(() => {
@@ -360,7 +401,7 @@ export default function NewsAggregator() {
                 aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
                 className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-[var(--text-secondary)] text-base cursor-pointer transition-all duration-200"
               >
-                {darkMode ? "☀" : "◑"}
+                {darkMode ? "☀" : "☾"}
               </button>
             )}
 
@@ -370,7 +411,11 @@ export default function NewsAggregator() {
 
         {/* Category pills with sliding indicator */}
         {!showBookmarks && !searchMode && !compareMode && (
-          <div ref={pillContainerRef} className="max-w-[1200px] mx-auto px-6 pb-3 flex gap-1.5 overflow-x-auto relative">
+          <div className="max-w-[1200px] mx-auto relative">
+            {/* Scroll fade indicators for mobile */}
+            <div className="absolute left-0 top-0 bottom-0 w-6 z-10 pointer-events-none bg-gradient-to-r from-[var(--nav-bg)] to-transparent md:hidden" />
+            <div className="absolute right-0 top-0 bottom-0 w-6 z-10 pointer-events-none bg-gradient-to-l from-[var(--nav-bg)] to-transparent md:hidden" />
+          <div ref={pillContainerRef} className="px-6 pb-3 flex gap-1.5 overflow-x-auto relative scrollbar-none" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {CATEGORIES.map((cat) => {
               const active = activeCategory === cat.id && !activeCustomTopic;
               return (
@@ -418,7 +463,16 @@ export default function NewsAggregator() {
                         setActiveCustomTopic(null);
                         clearTopicSearch();
                       }
-                      removeCustomTopic(topic.id);
+                      // Undo-able removal: delay actual deletion by 3 seconds
+                      if (pendingRemoval) {
+                        clearTimeout(pendingRemoval.timer);
+                        removeCustomTopic(pendingRemoval.topic.id);
+                      }
+                      const timer = setTimeout(() => {
+                        removeCustomTopic(topic.id);
+                        setPendingRemoval(null);
+                      }, 3000);
+                      setPendingRemoval({ topic, timer });
                     }}
                     className="text-[10px] opacity-0 group-hover:opacity-60 transition-opacity duration-150 ml-0.5 cursor-pointer"
                     style={{ color: active ? "#fff" : "var(--text-muted)" }}
@@ -459,6 +513,7 @@ export default function NewsAggregator() {
                 }}
               />
             )}
+          </div>
           </div>
         )}
 
@@ -542,6 +597,8 @@ export default function NewsAggregator() {
                         key={source.key}
                         type="button"
                         onClick={() => !disabled && toggleSource(source.key)}
+                        aria-disabled={disabled || undefined}
+                        tabIndex={disabled ? -1 : undefined}
                         className="px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-all duration-200 border"
                         style={{
                           background: isSelected ? "var(--accent)" : "transparent",
@@ -564,6 +621,17 @@ export default function NewsAggregator() {
           </div>
         )}
       </header>
+
+      {/* Screen reader status announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {loading && !hasData && "Loading articles..."}
+        {topicLoading && "Searching for articles..."}
+        {compareLoading && "Comparing coverage across sources..."}
+        {error && `Error: ${error}`}
+        {topicError && `Search error: ${topicError}`}
+        {compareError && `Comparison error: ${compareError}`}
+        {!loading && !topicLoading && hasData && `${feedItems.length} items loaded`}
+      </div>
 
       {/* ── Main ────────────────────────────────────── */}
       <main className="max-w-[1200px] mx-auto px-6 pt-7 pb-20">
@@ -654,7 +722,7 @@ export default function NewsAggregator() {
                 <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
                   <SkeletonCard featured />
                   {[1, 2, 3, 4].map((i) => (
-                    <SkeletonCard key={i} />
+                    <SkeletonCard key={i} hasImage={i % 2 === 0} />
                   ))}
                 </div>
                 {((searchMode || customTopicMode) ? topicSlow : slow) && (
@@ -679,6 +747,15 @@ export default function NewsAggregator() {
                       : loadCategory(activeCategory, true)
                 }
               />
+            )}
+
+            {/* Bookmarks loading */}
+            {showBookmarks && loadingBookmarks && !hasData && (
+              <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
+                {[1, 2, 3].map((i) => (
+                  <SkeletonCard key={i} />
+                ))}
+              </div>
             )}
 
             {/* Empty bookmarks */}
@@ -744,9 +821,26 @@ export default function NewsAggregator() {
 
             {/* Loading toast for refresh */}
             {loading && hasData && (
-              <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-6 py-2.5 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2.5 shadow-lg z-50 animate-fade-slide-in">
+              <div role="status" className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-6 py-2.5 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2.5 shadow-lg z-50 animate-fade-slide-in">
                 <span className="animate-sift-refresh inline-block text-[var(--accent)]">◆</span>
                 {COPY.loading.refresh}
+              </div>
+            )}
+
+            {/* Undo toast for topic removal */}
+            {pendingRemoval && (
+              <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-6 py-2.5 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-3 shadow-lg z-50 animate-fade-slide-in">
+                <span>Removed &ldquo;{pendingRemoval.topic.shortLabel}&rdquo;</span>
+                <button
+                  onClick={() => {
+                    clearTimeout(pendingRemoval.timer);
+                    setPendingRemoval(null);
+                  }}
+                  className="bg-transparent border-none p-0 cursor-pointer text-sm font-bold transition-colors duration-200"
+                  style={{ color: "var(--accent)" }}
+                >
+                  Undo
+                </button>
               </div>
             )}
           </>
@@ -770,8 +864,13 @@ export default function NewsAggregator() {
 
       {/* ── Footer ──────────────────────────────────── */}
       <footer className="border-t border-[var(--border)] py-6 px-6 text-center text-xs text-[var(--text-muted)] max-w-[1200px] mx-auto">
-        <SiftLogo variant="full" size={14} />
-        {" \u2014 "}{COPY.footer.main}
+        <SiftLogo variant="full" size={18} />
+        <span className="mx-2">&mdash;</span>{COPY.footer.main}
+        <div className="mt-2 flex items-center justify-center gap-3">
+          <a href="/privacy" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] transition-colors">Privacy</a>
+          <span className="opacity-30">&middot;</span>
+          <a href="/terms" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] transition-colors">Terms</a>
+        </div>
       </footer>
     </div>
   );

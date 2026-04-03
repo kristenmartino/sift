@@ -199,20 +199,13 @@ export default function StoryCard({
             style={{ animation: "story-expand 0.35s ease-out both" }}
           >
             {story.articles.map((article) => (
-              <div
+              <a
                 key={article.id}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200"
+                href={article.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 no-underline hover:bg-[var(--card-bg)]"
                 style={{ background: "var(--bg)" }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(article.sourceUrl, "_blank", "noopener,noreferrer");
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "var(--card-bg)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "var(--bg)";
-                }}
               >
                 <span className="text-xs font-bold text-[var(--text-secondary)] min-w-[70px] shrink-0">
                   {article.sourceName}
@@ -234,6 +227,7 @@ export default function StoryCard({
                 {onCompare && (
                   <button
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       onCompare(article.title, article.sourceName);
                     }}
@@ -243,7 +237,7 @@ export default function StoryCard({
                     Compare
                   </button>
                 )}
-              </div>
+              </a>
             ))}
           </div>
         )}
