@@ -24,7 +24,7 @@ const deleteTopicSchema = z.object({
 });
 
 function unauthorized() {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return NextResponse.json({ error: "Sign in to manage custom topics" }, { status: 401 });
 }
 
 // GET /api/topics — returns user's custom topics

@@ -55,7 +55,10 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `HTTP ${res.status}`);
+        if (res.status === 401) {
+          throw new Error("Please sign in to create custom topics");
+        }
+        throw new Error(body.error || `Something went wrong (${res.status})`);
       }
 
       const data: TopicGenerateResponse = await res.json();
