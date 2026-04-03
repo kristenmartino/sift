@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
@@ -30,19 +30,24 @@ function useClerkUserId(): string | null {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function NewsAggregator() {
+// Read URL params once on mount (avoids re-reading on every render)
+function useInitialParams() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const [initial] = useState(() => ({
+    category: (() => {
+      const param = searchParams.get("category");
+      return param && VALID_CATEGORIES.has(param as CategoryId) ? param as CategoryId : "top";
+    })(),
+    view: searchParams.get("view"),
+  }));
+  return initial;
+}
 
-  // Initialize state from URL params
-  const initialCategory = (() => {
-    const param = searchParams.get("category");
-    return param && VALID_CATEGORIES.has(param as CategoryId) ? param as CategoryId : "top";
-  })();
-  const initialView = searchParams.get("view");
+export default function NewsAggregator() {
+  const initialParams = useInitialParams();
 
-  const [activeCategory, setActiveCategory] = useState<CategoryId>(initialCategory);
-  const [showBookmarks, setShowBookmarks] = useState(initialView === "bookmarks");
+  const [activeCategory, setActiveCategory] = useState<CategoryId>(initialParams.category);
+  const [showBookmarks, setShowBookmarks] = useState(initialParams.view === "bookmarks");
   const [searchMode, setSearchMode] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [compareInputValue, setCompareInputValue] = useState("");
@@ -95,7 +100,7 @@ export default function NewsAggregator() {
     loadCategory(activeCategory);
   }, [activeCategory, loadCategory]);
 
-  // Sync state to URL
+  // Sync state to URL (shallow replace, no scroll)
   useEffect(() => {
     const params = new URLSearchParams();
     if (showBookmarks) {
@@ -103,9 +108,10 @@ export default function NewsAggregator() {
     } else if (activeCategory !== "top") {
       params.set("category", activeCategory);
     }
-    const newUrl = params.toString() ? `?${params.toString()}` : "/news";
-    router.replace(newUrl, { scroll: false });
-  }, [activeCategory, showBookmarks, router]);
+    const newUrl = params.toString() ? `/news?${params.toString()}` : "/news";
+    // Use history API directly to avoid triggering re-renders from router
+    window.history.replaceState(null, "", newUrl);
+  }, [activeCategory, showBookmarks]);
 
   // Category switch with fade-out/fade-in
   const switchCategory = useCallback((catId: CategoryId) => {
