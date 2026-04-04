@@ -113,6 +113,19 @@ export default function NewsAggregator() {
     window.history.replaceState(null, "", newUrl);
   }, [activeCategory, showBookmarks]);
 
+  // Push a history entry when entering compare mode so browser back exits it
+  useEffect(() => {
+    if (!compareMode) return;
+    window.history.pushState({ compareMode: true }, "");
+    const handlePopState = (e: PopStateEvent) => {
+      if (compareMode) {
+        exitCompareMode();
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [compareMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Category switch with fade-out/fade-in
   const switchCategory = useCallback((catId: CategoryId) => {
     if (catId === activeCategory && !activeCustomTopic) return;
@@ -216,7 +229,6 @@ export default function NewsAggregator() {
     setCompareMode(true);
     setShowBookmarks(false);
     setSearchMode(false);
-    clearTopicSearch();
     runCompare(topic, sources);
   };
 
