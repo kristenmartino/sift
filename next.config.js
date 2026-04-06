@@ -11,14 +11,16 @@ const nextConfig = {
     const csp = [
       "default-src 'self'",
       // 'unsafe-inline' required for: theme init script (layout.tsx), Tailwind styles, Clerk UI
-      "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
-      "style-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai https://challenges.cloudflare.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      // font-src: Google Fonts CDN
+      "font-src 'self' https://fonts.gstatic.com data:",
       // img-src: self + any HTTPS (news article images from 100+ sources)
       "img-src 'self' https: data:",
       // connect-src: API calls to self, Clerk, and server-side proxied services
-      "connect-src 'self' https://*.clerk.accounts.dev",
+      "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai",
       // Clerk auth iframes
-      "frame-src https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+      "frame-src https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
       "form-action 'self'",
       "base-uri 'self'",
