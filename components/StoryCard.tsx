@@ -52,7 +52,7 @@ export default function StoryCard({
       className={`
         bg-[var(--card-bg)] rounded-[14px] overflow-hidden
         border border-[var(--border)]
-        ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : "col-span-full"}
+        ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
       `}
       style={{
         position: "relative",

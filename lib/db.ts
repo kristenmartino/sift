@@ -96,14 +96,46 @@ export async function getStoriesWithArticles(
 
   const storyIds = stories.map((s) => s.id);
 
-  // 2. Get all articles for this category (with story_id if column exists)
-  let articlesRows: DbStoryArticle[] = [];
+  // 2a. Fetch ALL articles that belong to the selected stories. Using a top-N
+  // article limit would drop story members that don't rank in the top-N by
+  // importance × recency, producing empty story.articles and "View 0 articles"
+  // on the frontend.
+  const storyArticles: Record<string, DbStoryArticle[]> = {};
+  if (storyIds.length > 0) {
+    try {
+      const storyArticlesResult = await pool.query<DbStoryArticle>(
+        `SELECT id, title, summary, source_url, source_name, image_url,
+                category, published_date, read_time, why_it_matters, importance_score, created_at, story_id
+         FROM articles
+         WHERE story_id = ANY($1::text[])
+           AND from_search = false
+           AND summary IS NOT NULL AND summary != ''
+           AND LOWER(summary) NOT LIKE 'unable to provide%'
+         ORDER BY published_date DESC NULLS LAST`,
+        [storyIds]
+      );
+      for (const row of storyArticlesResult.rows) {
+        if (!row.story_id) continue;
+        if (!storyArticles[row.story_id]) storyArticles[row.story_id] = [];
+        storyArticles[row.story_id].push(row);
+      }
+    } catch (err) {
+      // story_id column may not exist — tolerate and fall through to articles-only path.
+      const msg = String(err);
+      if (!msg.includes("story_id") && !msg.includes("does not exist")) throw err;
+    }
+  }
+
+  // 2b. Fetch standalone articles (no story_id) for the feed, ranked by
+  // importance × recency. Tolerate absent story_id column by retrying.
+  let standaloneArticles: DbArticle[] = [];
   try {
-    const articlesResult = await pool.query<DbStoryArticle>(
+    const standaloneResult = await pool.query<DbArticle>(
       `SELECT id, title, summary, source_url, source_name, image_url,
-              category, published_date, read_time, why_it_matters, importance_score, created_at, story_id
+              category, published_date, read_time, why_it_matters, importance_score, created_at
        FROM articles
        WHERE category = $1 AND from_search = false
+         AND story_id IS NULL
          AND summary IS NOT NULL AND summary != ''
          AND LOWER(summary) NOT LIKE 'unable to provide%'
        ORDER BY
@@ -113,9 +145,8 @@ export async function getStoriesWithArticles(
        LIMIT 50`,
       [category]
     );
-    articlesRows = articlesResult.rows;
+    standaloneArticles = standaloneResult.rows;
   } catch (err) {
-    // story_id column may not exist — retry without it
     const msg = String(err);
     if (!msg.includes("story_id")) throw err;
     const fallback = await pool.query<DbArticle>(
@@ -133,20 +164,6 @@ export async function getStoriesWithArticles(
       [category]
     );
     return { stories: [], storyArticles: {}, standaloneArticles: fallback.rows };
-  }
-
-  // 3. Partition into story-grouped and standalone
-  const storyArticles: Record<string, DbStoryArticle[]> = {};
-  const standaloneArticles: DbArticle[] = [];
-  const storyIdSet = new Set(storyIds);
-
-  for (const row of articlesRows) {
-    if (row.story_id && storyIdSet.has(row.story_id)) {
-      if (!storyArticles[row.story_id]) storyArticles[row.story_id] = [];
-      storyArticles[row.story_id].push(row);
-    } else {
-      standaloneArticles.push(row);
-    }
   }
 
   return { stories, storyArticles, standaloneArticles };
