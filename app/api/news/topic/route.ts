@@ -5,6 +5,7 @@ import { stableHash, estimateReadTime } from "@/lib/utils";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
+import { logUsage } from "@/lib/usage-tracker";
 
 const BAD_SUMMARIES = ["unable to provide summary"];
 
@@ -331,6 +332,7 @@ If you truly cannot find any articles, respond with an empty array: []`,
       },
     ],
   });
+  logUsage("news.topic.webSearchFallback", response, "claude-haiku-4-5");
 
   // Extract JSON from response — Claude may return multiple text blocks
   const textBlocks = response.content
