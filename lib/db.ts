@@ -72,17 +72,32 @@ export interface DbStoryArticle extends DbArticle {
 export async function getStoriesWithArticles(
   category: string
 ): Promise<{ stories: DbStory[]; storyArticles: Record<string, DbStoryArticle[]>; standaloneArticles: DbArticle[] }> {
-  // 1. Try to get stories (gracefully handle missing table)
+  // 1. Try to get stories with LIVE article counts (gracefully handle missing table).
+  //
+  // Story IDs are content-addressable (sha256 of member article IDs), so when
+  // clustering shifts between refreshes the old story_id becomes orphaned:
+  // the `stories` row persists with a stale `article_count`, but zero articles
+  // reference it. Using the stored `article_count` ranks orphans highly and
+  // shows "View 0 articles" in the UI. Instead, compute the live count via
+  // LEFT JOIN, drop orphans with `HAVING >= 2`, and rank by the live count.
   let stories: DbStory[] = [];
   try {
     const storiesResult = await pool.query<DbStory>(
-      `SELECT id, headline, summary, category, framings, entities,
-              article_count, representative_image_url, published_date, synthesis_status
-       FROM stories
-       WHERE category = $1 AND synthesis_status = 'complete'
+      `SELECT s.id, s.headline, s.summary, s.category, s.framings, s.entities,
+              COUNT(a.id)::int AS article_count,
+              s.representative_image_url, s.published_date, s.synthesis_status
+       FROM stories s
+       LEFT JOIN articles a
+         ON a.story_id = s.id
+         AND a.from_search = false
+         AND a.summary IS NOT NULL AND a.summary != ''
+         AND LOWER(a.summary) NOT LIKE 'unable to provide%'
+       WHERE s.category = $1 AND s.synthesis_status = 'complete'
+       GROUP BY s.id
+       HAVING COUNT(a.id) >= 2
        ORDER BY
-         COALESCE(article_count, 1)::float *
-         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
+         COUNT(a.id)::float *
+         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 20`,
       [category]
@@ -126,8 +141,10 @@ export async function getStoriesWithArticles(
     }
   }
 
-  // 2b. Fetch standalone articles (no story_id) for the feed, ranked by
-  // importance × recency. Tolerate absent story_id column by retrying.
+  // 2b. Fetch standalone articles for the feed. An article is "standalone"
+  // when its story_id is NULL *or* when its story_id points to a story that
+  // was dropped in step 1 (orphan: fewer than 2 live member articles). This
+  // prevents orphan articles from disappearing entirely from the feed.
   let standaloneArticles: DbArticle[] = [];
   try {
     const standaloneResult = await pool.query<DbArticle>(
@@ -135,7 +152,7 @@ export async function getStoriesWithArticles(
               category, published_date, read_time, why_it_matters, importance_score, created_at
        FROM articles
        WHERE category = $1 AND from_search = false
-         AND story_id IS NULL
+         AND (story_id IS NULL OR story_id <> ALL($2::text[]))
          AND summary IS NOT NULL AND summary != ''
          AND LOWER(summary) NOT LIKE 'unable to provide%'
        ORDER BY
@@ -143,7 +160,7 @@ export async function getStoriesWithArticles(
          EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 50`,
-      [category]
+      [category, storyIds]
     );
     standaloneArticles = standaloneResult.rows;
   } catch (err) {
