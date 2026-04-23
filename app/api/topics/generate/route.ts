@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { TopicGenerateResponse } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkCsrf } from "@/lib/security";
+import { logUsage } from "@/lib/usage-tracker";
 
 const generateSchema = z.object({
   rawTopic: z.string().min(2).max(200),
@@ -72,6 +73,7 @@ Respond with ONLY valid JSON, no explanation:
         },
       ],
     });
+    logUsage("topics.generate", response, "claude-haiku-4-5");
 
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
