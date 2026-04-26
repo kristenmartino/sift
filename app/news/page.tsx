@@ -18,10 +18,10 @@ function NewsLoading() {
         className="sticky top-0 z-50 border-b border-[var(--border)]"
         style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
       >
-        <div className="max-w-[1200px] mx-auto px-6 py-3.5 h-14" />
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-3.5 h-14" />
       </header>
-      <main className="max-w-[1200px] mx-auto px-6 pt-7 pb-20">
-        <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
+      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-7 pb-20">
+        <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4 sm:gap-5">
           {[0, 1, 2, 3, 4].map((i) => (
             <div
               key={i}
