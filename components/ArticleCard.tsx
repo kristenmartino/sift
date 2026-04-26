@@ -169,12 +169,17 @@ export default function ArticleCard({
           )}
         </h3>
 
-        {/* Summary */}
+        {/* Summary — clamp to fixed line count so card heights converge across
+            the auto-fill grid (StoryCard.tsx already does the same). */}
         <p
           className="text-[var(--text-secondary)] leading-relaxed"
           style={{
             fontSize: featured ? 15 : 13.5,
             flex: 1,
+            display: "-webkit-box",
+            WebkitLineClamp: featured ? 5 : 4,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
           }}
         >
           {article.summary}

@@ -324,29 +324,30 @@ export default function NewsAggregator() {
           WebkitBackdropFilter: "blur(20px) saturate(180%)",
         }}
       >
-        <div className="max-w-[1200px] mx-auto px-6 py-3.5 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-3.5 flex items-center justify-between">
           <div
             className="flex items-baseline gap-3 cursor-pointer"
             onClick={() => { setShowBookmarks(false); setSearchMode(false); clearTopicSearch(); exitCompareMode(); setActiveCustomTopic(null); setActiveCategory("top"); }}
           >
             <SiftLogo variant="full" size={28} />
-            <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--accent)] opacity-80">
+            {/* Tagline hides under sm — at 390px the right cluster needs the space. */}
+            <span className="hidden sm:inline text-[10px] font-bold tracking-widest uppercase text-[var(--accent)] opacity-80">
               {COPY.header.tagline}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => { setShowBookmarks(!showBookmarks); setSearchMode(false); clearTopicSearch(); exitCompareMode(); }}
-              aria-label="Bookmarks"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold cursor-pointer transition-all duration-200 font-body"
+              aria-label={bookmarkCount > 0 ? `Bookmarks (${bookmarkCount})` : "Bookmarks"}
+              className="flex items-center gap-1.5 h-9 px-2.5 sm:px-3.5 rounded-full text-sm font-semibold cursor-pointer transition-all duration-200 font-body"
               style={{
                 background: showBookmarks ? "var(--accent)" : "transparent",
                 border: `1px solid ${showBookmarks ? "var(--accent)" : "var(--border)"}`,
                 color: showBookmarks ? "#fff" : "var(--text-secondary)",
               }}
             >
-              ★ {bookmarkCount}
+              {bookmarkCount > 0 ? `★ ${bookmarkCount}` : "★"}
             </button>
 
             <button
@@ -423,10 +424,12 @@ export default function NewsAggregator() {
         {/* Category pills with sliding indicator */}
         {!showBookmarks && !searchMode && !compareMode && (
           <div className="max-w-[1200px] mx-auto relative">
-            {/* Scroll fade indicators for mobile */}
-            <div className="absolute left-0 top-0 bottom-0 w-6 z-10 pointer-events-none bg-gradient-to-r from-[var(--nav-bg)] to-transparent md:hidden" />
-            <div className="absolute right-0 top-0 bottom-0 w-6 z-10 pointer-events-none bg-gradient-to-l from-[var(--nav-bg)] to-transparent md:hidden" />
-          <div ref={pillContainerRef} className="px-6 pb-3 flex gap-1.5 overflow-x-auto relative scrollbar-none" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+            {/* Scroll fade indicators for mobile. --nav-bg is rgba(...,0.92) so a
+                gradient from that color is barely visible over the pills. Use the
+                solid --bg color so the fade is unmistakable. */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-r from-[var(--bg)] to-transparent md:hidden" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-l from-[var(--bg)] to-transparent md:hidden" />
+          <div ref={pillContainerRef} className="px-4 sm:px-6 lg:px-10 pb-3 flex gap-1.5 overflow-x-auto relative scrollbar-none" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {CATEGORIES.map((cat) => {
               const active = activeCategory === cat.id && !activeCustomTopic;
               return (
@@ -542,7 +545,7 @@ export default function NewsAggregator() {
 
         {/* Compare input bar */}
         {compareMode && !compareComparison && !compareLoading && (
-          <div className="max-w-[1200px] mx-auto px-6 pb-3">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pb-3">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -645,7 +648,7 @@ export default function NewsAggregator() {
       </div>
 
       {/* ── Main ────────────────────────────────────── */}
-      <main className="max-w-[1200px] mx-auto px-6 pt-7 pb-20">
+      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-7 pb-20">
         {/* Compare mode */}
         {compareMode ? (
           <>
@@ -737,7 +740,7 @@ export default function NewsAggregator() {
             {/* Loading skeleton */}
             {(((searchMode || customTopicMode) ? topicLoading : loading) && !hasData && !((searchMode || customTopicMode) ? topicError : error)) && (
               <div>
-                <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4 sm:gap-5">
                   <SkeletonCard featured />
                   {[1, 2, 3, 4].map((i) => (
                     <SkeletonCard key={i} hasImage={i % 2 === 0} />
@@ -769,7 +772,7 @@ export default function NewsAggregator() {
 
             {/* Bookmarks loading */}
             {showBookmarks && loadingBookmarks && !hasData && (
-              <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4 sm:gap-5">
                 {[1, 2, 3].map((i) => (
                   <SkeletonCard key={i} />
                 ))}
@@ -804,7 +807,7 @@ export default function NewsAggregator() {
             {/* Feed grid — fades on category switch */}
             {hasData && (
               <div
-                className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5"
+                className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4 sm:gap-5"
                 style={{
                   transition: "opacity 0.12s ease-out, transform 0.12s ease-out",
                   opacity: categoryFading ? 0 : 1,
