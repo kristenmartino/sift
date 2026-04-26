@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import dynamic from "next/dynamic";
 import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
@@ -12,12 +13,16 @@ import StoryCard from "./StoryCard";
 import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
-import TopicSearch from "./TopicSearch";
-import TopicModal from "./TopicModal";
-import CompareView from "./CompareView";
 import SiftLogo from "./SiftLogo";
 import AuthButtons, { clerkEnabled } from "./AuthButtons";
 import type { Article, CustomTopic, FeedItem, CategoryId } from "@/lib/types";
+
+// Code-split: these surfaces only render on user intent (Cmd+K search,
+// "+" topic-create, async compare response). Deferring their JS shaves
+// ~240 KiB of unused-on-first-paint bundle from Lighthouse.
+const TopicSearch = dynamic(() => import("./TopicSearch"), { ssr: false });
+const TopicModal = dynamic(() => import("./TopicModal"), { ssr: false });
+const CompareView = dynamic(() => import("./CompareView"), { ssr: false });
 
 // ─── Clerk user ID (safe when ClerkProvider absent) ─────
 

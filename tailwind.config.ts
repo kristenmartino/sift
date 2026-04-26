@@ -10,8 +10,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        heading: ["Playfair Display", "Georgia", "Times New Roman", "serif"],
-        body: ["Source Sans 3", "Segoe UI", "sans-serif"],
+        // CSS variables are injected by next/font in app/layout.tsx.
+        heading: ["var(--font-heading)", "Georgia", "Times New Roman", "serif"],
+        body: ["var(--font-body)", "Segoe UI", "sans-serif"],
       },
       colors: {
         sift: {
