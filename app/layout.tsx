@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
@@ -44,10 +44,18 @@ export const metadata: Metadata = {
     description:
       "AI-curated news summaries from 100+ sources. Get the key points in 60 seconds.",
   },
-  other: {
-    "theme-color": "#0c0a09",
-    "color-scheme": "dark light",
-  },
+};
+
+// Browser chrome (iOS Safari address bar, Android task switcher) follows the OS
+// color-scheme preference, not the user's in-app theme toggle. Late Edition
+// background for dark; Newsprint background for light. Matches the CSS
+// variables in app/globals.css.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f2ed" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c0a09" },
+  ],
+  colorScheme: "dark light",
 };
 
 const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
