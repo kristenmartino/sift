@@ -29,6 +29,9 @@ export default function CardImage({ src, alt, featured }: CardImageProps) {
         alt={alt || ""}
         fill
         sizes={featured ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 640px) 100vw, 340px"}
+        // The featured (index-0) card image is the LCP element on /news.
+        // priority adds fetchpriority="high", loading="eager", and a <link rel="preload">.
+        priority={featured}
         referrerPolicy="no-referrer"
         onLoad={() => setStatus("loaded")}
         onError={() => setStatus("error")}

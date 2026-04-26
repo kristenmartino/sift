@@ -1,7 +1,26 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Playfair_Display, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
+
+// Self-hosted via next/font: Next downloads the woff2s at build time, serves
+// them from /_next/static/media (same-origin, cacheable, no CSP changes), and
+// auto-injects <link rel="preload"> for the primary weights. CSS variables
+// are wired into Tailwind (font-heading, font-body) and globals.css.
+const fontHeading = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800", "900"],
+  display: "swap",
+  variable: "--font-heading",
+});
+
+const fontBody = Source_Sans_3({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-body",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -44,26 +63,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const inner = (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-theme="dark"
+      className={`${fontHeading.variable} ${fontBody.variable}`}
+      suppressHydrationWarning
+    >
       <head>
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-        />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          as="style"
-          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap"
-        />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap"
-        />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
