@@ -7,7 +7,8 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div
+    <main
+      id="main-content"
       className="min-h-screen px-6 py-16"
       style={{ background: "var(--bg)", color: "var(--text)" }}
     >
@@ -61,6 +62,6 @@ export default function TermsPage() {
           Last updated: April 2026
         </p>
       </div>
-    </div>
+    </main>
   );
 }

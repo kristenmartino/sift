@@ -648,7 +648,7 @@ export default function NewsAggregator() {
       </div>
 
       {/* ── Main ────────────────────────────────────── */}
-      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-7 pb-20">
+      <main id="main-content" className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-7 pb-20">
         {/* Compare mode */}
         {compareMode ? (
           <>

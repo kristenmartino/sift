@@ -99,7 +99,6 @@ export default function LandingPage() {
 
   return (
     <div
-      id="main-content"
       style={{
         background: "var(--bg)",
         color: "var(--text)",
@@ -150,6 +149,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
+      <main id="main-content">
       {/* ── Hero ──────────────────────────────────── */}
       <section className="max-w-[1200px] mx-auto px-6 pt-24 pb-20 text-center">
         <h1 className="font-heading text-[clamp(36px,6vw,60px)] font-bold leading-[1.1] tracking-tight text-[var(--text)] mb-6">
@@ -340,6 +340,7 @@ export default function LandingPage() {
           Start Reading &rarr;
         </Link>
       </section>
+      </main>
 
       {/* ── Footer ────────────────────────────────── */}
       <footer className="border-t border-[var(--border)] py-10 px-6 max-w-[1200px] mx-auto">
