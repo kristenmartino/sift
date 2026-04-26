@@ -8,7 +8,8 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <div
+    <main
+      id="main-content"
       className="min-h-screen flex items-center justify-center px-5"
       style={{ background: "var(--bg)", color: "var(--text)" }}
     >
@@ -32,6 +33,6 @@ export default function NotFound() {
           {COPY.notFound.button}
         </Link>
       </div>
-    </div>
+    </main>
   );
 }

@@ -20,7 +20,7 @@ function NewsLoading() {
       >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-3.5 h-14" />
       </header>
-      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-7 pb-20">
+      <main id="main-content" className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-7 pb-20">
         <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4 sm:gap-5">
           {[0, 1, 2, 3, 4].map((i) => (
             <div

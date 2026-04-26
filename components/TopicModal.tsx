@@ -20,6 +20,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
   const [preview, setPreview] = useState<TopicGenerateResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const color = CUSTOM_TOPIC_COLORS[colorIndex % CUSTOM_TOPIC_COLORS.length];
 
@@ -27,10 +28,39 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
     inputRef.current?.focus();
   }, []);
 
-  // Close on Escape
+  // Restore focus to whoever opened the modal when it unmounts.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    return () => {
+      // Guard against the opener being unmounted (e.g. the "+" button hides
+      // when the topic limit is reached after the new topic is added).
+      if (opener && document.contains(opener)) opener.focus();
+    };
+  }, []);
+
+  // Escape closes; Tab/Shift+Tab cycles within the dialog so focus can't leak
+  // into the muted background page.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -95,6 +125,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
+        ref={dialogRef}
         className="w-full max-w-[460px] rounded-2xl border border-[var(--border)] overflow-hidden animate-fade-slide-in"
         style={{ background: "var(--card-bg)" }}
       >
