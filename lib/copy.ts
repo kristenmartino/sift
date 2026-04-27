@@ -4,6 +4,8 @@
 // Voice: Bloomberg meets a smart friend. Conversational authority.
 // Rules: contractions always, active voice, no jargon, no exclamation marks.
 
+import type { StoryFraming } from "./types";
+
 export const COPY = {
   header: {
     tagline: "Intelligence, distilled",
@@ -52,8 +54,24 @@ export const COPY = {
   stories: {
     sourcesBadge: (count: number) => `${count} source${count !== 1 ? "s" : ""}`,
     expand: (count: number) => `View ${count} article${count !== 1 ? "s" : ""}`,
-    collapse: "Collapse",
-    framing: "How sources covered this",
+    collapse: "Hide sources",
+    framing: (count: number) =>
+      count === 1
+        ? "How one outlet framed it"
+        : count <= 3
+          ? `How ${count} outlets framed it`
+          : `How ${count} outlets covered this`,
+    compareRow: "See angles",
+    expandedMeta: (when: string, count: number) =>
+      `Updated ${when} · ${count} ${count === 1 ? "source" : "sources"}`,
+    analyzingFallback: "Sources are still being analyzed — articles below.",
+    toneLabels: {
+      neutral: "Straight",
+      urgent: "Pressing",
+      analytical: "Deep read",
+      critical: "Skeptical",
+      optimistic: "Hopeful",
+    } as Record<StoryFraming["tone"], string>,
   },
   notFound: {
     title: "This page wandered off",
