@@ -27,6 +27,46 @@ describe("COPY strings", () => {
     });
   });
 
+  describe("stories.framing", () => {
+    it("returns singular phrasing for 1 outlet", () => {
+      expect(COPY.stories.framing(1)).toBe("How one outlet framed it");
+    });
+
+    it("uses 'framed it' phrasing for small groups (≤3)", () => {
+      expect(COPY.stories.framing(2)).toBe("How 2 outlets framed it");
+      expect(COPY.stories.framing(3)).toBe("How 3 outlets framed it");
+    });
+
+    it("uses 'covered this' phrasing for larger groups (>3)", () => {
+      expect(COPY.stories.framing(4)).toBe("How 4 outlets covered this");
+      expect(COPY.stories.framing(14)).toBe("How 14 outlets covered this");
+    });
+  });
+
+  describe("stories.expandedMeta", () => {
+    it("returns singular for 1 source", () => {
+      expect(COPY.stories.expandedMeta("12 min ago", 1)).toBe(
+        "Updated 12 min ago · 1 source"
+      );
+    });
+
+    it("returns plural for multiple sources", () => {
+      expect(COPY.stories.expandedMeta("just now", 14)).toBe(
+        "Updated just now · 14 sources"
+      );
+    });
+  });
+
+  describe("stories.toneLabels", () => {
+    it("provides editorial labels for every framing tone", () => {
+      expect(COPY.stories.toneLabels.neutral).toBe("Straight");
+      expect(COPY.stories.toneLabels.urgent).toBe("Pressing");
+      expect(COPY.stories.toneLabels.analytical).toBe("Deep read");
+      expect(COPY.stories.toneLabels.critical).toBe("Skeptical");
+      expect(COPY.stories.toneLabels.optimistic).toBe("Hopeful");
+    });
+  });
+
   describe("static strings", () => {
     it("has header tagline", () => {
       expect(COPY.header.tagline).toBeTruthy();
