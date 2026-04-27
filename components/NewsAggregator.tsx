@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
@@ -14,7 +13,6 @@ import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
 import SiftLogo from "./SiftLogo";
-import AuthButtons, { clerkEnabled } from "./AuthButtons";
 import type { Article, CustomTopic, FeedItem, CategoryId } from "@/lib/types";
 
 // Code-split: these surfaces only render on user intent (Cmd+K search,
@@ -23,15 +21,6 @@ import type { Article, CustomTopic, FeedItem, CategoryId } from "@/lib/types";
 const TopicSearch = dynamic(() => import("./TopicSearch"), { ssr: false });
 const TopicModal = dynamic(() => import("./TopicModal"), { ssr: false });
 const CompareView = dynamic(() => import("./CompareView"), { ssr: false });
-
-// ─── Clerk user ID (safe when ClerkProvider absent) ─────
-
-function useClerkUserId(): string | null {
-  if (!clerkEnabled) return null;
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { userId } = useAuth();
-  return userId ?? null;
-}
 
 // ─── Component ──────────────────────────────────────────
 
@@ -48,7 +37,12 @@ function useInitialParams() {
   return initial;
 }
 
-export default function NewsAggregator() {
+interface NewsAggregatorProps {
+  userId: string | null;
+  authSlot: React.ReactNode;
+}
+
+export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps) {
   const initialParams = useInitialParams();
 
   const [activeCategory, setActiveCategory] = useState<CategoryId>(initialParams.category);
@@ -69,8 +63,6 @@ export default function NewsAggregator() {
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
   const [loadingBookmarks, setLoadingBookmarks] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<{ topic: CustomTopic; timer: ReturnType<typeof setTimeout> } | null>(null);
-
-  const userId = useClerkUserId();
 
   const { articles, stories, loading, error, slow, lastUpdated, loadCategory } = useNewsLoader();
   const { bookmarks, toggle: toggleBookmark, count: bookmarkCount } = useBookmarks(userId);
@@ -417,7 +409,7 @@ export default function NewsAggregator() {
               </button>
             )}
 
-            <AuthButtons />
+            {authSlot}
           </div>
         </div>
 

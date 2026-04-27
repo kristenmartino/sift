@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
@@ -58,9 +57,6 @@ export const viewport: Viewport = {
   colorScheme: "dark light",
 };
 
-const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-const clerkEnabled = !!clerkPk && clerkPk.startsWith("pk_");
-
 // Blocking script that sets data-theme on <html> before first paint.
 // Reads from localStorage; defaults to "dark" if unset.
 const themeScript = `(function(){try{var t=JSON.parse(localStorage.getItem("sift-theme"));document.documentElement.dataset.theme=t===false?"light":"dark"}catch(e){document.documentElement.dataset.theme="dark"}})()`;
@@ -70,7 +66,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const inner = (
+  return (
     <html
       lang="en"
       data-theme="dark"
@@ -89,8 +85,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-
-  if (!clerkEnabled) return inner;
-
-  return <ClerkProvider>{inner}</ClerkProvider>;
 }
