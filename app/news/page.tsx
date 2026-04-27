@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { auth } from "@clerk/nextjs/server";
 import NewsAggregator from "@/components/NewsAggregator";
+import AuthButtons from "@/components/AuthButtons";
 
 export const metadata: Metadata = {
   title: "News",
   description:
     "AI-curated news summaries across technology, business, science, energy, world, and health.",
 };
+
+const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const clerkEnabled = !!clerkPk && clerkPk.startsWith("pk_");
 
 function NewsLoading() {
   return (
@@ -41,10 +46,12 @@ function NewsLoading() {
   );
 }
 
-export default function NewsPage() {
+export default async function NewsPage() {
+  const userId = clerkEnabled ? (await auth()).userId ?? null : null;
+
   return (
     <Suspense fallback={<NewsLoading />}>
-      <NewsAggregator />
+      <NewsAggregator userId={userId} authSlot={<AuthButtons />} />
     </Suspense>
   );
 }
