@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { CATEGORY_COLORS } from "@/lib/constants";
 import type { CardImageProps } from "@/lib/types";
 
-export default function CardImage({ src, alt, featured }: CardImageProps) {
+export default function CardImage({ src, alt, featured, category }: CardImageProps) {
+  const color = CATEGORY_COLORS[category] || CATEGORY_COLORS.top;
   const [status, setStatus] = useState<"loading" | "loaded" | "error">(
     src ? "loading" : "error"
   );
@@ -50,6 +52,19 @@ export default function CardImage({ src, alt, featured }: CardImageProps) {
           className="absolute inset-0 pointer-events-none"
           style={{
             background: "linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 40%)",
+          }}
+        />
+      )}
+
+      {/* Category-color hairline ties image to card body */}
+      {status === "loaded" && (
+        <div
+          aria-hidden
+          className="absolute bottom-0 left-0 right-0 pointer-events-none"
+          style={{
+            height: 1,
+            background: `linear-gradient(90deg, ${color.hex} 0%, ${color.hex}80 30%, transparent 100%)`,
+            opacity: 0.85,
           }}
         />
       )}

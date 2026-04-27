@@ -15,6 +15,28 @@ const TONE_COLORS: Record<StoryFraming["tone"], string> = {
   optimistic: "#059669",
 };
 
+function Chevron({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      className="story-chevron"
+      data-expanded={expanded}
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M2 3.5 L5 6.5 L8 3.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function StoryCard({
   story,
   featured,
@@ -56,11 +78,16 @@ export default function StoryCard({
       `}
       style={{
         position: "relative",
-        transition: "transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)",
+        transition:
+          "transform var(--dur-slow) var(--ease-out-expo), box-shadow var(--dur-slow) var(--ease-out-expo)",
         transform: hovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: hovered
-          ? "0 20px 60px var(--shadow-hover)"
-          : "0 2px 16px var(--shadow)",
+          ? featured && expanded
+            ? "0 24px 80px var(--shadow-high)"
+            : "0 20px 60px var(--shadow-hover)"
+          : featured && expanded
+            ? "0 4px 24px var(--shadow-mid)"
+            : "0 2px 16px var(--shadow)",
         borderTop: !hasImage ? `3px solid ${color.hex}` : undefined,
         animation: index <= 2 ? `card-enter-left 0.5s ease-out both` : undefined,
         animationDelay: index <= 2 ? `${index * 60}ms` : undefined,
@@ -71,6 +98,14 @@ export default function StoryCard({
         className="absolute top-0 left-0 right-0 h-[2px] transition-opacity duration-300 pointer-events-none"
         style={{ background: color.hex, opacity: hovered ? 0.6 : 0, zIndex: 1 }}
       />
+
+      {/* Light-source radial highlight — only on the signature expanded card */}
+      {featured && expanded && (
+        <div
+          aria-hidden
+          className="story-highlight absolute top-0 left-0 right-0 h-[120px] pointer-events-none"
+        />
+      )}
 
       {/* Image */}
       {hasImage && (
@@ -108,17 +143,17 @@ export default function StoryCard({
 
         {/* Headline */}
         <h3
-          className="font-heading font-bold leading-snug text-[var(--text)] tracking-tight"
-          style={{ fontSize: featured ? 24 : 19 }}
+          className={`font-heading font-bold text-[var(--text)] ${
+            featured ? "text-headline-lg" : "text-headline"
+          }`}
         >
           {story.headline}
         </h3>
 
         {/* Summary */}
         <p
-          className="text-[var(--text-secondary)] leading-relaxed"
+          className={`text-[var(--text-secondary)] ${featured ? "text-body-lg" : "text-body"}`}
           style={{
-            fontSize: featured ? 15 : 14,
             display: "-webkit-box",
             WebkitLineClamp: featured ? 4 : 3,
             WebkitBoxOrient: "vertical",
@@ -155,29 +190,60 @@ export default function StoryCard({
         {/* Framings section */}
         {story.framings.length > 0 && (
           <div className="mt-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">
-              {COPY.stories.framing}
-            </p>
-            <div className="flex flex-col gap-1.5">
-              {story.framings.map((f) => (
-                <div key={f.sourceName} className="flex items-start gap-2 text-xs">
-                  <span className="font-bold text-[var(--text-secondary)] shrink-0 min-w-[80px]">
-                    {f.sourceName}
-                  </span>
-                  <span className="text-[var(--text-muted)] flex-1">{f.framing}</span>
-                  <span
-                    className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase shrink-0"
-                    style={{
-                      color: TONE_COLORS[f.tone] || TONE_COLORS.neutral,
-                      background: `${TONE_COLORS[f.tone] || TONE_COLORS.neutral}15`,
-                    }}
+            <div className="flex items-center gap-3 mb-3">
+              <p className="text-kicker font-bold uppercase text-[var(--text-muted)] shrink-0">
+                {COPY.stories.framing(story.framings.length)}
+              </p>
+              <span
+                aria-hidden
+                className="flex-1 h-px bg-gradient-to-r from-[var(--border)] to-transparent"
+              />
+            </div>
+            <div className="flex flex-col">
+              {story.framings.map((f, i) => {
+                const toneHex = TONE_COLORS[f.tone] || TONE_COLORS.neutral;
+                return (
+                  <div
+                    key={f.sourceName}
+                    className="story-row flex items-start gap-4 py-2.5 border-b border-[color:var(--border-subtle)] last:border-b-0"
                   >
-                    {f.tone}
-                  </span>
-                </div>
-              ))}
+                    <span
+                      aria-hidden
+                      className="story-row__tone-gutter"
+                      style={{ background: toneHex }}
+                    />
+                    <span className="story-row__source text-outlet font-semibold uppercase text-[var(--text)] shrink-0 min-w-[88px]">
+                      {f.sourceName}
+                    </span>
+                    <span className="text-body text-[var(--text-secondary)] flex-1">
+                      {f.framing}
+                    </span>
+                    <span
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--border)] text-[10px] font-medium tracking-[0.04em] text-[var(--text-secondary)] shrink-0"
+                      style={{
+                        animation: "tone-breathe 600ms var(--ease-spring) both",
+                        animationDelay: `${300 + i * 24}ms`,
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        className="inline-block rounded-full"
+                        style={{ width: 6, height: 6, background: toneHex }}
+                      />
+                      {COPY.stories.toneLabels[f.tone]}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
+        )}
+
+        {/* Empty-framings fallback — articles exist but framings still pending */}
+        {story.framings.length === 0 && story.articles.length > 0 && (
+          <p className="text-body text-[var(--text-muted)] italic">
+            {COPY.stories.analyzingFallback}
+          </p>
         )}
 
         {/* Expand/collapse toggle */}
@@ -186,61 +252,87 @@ export default function StoryCard({
             e.stopPropagation();
             setExpanded(!expanded);
           }}
-          className="self-start bg-transparent border-none p-0 cursor-pointer text-xs font-semibold transition-colors duration-200 mt-1"
+          className="story-expand-btn self-start bg-transparent border-none p-0 cursor-pointer text-xs font-semibold transition-colors duration-200 mt-1 inline-flex items-center gap-1.5"
           style={{ color: "var(--accent)" }}
+          aria-expanded={expanded}
         >
           {expanded ? COPY.stories.collapse : COPY.stories.expand(story.articles.length)}
+          <Chevron expanded={expanded} />
         </button>
 
-        {/* Expanded child articles */}
-        {expanded && (
-          <div
-            className="flex flex-col gap-2 mt-1 pt-3 border-t border-[var(--border)]"
-            style={{ animation: "story-expand 0.35s ease-out both" }}
-          >
-            {story.articles.map((article) => (
-              <a
-                key={article.id}
-                href={article.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 no-underline hover:bg-[var(--card-bg)]"
-                style={{ background: "var(--bg)" }}
-              >
-                <span className="text-xs font-bold text-[var(--text-secondary)] min-w-[70px] shrink-0">
-                  {article.sourceName}
-                </span>
-                <span
-                  className="text-xs text-[var(--text)] flex-1"
+        {/* Expanded child articles — grid-template-rows disclosure (no max-height) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateRows: expanded ? "1fr" : "0fr",
+            transition: "grid-template-rows var(--dur-base) var(--ease-out-expo)",
+          }}
+        >
+          <div style={{ overflow: "hidden", minHeight: 0 }}>
+            {expanded && (
+              <div className="mt-3 pt-4 border-t border-[var(--border)]">
+                <p className="text-meta text-[var(--text-muted)] mb-3">
+                  {COPY.stories.expandedMeta(timeAgo(story.publishedDate), story.articles.length)}
+                </p>
+                <div
+                  className="rounded-[10px] px-2"
                   style={{
-                    display: "-webkit-box",
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
+                    background: "var(--well-bg)",
+                    boxShadow: "inset 0 1px 0 var(--border)",
                   }}
                 >
-                  {article.title}
-                </span>
-                <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                  {timeAgo(article.publishedDate)}
-                </span>
-                {onCompare && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onCompare(article.title, article.sourceName);
-                    }}
-                    className="bg-transparent border-none p-0 cursor-pointer text-[10px] font-medium shrink-0 transition-colors duration-200"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    Compare
-                  </button>
-                )}
-              </a>
-            ))}
+                  <div className="flex flex-col">
+                    {story.articles.map((article, i) => (
+                      <a
+                        key={article.id}
+                        href={article.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="story-row flex items-center gap-4 py-3 no-underline border-b border-[color:var(--border-subtle)] last:border-b-0"
+                        style={{
+                          animation: "row-reveal 320ms var(--ease-out-expo) both",
+                          animationDelay: `${(story.framings.length + Math.min(i, 11)) * 24}ms`,
+                        }}
+                      >
+                        <span aria-hidden className="story-row__rail" />
+                        <span className="story-row__source text-outlet font-semibold uppercase text-[var(--text)] shrink-0 min-w-[88px]">
+                          {article.sourceName}
+                        </span>
+                        <span
+                          className="text-body text-[var(--text)] flex-1"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {article.title}
+                        </span>
+                        <span className="text-meta text-[var(--text-muted)] shrink-0">
+                          {timeAgo(article.publishedDate)}
+                        </span>
+                        {onCompare && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onCompare(article.title, article.sourceName);
+                            }}
+                            className="story-row__cta bg-transparent border-none p-0 cursor-pointer text-meta font-medium shrink-0"
+                            style={{ color: "var(--accent)" }}
+                          >
+                            {COPY.stories.compareRow}
+                          </button>
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Meta row */}
         <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-[var(--text-muted)] font-medium">

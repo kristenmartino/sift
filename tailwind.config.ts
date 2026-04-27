@@ -14,6 +14,16 @@ const config: Config = {
         heading: ["var(--font-heading)", "Georgia", "Times New Roman", "serif"],
         body: ["var(--font-body)", "Segoe UI", "sans-serif"],
       },
+      fontSize: {
+        kicker:        ["11px",   { lineHeight: "1.2",  letterSpacing: "0.12em" }],
+        meta:          ["11px",   { lineHeight: "1.3",  letterSpacing: "0.02em" }],
+        outlet:        ["11px",   { lineHeight: "1.2",  letterSpacing: "0.08em" }],
+        body:          ["13.5px", { lineHeight: "1.5",  letterSpacing: "0" }],
+        "body-lg":     ["15px",   { lineHeight: "1.55", letterSpacing: "-0.005em" }],
+        headline:      ["19px",   { lineHeight: "1.25", letterSpacing: "-0.015em" }],
+        "headline-lg": ["24px",   { lineHeight: "1.2",  letterSpacing: "-0.02em" }],
+        display:       ["32px",   { lineHeight: "1.1",  letterSpacing: "-0.025em" }],
+      },
       colors: {
         sift: {
           bg: "var(--bg)",

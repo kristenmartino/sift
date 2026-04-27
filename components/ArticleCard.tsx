@@ -57,7 +57,8 @@ export default function ArticleCard({
       `}
       style={{
         position: "relative",
-        transition: "transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1), background-color 0.3s ease, border-color 0.3s ease",
+        transition:
+          "transform var(--dur-slow) var(--ease-out-expo), box-shadow var(--dur-slow) var(--ease-out-expo), background-color 0.3s ease, border-color 0.3s ease",
         transform: hovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: hovered
           ? "0 20px 60px var(--shadow-hover)"
