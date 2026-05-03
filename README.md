@@ -1,8 +1,10 @@
 # Sift
 
-AI-curated news aggregator. 100+ RSS sources, 10 categories, Claude Haiku summaries, Voyage AI embeddings, multi-source comparison. Updated every 10 minutes.
+A civic-literacy news app for the American public. Sift reads hundreds of vetted sources, surfaces the civic context the news assumes you already know, compares how outlets across the political spectrum frame the same story, and shows the financial and political ties behind every entity — all linked to public records.
 
 **Live:** [siftnews.kristenmartino.ai](https://siftnews.kristenmartino.ai)
+
+> **Direction:** Sift is mid-pivot from a general-audience news aggregator to a civic-literacy news app. See [`plans/sift-civic-literacy.md`](../../.claude/plans/sift-civic-literacy.md) for the active plan. The pre-pivot product is preserved at git tag `v1-general-audience`. A possible future "Sift Pro" tier (paid power-user / professional intelligence) is documented but deferred — see [`plans/sift-ib-pivot.md`](../../.claude/plans/sift-ib-pivot.md).
 
 ## Architecture
 
@@ -17,7 +19,7 @@ Browser --> Vercel (Next.js) --reads--> Neon Postgres (pgvector)
 - **sift-api**: Python FastAPI + LangGraph on Railway — background pipeline + comparison workflow
 - **Database**: Neon Postgres (pgvector) — shared source of truth
 
-## Features
+## Features (current)
 
 - **10 categories**: Top, Technology, Business, Science, Energy, World, Health, Politics, Sports, Entertainment
 - **AI summaries**: Every article summarized by Claude Haiku 4.5
@@ -26,8 +28,15 @@ Browser --> Vercel (Next.js) --reads--> Neon Postgres (pgvector)
 - **Bookmarks**: localStorage + Clerk server sync
 - **Dark/light themes**: "Late Edition" (dark) and "Newsprint" (light) with warm editorial tones
 - **SiftLogo**: Diamond mark brand identity across all touchpoints
-- **Landing page**: Marketing page with feature showcase
 - **Auth**: Clerk (free to 10K MAU)
+
+## Features (civic-literacy MVP, in progress — see plan)
+
+- **Background primer**: *"What you should know first"* + 3–5 term definitions, AI-generated at ingest
+- **Cross-spectrum comparison**: how outlets across left / center / right framed the same story, with AllSides + MBFC ratings shown for each outlet
+- **Reading-level adjuster**: Simpler / Standard / Detailed slider, Claude-rewritten and cached
+- **Inline glossary with financial AND political context**: hover any entity (outlet, politician, think tank, pundit, bill) for an externally-sourced dossier — ownership, donors, voting records, foreign funding (FARA), interest-group ratings. All linked to AllSides, MBFC, OpenSecrets, GovTrack, ProPublica Nonprofit Explorer, FARA, Vote Smart, and FEC
+- **Methodology**: source curation policy and symmetric-application rules public at `/methodology`
 
 ## Quick start
 

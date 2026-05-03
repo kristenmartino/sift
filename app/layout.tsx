@@ -23,25 +23,25 @@ const fontBody = Source_Sans_3({
 
 export const metadata: Metadata = {
   title: {
-    default: "Sift — AI-Curated News, Already Read for You",
+    default: "Sift — News with context, comparison, and transparency",
     template: "%s | Sift",
   },
   description:
-    "AI-curated news summaries from 100+ sources across technology, business, science, energy, world, and health. Updated every 10 minutes.",
+    "Sift reads hundreds of sources and surfaces the civic context the news assumes you already know — with cross-spectrum comparison and the financial and political ties behind every story. Every claim links to a public record.",
   metadataBase: new URL("https://siftnews.kristenmartino.ai"),
   openGraph: {
-    title: "Sift — AI-Curated News",
+    title: "Sift — Read the news with the context it deserves",
     description:
-      "AI-curated news summaries from 100+ sources. Get the key points in 60 seconds.",
+      "The civics the news assumes. The framing across the political spectrum. The money and politics behind every story. Linked to public records.",
     siteName: "Sift",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sift — AI-Curated News",
+    title: "Sift — Read the news with the context it deserves",
     description:
-      "AI-curated news summaries from 100+ sources. Get the key points in 60 seconds.",
+      "The civics the news assumes. The framing across the political spectrum. The money and politics behind every story.",
   },
 };
 
