@@ -187,13 +187,6 @@ article,
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* One-shot tone-badge breathe, runs once on initial reveal. */
-@keyframes tone-breathe {
-  0%   { transform: scale(1); }
-  30%  { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
-
 /* ─── Story Row Affordances ───────────────────────────── */
 /* Used by both framing rows and article rows in the expanded
    StoryCard. Hover/focus reveals an accent rail, shifts the
@@ -246,17 +239,6 @@ article,
 .story-row:active {
   transform: scale(0.99);
   transition: transform 80ms var(--ease-snap);
-}
-/* Tone-color gutter — lives at row left edge, semantic content. */
-.story-row__tone-gutter {
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  opacity: 0.7;
-  pointer-events: none;
-  border-radius: 1px;
 }
 
 /* ─── Story Light-Source Highlight ────────────────────── */

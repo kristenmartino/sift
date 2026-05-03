@@ -5,10 +5,10 @@ import type { Article, CategoryId } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Sift — Intelligence, distilled",
+    absolute: "Sift — News with context, comparison, and transparency",
   },
   description:
-    "AI-curated news summaries from 100+ sources across technology, business, science, energy, world, and health. Updated every 10 minutes.",
+    "Read the news with the civic context, cross-spectrum comparison, and source transparency it assumes you already know. Linked to public records. Refreshed every 10 minutes.",
 };
 
 // ISR: re-render at most once every 10 minutes — same heartbeat as the

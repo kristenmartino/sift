@@ -5,15 +5,11 @@ import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
-import type { StoryCardProps, StoryFraming } from "@/lib/types";
+import type { StoryCardProps } from "@/lib/types";
 
-const TONE_COLORS: Record<StoryFraming["tone"], string> = {
-  neutral: "#6b7280",
-  urgent: "#dc2626",
-  analytical: "#2563eb",
-  critical: "#d97706",
-  optimistic: "#059669",
-};
+// Tone labels are no longer rendered (civic-literacy pivot, Phase 0).
+// Schema fields + COPY.stories.toneLabels lookup remain for backward
+// compatibility and possible future re-introduction. See plans/sift-civic-literacy.md.
 
 function Chevron({ expanded }: { expanded: boolean }) {
   return (
@@ -200,41 +196,20 @@ export default function StoryCard({
               />
             </div>
             <div className="flex flex-col">
-              {story.framings.map((f, i) => {
-                const toneHex = TONE_COLORS[f.tone] || TONE_COLORS.neutral;
-                return (
-                  <div
-                    key={f.sourceName}
-                    className="story-row flex items-start gap-4 py-2.5 border-b border-[color:var(--border-subtle)] last:border-b-0"
-                  >
-                    <span
-                      aria-hidden
-                      className="story-row__tone-gutter"
-                      style={{ background: toneHex }}
-                    />
-                    <span className="story-row__source text-outlet font-semibold uppercase text-[var(--text)] shrink-0 min-w-[88px]">
-                      {f.sourceName}
-                    </span>
-                    <span className="text-body text-[var(--text-secondary)] flex-1">
-                      {f.framing}
-                    </span>
-                    <span
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--border)] text-[10px] font-medium tracking-[0.04em] text-[var(--text-secondary)] shrink-0"
-                      style={{
-                        animation: "tone-breathe 600ms var(--ease-spring) both",
-                        animationDelay: `${300 + i * 24}ms`,
-                      }}
-                    >
-                      <span
-                        aria-hidden
-                        className="inline-block rounded-full"
-                        style={{ width: 6, height: 6, background: toneHex }}
-                      />
-                      {COPY.stories.toneLabels[f.tone]}
-                    </span>
-                  </div>
-                );
-              })}
+              {story.framings.map((f) => (
+                <div
+                  key={f.sourceName}
+                  className="story-row flex items-start gap-4 py-2.5 border-b border-[color:var(--border-subtle)] last:border-b-0"
+                >
+                  <span aria-hidden className="story-row__rail" />
+                  <span className="story-row__source text-outlet font-semibold uppercase text-[var(--text)] shrink-0 min-w-[88px]">
+                    {f.sourceName}
+                  </span>
+                  <span className="text-body text-[var(--text-secondary)] flex-1">
+                    {f.framing}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         )}

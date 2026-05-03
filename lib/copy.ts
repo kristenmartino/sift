@@ -1,17 +1,19 @@
 // ─── Sift Voice & Tone ──────────────────────────────────
 //
 // Every string in Sift passes through this file.
-// Voice: Bloomberg meets a smart friend. Conversational authority.
+// Voice: the patient teacher who never makes you feel dumb.
+// Authoritative without being preachy. Never partisan. Never editorializing.
 // Rules: contractions always, active voice, no jargon, no exclamation marks.
+// Show the data, link the source, let the reader conclude.
 
 import type { StoryFraming } from "./types";
 
 export const COPY = {
   header: {
-    tagline: "Intelligence, distilled",
+    tagline: "Context, comparison, transparency",
   },
   footer: {
-    main: "Sift reads hundreds of sources so you don't have to. Every story links to the original.",
+    main: "Sift reads hundreds of sources, surfaces the civic context the news assumes you already know, and shows you who's behind every story. Every link goes to the original.",
   },
   error: {
     title: "We hit a snag pulling today's stories",
