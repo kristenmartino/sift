@@ -186,6 +186,37 @@ export async function getStoriesWithArticles(
   return { stories, storyArticles, standaloneArticles };
 }
 
+// ─── Landing ───────────────────────────────────────────
+
+/**
+ * Fetch a single hero-quality article for the marketing landing page.
+ * Prefers articles that (a) have an image, (b) sit in the "top" category,
+ * and (c) rank high on importance × recency. Returns null if the DB has
+ * nothing usable — caller renders a fallback layout.
+ */
+export async function getTopStoryForLanding(): Promise<DbArticle | null> {
+  try {
+    const result = await pool.query<DbArticle>(
+      `SELECT id, title, summary, source_url, source_name, image_url,
+              category, published_date, read_time, why_it_matters, importance_score, created_at
+       FROM articles
+       WHERE category = 'top'
+         AND from_search = false
+         AND image_url IS NOT NULL
+         AND summary IS NOT NULL AND summary != ''
+         AND LOWER(summary) NOT LIKE 'unable to provide%'
+       ORDER BY
+         COALESCE(importance_score, 3)::float *
+         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
+       DESC NULLS LAST
+       LIMIT 1`
+    );
+    return result.rows[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getLastRefreshed(category: string): Promise<Date | null> {
   const result = await pool.query(
     "SELECT last_refreshed_at FROM pipeline_state WHERE category = $1",

@@ -94,4 +94,25 @@ export const COPY = {
     body: "Try different words \u2014 or let the AI surprise you.",
     button: "Browse today\u2019s stories",
   },
+  landing: {
+    // Single editorial paragraph below the lead story. The "what is this".
+    explainer:
+      "Sift reads hundreds of sources every morning, summarizes the stories worth knowing, and links back to the originals \u2014 so you can stop checking ten tabs and get on with your day.",
+    leadEyebrow: "Today\u2019s lead",
+    leadFallbackTitle: "Today\u2019s stories are still being filed",
+    leadFallbackBody:
+      "The morning ingest is in progress. Open the feed for what\u2019s already in.",
+    leadCta: "Read in full",
+    feedCta: "Open the full feed",
+    // Section heading for the multi-source comparison demo.
+    compareEyebrow: "How outlets framed it",
+    compareTitle: "The Federal Reserve\u2019s May rate decision",
+    compareSubtitle: "One story, three angles. This is what Sift\u2019s compare view does on every topic.",
+    compareCta: "Compare any topic",
+    // Source colophon.
+    colophonHeading: "Read from",
+    colophonSummary: "100+ outlets \u00b7 10 categories \u00b7 refreshed every 10 minutes",
+    // Footer colophon link.
+    colophonLink: "Colophon",
+  },
 } as const;
