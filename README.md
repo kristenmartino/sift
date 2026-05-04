@@ -1,6 +1,6 @@
 # Sift
 
-A civic-literacy news app for the American public. Sift reads hundreds of vetted sources, surfaces the civic context the news assumes you already know, compares how outlets across the political spectrum frame the same story, and shows the financial and political ties behind every entity — all linked to public records.
+**The news, with footnotes.** A civic-literacy news app for the American public. Sift reads hundreds of vetted sources, adds the footnotes the news assumes you don't need — civic context, cross-spectrum framing, and the financial and political ties behind every entity — all linked to public records.
 
 **Live:** [siftnews.kristenmartino.ai](https://siftnews.kristenmartino.ai)
 
