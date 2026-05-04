@@ -10,7 +10,7 @@ import type { StoryFraming } from "./types";
 
 export const COPY = {
   header: {
-    tagline: "Context, comparison, transparency",
+    tagline: "The news, with footnotes",
   },
   footer: {
     main: "Sift reads hundreds of sources, surfaces the civic context the news assumes you already know, and shows you who's behind every story. Every link goes to the original.",

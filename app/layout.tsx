@@ -23,25 +23,25 @@ const fontBody = Source_Sans_3({
 
 export const metadata: Metadata = {
   title: {
-    default: "Sift — News with context, comparison, and transparency",
+    default: "Sift — The news, with footnotes.",
     template: "%s | Sift",
   },
   description:
-    "Sift reads hundreds of sources and surfaces the civic context the news assumes you already know — with cross-spectrum comparison and the financial and political ties behind every story. Every claim links to a public record.",
+    "Sift reads hundreds of sources and adds the footnotes — the civic context the news assumes, the framing across the political spectrum, and the financial and political ties behind every story. Every claim links to a public record.",
   metadataBase: new URL("https://siftnews.kristenmartino.ai"),
   openGraph: {
-    title: "Sift — Read the news with the context it deserves",
+    title: "Sift — The news, with footnotes.",
     description:
-      "The civics the news assumes. The framing across the political spectrum. The money and politics behind every story. Linked to public records.",
+      "The civic context the news assumes. The framing across the political spectrum. The money behind every story. Linked to public records.",
     siteName: "Sift",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sift — Read the news with the context it deserves",
+    title: "Sift — The news, with footnotes.",
     description:
-      "The civics the news assumes. The framing across the political spectrum. The money and politics behind every story.",
+      "The civic context the news assumes. The framing across the political spectrum. The money behind every story.",
   },
 };
 
