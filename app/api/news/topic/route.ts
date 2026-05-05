@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { searchArticlesByEmbedding, insertArticle } from "@/lib/db";
+import { parseContextPrimer } from "@/lib/primer";
 import { stableHash, estimateReadTime } from "@/lib/utils";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
@@ -193,21 +194,25 @@ export async function GET(request: NextRequest) {
         );
 
         // 3. Map DB rows to Article type
-        const articles: Article[] = rows.map((row) => ({
-          id: row.id,
-          title: row.title,
-          summary: cleanSummary(row.summary),
-          sourceUrl: row.source_url,
-          sourceName: row.source_name,
-          publishedDate: row.published_date
-            ? row.published_date.toISOString()
-            : null,
-          imageUrl: cleanImageUrl(row.image_url),
-          category: row.category as CategoryId,
-          readTime: row.read_time || 1,
-          ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
-          ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
-        }));
+        const articles: Article[] = rows.map((row) => {
+          const primer = parseContextPrimer(row.context_primer);
+          return {
+            id: row.id,
+            title: row.title,
+            summary: cleanSummary(row.summary),
+            sourceUrl: row.source_url,
+            sourceName: row.source_name,
+            publishedDate: row.published_date
+              ? row.published_date.toISOString()
+              : null,
+            imageUrl: cleanImageUrl(row.image_url),
+            category: row.category as CategoryId,
+            readTime: row.read_time || 1,
+            ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
+            ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
+            ...(primer ? { contextPrimer: primer } : {}),
+          };
+        });
 
         // 4. Stream vector results immediately
         if (articles.length > 0) {

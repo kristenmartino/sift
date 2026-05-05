@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStoriesWithArticles, getLastRefreshed } from "@/lib/db";
+import { parseContextPrimer } from "@/lib/primer";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
@@ -57,24 +58,9 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Map standalone articles
-    const articles: Article[] = standaloneArticles.map((row) => ({
-      id: row.id,
-      title: row.title,
-      summary: cleanSummary(row.summary),
-      sourceUrl: row.source_url,
-      sourceName: row.source_name,
-      publishedDate: row.published_date ? row.published_date.toISOString() : null,
-      imageUrl: cleanImageUrl(row.image_url),
-      category: row.category as CategoryId,
-      readTime: row.read_time || 1,
-      ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
-      ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
-    }));
-
-    // Map stories with nested articles
-    const stories: Story[] = dbStories.map((s) => {
-      const childRows = storyArticles[s.id] || [];
-      const childArticles: Article[] = childRows.map((row) => ({
+    const articles: Article[] = standaloneArticles.map((row) => {
+      const primer = parseContextPrimer(row.context_primer);
+      return {
         id: row.id,
         title: row.title,
         summary: cleanSummary(row.summary),
@@ -86,7 +72,30 @@ export async function GET(request: NextRequest) {
         readTime: row.read_time || 1,
         ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
         ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
-      }));
+        ...(primer ? { contextPrimer: primer } : {}),
+      };
+    });
+
+    // Map stories with nested articles
+    const stories: Story[] = dbStories.map((s) => {
+      const childRows = storyArticles[s.id] || [];
+      const childArticles: Article[] = childRows.map((row) => {
+        const primer = parseContextPrimer(row.context_primer);
+        return {
+          id: row.id,
+          title: row.title,
+          summary: cleanSummary(row.summary),
+          sourceUrl: row.source_url,
+          sourceName: row.source_name,
+          publishedDate: row.published_date ? row.published_date.toISOString() : null,
+          imageUrl: cleanImageUrl(row.image_url),
+          category: row.category as CategoryId,
+          readTime: row.read_time || 1,
+          ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
+          ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
+          ...(primer ? { contextPrimer: primer } : {}),
+        };
+      });
 
       // Parse JSONB framings (validate types, sanitize external text)
       const rawFramings = Array.isArray(s.framings) ? s.framings : [];

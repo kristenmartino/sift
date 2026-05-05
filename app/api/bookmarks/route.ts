@@ -7,6 +7,7 @@ import {
   removeBookmark,
   getBookmarkedArticles,
 } from "@/lib/db";
+import { parseContextPrimer } from "@/lib/primer";
 import type { Article, CategoryId } from "@/lib/types";
 import { checkCsrf } from "@/lib/security";
 
@@ -28,17 +29,23 @@ export async function GET(request: NextRequest) {
 
     if (full) {
       const rows = await getBookmarkedArticles(userId);
-      const articles: Article[] = rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        summary: row.summary || "",
-        sourceUrl: row.source_url,
-        sourceName: row.source_name,
-        publishedDate: row.published_date ? row.published_date.toISOString() : null,
-        imageUrl: row.image_url,
-        category: row.category as CategoryId,
-        readTime: row.read_time || 1,
-      }));
+      const articles: Article[] = rows.map((row) => {
+        const primer = parseContextPrimer(row.context_primer);
+        return {
+          id: row.id,
+          title: row.title,
+          summary: row.summary || "",
+          sourceUrl: row.source_url,
+          sourceName: row.source_name,
+          publishedDate: row.published_date ? row.published_date.toISOString() : null,
+          imageUrl: row.image_url,
+          category: row.category as CategoryId,
+          readTime: row.read_time || 1,
+          ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
+          ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
+          ...(primer ? { contextPrimer: primer } : {}),
+        };
+      });
       return NextResponse.json({ articles });
     }
 
