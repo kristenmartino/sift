@@ -63,6 +63,27 @@ export default function StoryCard({
   }
   const visibleTags = entityTags.slice(0, 6);
 
+  // Dedupe framings by source so a story doesn't claim multi-outlet
+  // coverage when one outlet just published several near-duplicate
+  // articles. The clusterer can group same-outlet posts into a single
+  // story; we should never render that as "How 4 outlets covered this".
+  // Keeps first-seen framing per outlet (preserves the LLM's chosen
+  // representative wording per source).
+  const uniqueFramings = (() => {
+    const sourcesSeen = new Set<string>();
+    return story.framings.filter((f) => {
+      if (sourcesSeen.has(f.sourceName)) return false;
+      sourcesSeen.add(f.sourceName);
+      return true;
+    });
+  })();
+  const uniqueSourceCount = uniqueFramings.length;
+  // Only show multi-source affordances (the "N sources" badge + the
+  // framings section) when there are at least 2 distinct outlets.
+  // Below threshold, the cluster reads as related coverage from one
+  // outlet and the article-list expand still works as intended.
+  const isMultiSource = uniqueSourceCount >= 2;
+
   return (
     <article
       onMouseEnter={() => setHovered(true)}
@@ -114,7 +135,7 @@ export default function StoryCard({
       )}
 
       <div className={`flex flex-col gap-3 ${featured ? "p-7 md:p-8" : "p-5"}`}>
-        {/* Category badge + sources badge */}
+        {/* Category badge + sources badge (only when multi-outlet) */}
         <div className="flex items-center gap-2 flex-wrap">
           <span
             className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
@@ -126,15 +147,17 @@ export default function StoryCard({
           >
             {cat.icon} {cat.label}
           </span>
-          <span
-            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide"
-            style={{
-              background: "var(--accent)",
-              color: "#fff",
-            }}
-          >
-            {COPY.stories.sourcesBadge(story.articleCount)}
-          </span>
+          {isMultiSource && (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide"
+              style={{
+                background: "var(--accent)",
+                color: "#fff",
+              }}
+            >
+              {COPY.stories.sourcesBadge(uniqueSourceCount)}
+            </span>
+          )}
         </div>
 
         {/* Headline */}
@@ -183,12 +206,15 @@ export default function StoryCard({
           </div>
         )}
 
-        {/* Framings section */}
-        {story.framings.length > 0 && (
+        {/* Framings section — only render when 2+ unique outlets disagree
+            on framing. Single-outlet clusters (one outlet, multiple
+            near-duplicate articles) skip this section entirely so the card
+            never claims cross-outlet coverage that doesn't exist. */}
+        {isMultiSource && (
           <div className="mt-1">
             <div className="flex items-center gap-3 mb-3">
               <p className="text-kicker font-bold uppercase text-[var(--text-muted)] shrink-0">
-                {COPY.stories.framing(story.framings.length)}
+                {COPY.stories.framing(uniqueSourceCount)}
               </p>
               <span
                 aria-hidden
@@ -196,7 +222,7 @@ export default function StoryCard({
               />
             </div>
             <div className="flex flex-col">
-              {story.framings.map((f) => (
+              {uniqueFramings.map((f) => (
                 <div
                   key={f.sourceName}
                   className="story-row flex items-start gap-4 py-2.5 border-b border-[color:var(--border-subtle)] last:border-b-0"
@@ -214,12 +240,20 @@ export default function StoryCard({
           </div>
         )}
 
-        {/* Empty-framings fallback — articles exist but framings still pending */}
-        {story.framings.length === 0 && story.articles.length > 0 && (
-          <p className="text-body text-[var(--text-muted)] italic">
-            {COPY.stories.analyzingFallback}
-          </p>
-        )}
+        {/* Empty-framings fallback — articles exist but framings still pending.
+            Only shown for multi-outlet clusters; single-outlet clusters render
+            as a regular card (no synthesis pending state). */}
+        {story.framings.length === 0 && story.articles.length > 0 && (() => {
+          const uniqueSourcesInArticles = new Set(
+            story.articles.map((a) => a.sourceName)
+          ).size;
+          if (uniqueSourcesInArticles < 2) return null;
+          return (
+            <p className="text-body text-[var(--text-muted)] italic">
+              {COPY.stories.analyzingFallback}
+            </p>
+          );
+        })()}
 
         {/* Expand/collapse toggle */}
         <button
@@ -266,7 +300,10 @@ export default function StoryCard({
                         className="story-row flex items-center gap-4 py-3 no-underline border-b border-[color:var(--border-subtle)] last:border-b-0"
                         style={{
                           animation: "row-reveal 320ms var(--ease-out-expo) both",
-                          animationDelay: `${(story.framings.length + Math.min(i, 11)) * 24}ms`,
+                          // Stagger after the framings rows when those render;
+                          // otherwise start from zero so the article list
+                          // doesn't pause for invisible framings.
+                          animationDelay: `${((isMultiSource ? uniqueSourceCount : 0) + Math.min(i, 11)) * 24}ms`,
                         }}
                       >
                         <span aria-hidden className="story-row__rail" />
