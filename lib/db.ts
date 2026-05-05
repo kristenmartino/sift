@@ -27,6 +27,14 @@ export interface DbArticle {
   why_it_matters: string | null;
   importance_score: number | null;
   created_at: Date;
+  // Civic-literacy MVP additions. Both columns added in
+  // sift-api/migrations/005_context_primer_and_reading_levels.sql.
+  // context_primer is populated by Phase 1A primer_generator;
+  // reading_levels is reserved for Phase 1B (always NULL today).
+  // pg returns JSONB as already-parsed objects, so type as `unknown`
+  // here and validate at the API boundary via lib/primer.ts.
+  context_primer: unknown;
+  reading_levels: unknown;
 }
 
 export async function getArticlesByCategory(
@@ -35,7 +43,7 @@ export async function getArticlesByCategory(
 ): Promise<DbArticle[]> {
   const result = await pool.query<DbArticle>(
     `SELECT id, title, summary, source_url, source_name, image_url,
-            category, published_date, read_time, why_it_matters, importance_score, created_at
+            category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at
      FROM articles
      WHERE category = $1 AND from_search = false
        AND summary IS NOT NULL AND summary != ''
@@ -120,7 +128,7 @@ export async function getStoriesWithArticles(
     try {
       const storyArticlesResult = await pool.query<DbStoryArticle>(
         `SELECT id, title, summary, source_url, source_name, image_url,
-                category, published_date, read_time, why_it_matters, importance_score, created_at, story_id
+                category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at, story_id
          FROM articles
          WHERE story_id = ANY($1::text[])
            AND from_search = false
@@ -149,7 +157,7 @@ export async function getStoriesWithArticles(
   try {
     const standaloneResult = await pool.query<DbArticle>(
       `SELECT id, title, summary, source_url, source_name, image_url,
-              category, published_date, read_time, why_it_matters, importance_score, created_at
+              category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at
        FROM articles
        WHERE category = $1 AND from_search = false
          AND (story_id IS NULL OR story_id <> ALL($2::text[]))
@@ -168,7 +176,7 @@ export async function getStoriesWithArticles(
     if (!msg.includes("story_id")) throw err;
     const fallback = await pool.query<DbArticle>(
       `SELECT id, title, summary, source_url, source_name, image_url,
-              category, published_date, read_time, why_it_matters, importance_score, created_at
+              category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at
        FROM articles
        WHERE category = $1 AND from_search = false
          AND summary IS NOT NULL AND summary != ''
@@ -198,7 +206,7 @@ export async function getTopStoryForLanding(): Promise<DbArticle | null> {
   try {
     const result = await pool.query<DbArticle>(
       `SELECT id, title, summary, source_url, source_name, image_url,
-              category, published_date, read_time, why_it_matters, importance_score, created_at
+              category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at
        FROM articles
        WHERE category = 'top'
          AND from_search = false
@@ -261,7 +269,8 @@ export async function removeBookmark(userId: string, articleId: string): Promise
 export async function getBookmarkedArticles(userId: string): Promise<DbArticle[]> {
   const result = await pool.query<DbArticle>(
     `SELECT a.id, a.title, a.summary, a.source_url, a.source_name, a.image_url,
-            a.category, a.published_date, a.read_time, a.why_it_matters, a.importance_score, a.created_at
+            a.category, a.published_date, a.read_time, a.why_it_matters, a.importance_score,
+            a.context_primer, a.reading_levels, a.created_at
      FROM articles a
      JOIN bookmarks b ON b.article_id = a.id
      WHERE b.user_id = $1
@@ -294,7 +303,7 @@ export async function searchArticlesByEmbedding(
   const vectorStr = toVectorString(embedding);
   const result = await pool.query<DbArticle & { similarity: number }>(
     `SELECT id, title, summary, source_url, source_name, image_url,
-            category, published_date, read_time, why_it_matters, importance_score, created_at,
+            category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at,
             1 - (embedding <=> $1::vector) AS similarity
      FROM articles
      WHERE embedding IS NOT NULL

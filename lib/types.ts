@@ -30,6 +30,37 @@ export interface Article {
   readTime: number;
   whyItMatters?: string;
   importanceScore?: number;
+  /**
+   * AI-generated "What you should know first" panel — civic-literacy MVP.
+   * Populated by sift-api's primer_generator. Null/undefined when the article
+   * is short enough to need no context, or when the pipeline hasn't run for it
+   * yet. UI tolerates absence (BackgroundPrimer renders nothing).
+   */
+  contextPrimer?: ContextPrimer | null;
+  /**
+   * Reading-level alternates — civic-literacy MVP Phase 1B (not yet
+   * populated). Forward-declared here so the type contract is stable when
+   * the pipeline starts writing this field.
+   */
+  readingLevels?: ReadingLevels | null;
+}
+
+export interface ContextPrimerTerm {
+  term: string;
+  definition: string;
+  source?: string;
+}
+
+export interface ContextPrimer {
+  background: string;
+  terms: ContextPrimerTerm[];
+  generated_at?: string;
+}
+
+export interface ReadingLevels {
+  simpler?: { headline?: string; summary?: string };
+  detailed?: { headline?: string; summary?: string };
+  generated_at?: string;
 }
 
 // ─── Story Types ────────────────────────────────────────

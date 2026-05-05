@@ -5,6 +5,7 @@ import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
+import BackgroundPrimer from "./primer/BackgroundPrimer";
 import type { ArticleCardProps } from "@/lib/types";
 
 // Fan-out stagger: even-indexed cards drift from left, odd from right
@@ -194,6 +195,17 @@ export default function ArticleCard({
           >
             {article.whyItMatters}
           </p>
+        )}
+
+        {/* Background primer ("What you should know first") — civic-literacy
+            MVP Phase 1C. Renders nothing when contextPrimer is absent.
+            Featured cards default expanded so the primer is visible without a
+            click; standard cards default collapsed to keep feed scannable. */}
+        {article.contextPrimer && (
+          <BackgroundPrimer
+            primer={article.contextPrimer}
+            defaultExpanded={!!featured}
+          />
         )}
 
         {/* Meta */}

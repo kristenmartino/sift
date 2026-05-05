@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import LandingPage from "@/components/LandingPage";
 import { getTopStoryForLanding } from "@/lib/db";
+import { parseContextPrimer } from "@/lib/primer";
 import type { Article, CategoryId } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ export const revalidate = 600;
 
 export default async function Home() {
   const lead = await getTopStoryForLanding();
+  const primer = lead ? parseContextPrimer(lead.context_primer) : null;
   const leadStory: Article | null = lead
     ? {
         id: lead.id,
@@ -31,6 +33,7 @@ export default async function Home() {
         readTime: lead.read_time,
         whyItMatters: lead.why_it_matters ?? undefined,
         importanceScore: lead.importance_score ?? undefined,
+        ...(primer ? { contextPrimer: primer } : {}),
       }
     : null;
 

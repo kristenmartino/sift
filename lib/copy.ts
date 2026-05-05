@@ -96,6 +96,15 @@ export const COPY = {
     body: "Try different words \u2014 or let the AI surprise you.",
     button: "Browse today\u2019s stories",
   },
+  primer: {
+    // Eyebrow shown above the collapsed/expanded primer panel.
+    eyebrow: "What you should know first",
+    // Toggle button copy. Closed \u2192 opens; open \u2192 closes.
+    show: "Show context",
+    hide: "Hide context",
+    // Section header inside the expanded primer when there are key terms.
+    termsLabel: "Key terms",
+  },
   landing: {
     // Single editorial paragraph below the lead story. The "what is this".
     explainer:

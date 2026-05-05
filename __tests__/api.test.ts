@@ -40,6 +40,8 @@ const MOCK_DB_ROWS: DbArticle[] = [
     read_time: 2,
     why_it_matters: null,
     importance_score: null,
+    context_primer: null,
+    reading_levels: null,
     created_at: new Date("2026-03-28T10:00:00Z"),
   },
   {
@@ -54,6 +56,8 @@ const MOCK_DB_ROWS: DbArticle[] = [
     read_time: 3,
     why_it_matters: null,
     importance_score: null,
+    context_primer: null,
+    reading_levels: null,
     created_at: new Date("2026-03-28T08:00:00Z"),
   },
 ];
