@@ -27,6 +27,13 @@ interface BackgroundPrimerProps {
  * teacher, never preachy, never partisan, never editorializing. The component
  * just plumbs the structured output into HTML; the editorial discipline is
  * upstream.
+ *
+ * z-index note: ArticleCard makes the entire card clickable via a stretched
+ * <a><span absolute inset-0 z-[1]> overlay. Anything inside the card that
+ * needs its own click target (bookmark button, primer toggle) must be
+ * relatively-positioned with z-[2]+ to sit above that overlay. The wrapping
+ * `relative z-[2]` on the outer div here makes the entire primer surface
+ * (collapsed pill + expanded panel) opt out of the card-link click handler.
  */
 export default function BackgroundPrimer({
   primer,
@@ -40,7 +47,7 @@ export default function BackgroundPrimer({
   if (!background && terms.length === 0) return null;
 
   return (
-    <div className="my-1">
+    <div className="my-1 relative z-[2]">
       {!expanded && (
         <button
           type="button"
@@ -63,6 +70,9 @@ export default function BackgroundPrimer({
           style={{
             background: "var(--well-bg)",
           }}
+          // Defensive: stop bubbling to the card-link overlay even on
+          // background clicks within the panel (text selection, e.g.).
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Eyebrow + collapse */}
           <div className="flex items-center justify-between gap-3 mb-2.5">
@@ -90,26 +100,22 @@ export default function BackgroundPrimer({
             </p>
           )}
 
-          {/* Key terms */}
+          {/* Term/definition list — no "Key terms" label. Renders as a
+              reference panel rather than a textbook glossary. */}
           {terms.length > 0 && (
-            <div>
-              <p className="text-meta uppercase tracking-wider font-semibold text-[var(--text-muted)] mb-2">
-                {COPY.primer.termsLabel}
-              </p>
-              <dl className="flex flex-col gap-1.5">
-                {terms.map((t) => (
-                  <div key={t.term} className="text-body leading-snug">
-                    <dt className="inline font-semibold text-[var(--text)]">
-                      {t.term}
-                    </dt>
-                    <dd className="inline text-[var(--text-secondary)]">
-                      {" — "}
-                      {t.definition}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
+            <dl className="flex flex-col gap-1.5">
+              {terms.map((t) => (
+                <div key={t.term} className="text-body leading-snug">
+                  <dt className="inline font-semibold text-[var(--text)]">
+                    {t.term}
+                  </dt>
+                  <dd className="inline text-[var(--text-secondary)]">
+                    {" — "}
+                    {t.definition}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           )}
         </div>
       )}
