@@ -178,6 +178,32 @@ export const COPY = {
     },
     backLink: "Back to Sift",
   },
+  politicianDossier: {
+    eyebrow: "Politician dossier",
+    sections: {
+      committees: "Committee assignments",
+      topIndustries: "Top donor industries this cycle",
+      interestGroupRatings: "Interest-group ratings",
+      links: "Where to read more",
+      notes: "Notes",
+    },
+    // External-link labels in stable display order.
+    externalLinkLabels: {
+      govtrack: "GovTrack",
+      opensecrets: "OpenSecrets",
+      votesmart: "Vote Smart",
+      ballotpedia: "Ballotpedia",
+      wikipedia: "Wikipedia",
+    } as Record<string, string>,
+    // Footer note shown when donor and rating data are both absent \u2014 the
+    // common case before sift-api Phase 3.E enrichment runs in prod.
+    notYetEnriched:
+      "Donor and voting data populates from OpenSecrets and GovTrack on the next refresh. Until then, this dossier shows curated metadata only.",
+    methodologyHint: "Data comes from public records. Read the methodology.",
+    // Empty-state when industries/ratings are partially populated.
+    industriesEmpty: "No donor-industry data yet for this cycle.",
+    ratingsEmpty: "No interest-group ratings yet recorded.",
+  },
   dossier: {
     // Eyebrow shown above the outlet name.
     eyebrow: "Outlet dossier",
