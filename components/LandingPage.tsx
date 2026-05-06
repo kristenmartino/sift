@@ -67,6 +67,12 @@ export default function LandingPage({ leadStory }: LandingPageProps) {
               {COPY.landing.colophonLink}
             </Link>
             <Link
+              href="/methodology"
+              className="text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline"
+            >
+              Methodology
+            </Link>
+            <Link
               href="/privacy"
               className="text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline"
             >
