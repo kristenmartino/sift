@@ -204,6 +204,38 @@ export const COPY = {
     industriesEmpty: "No donor-industry data yet for this cycle.",
     ratingsEmpty: "No interest-group ratings yet recorded.",
   },
+  orgDossier: {
+    eyebrow: "Org dossier",
+    sections: {
+      politicalLean: "Political lean",
+      finances: "Finances",
+      majorFunders: "Major funders",
+      fara: "Foreign-agent registration (FARA)",
+      links: "Where to read more",
+      notes: "Notes",
+    },
+    // External-link labels in stable display order.
+    externalLinkLabels: {
+      propublica: "ProPublica Nonprofit Explorer",
+      irs_990: "IRS Form 990",
+      fara: "FARA filings",
+      official: "Official site",
+      wikipedia: "Wikipedia",
+    } as Record<string, string>,
+    // FARA disclosure copy. Symmetric — same wording regardless of which
+    // country the org is registered to represent.
+    faraRegisteredHeader: "Registered as a foreign agent",
+    faraRegisteredBody: (countries: string[]) =>
+      countries.length === 0
+        ? "This organization is registered with the U.S. Department of Justice under FARA."
+        : countries.length === 1
+          ? `This organization is registered with the U.S. Department of Justice under FARA on behalf of ${countries[0]}.`
+          : `This organization is registered with the U.S. Department of Justice under FARA on behalf of: ${countries.join(", ")}.`,
+    // Single-line lede builder bits.
+    foundedYearLabel: (year: number) => `Founded ${year}`,
+    annualBudgetLabel: (budget: string) => `Annual budget ~${budget}`,
+    methodologyHint: "Funding data comes from IRS 990s and FARA. Read the methodology.",
+  },
   dossier: {
     // Eyebrow shown above the outlet name.
     eyebrow: "Outlet dossier",

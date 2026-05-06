@@ -1,11 +1,12 @@
 import { Pool } from "pg";
 
+import { parseDbOrgProfile, type DbOrgProfileRow } from "./org";
 import { parseDbOutletProfile, type DbOutletProfileRow } from "./outlet";
 import {
   parseDbPoliticianProfile,
   type DbPoliticianProfileRow,
 } from "./politician";
-import type { OutletProfile, PoliticianProfile } from "./types";
+import type { OrgProfile, OutletProfile, PoliticianProfile } from "./types";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
@@ -569,6 +570,37 @@ export async function getPoliticianByBioguide(
     );
     if (result.rows.length === 0) return null;
     return parseDbPoliticianProfile(result.rows[0]);
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return null;
+    throw err;
+  }
+}
+
+// ─── Org Dossier (Phase 3.D) ───────────────────────────
+
+/**
+ * Fetch a single org profile by slug (e.g. 'brookings-institution').
+ * Returns null when the slug isn't curated (caller should call
+ * notFound() for the dossier route) or when the org_profiles table
+ * doesn't exist yet.
+ */
+export async function getOrgBySlug(slug: string): Promise<OrgProfile | null> {
+  const trimmed = slug.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  try {
+    const result = await pool.query<DbOrgProfileRow>(
+      `SELECT slug, name, type, political_lean, founded_year,
+              annual_budget_usd, major_funders, fara_registered,
+              fara_countries, external_links, notes
+       FROM org_profiles
+       WHERE slug = $1
+       LIMIT 1`,
+      [trimmed]
+    );
+    if (result.rows.length === 0) return null;
+    return parseDbOrgProfile(result.rows[0]);
   } catch (err) {
     const msg = String(err);
     if (msg.includes("does not exist")) return null;
