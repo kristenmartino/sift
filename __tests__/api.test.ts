@@ -18,14 +18,16 @@ const mockGetStoriesWithArticles = jest.fn<
 >();
 const mockGetLastRefreshed = jest.fn<Promise<Date | null>, [string]>();
 
-// Phase 2.B: outlet provenance map. Tests pre-date the lookup, so default to
-// an empty Map (= no curated outlets resolved → API returns articles with
-// outlet absent, which is the graceful-degradation path the UI tolerates).
+// Phase 2.B: outlet provenance map. Phase 3.H: entity_links lookup.
+// Tests pre-date both, so default to empty results (= API returns articles
+// without outlet/entityLinks, which is the graceful-degradation path the UI
+// tolerates).
 jest.mock("@/lib/db", () => ({
   getStoriesWithArticles: (...args: [string]) => mockGetStoriesWithArticles(...args),
   getLastRefreshed: (...args: [string]) => mockGetLastRefreshed(...args),
   getOutletProfilesMap: jest.fn().mockResolvedValue(new Map()),
   resolveOutletForSourceName: jest.fn().mockReturnValue(null),
+  getArticleEntityLinks: jest.fn().mockResolvedValue(new Map()),
 }));
 
 import { GET } from "../app/api/news/route";

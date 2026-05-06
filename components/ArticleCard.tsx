@@ -7,6 +7,7 @@ import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
 import BackgroundPrimer from "./primer/BackgroundPrimer";
 import OutletBadge from "./outlet/OutletBadge";
+import EntityLinksList from "./glossary/EntityLinksList";
 import type { ArticleCardProps } from "@/lib/types";
 
 // Fan-out stagger: even-indexed cards drift from left, odd from right
@@ -208,6 +209,12 @@ export default function ArticleCard({
             defaultExpanded={!!featured}
           />
         )}
+
+        {/* Entity links ("Mentioned in this story") — civic-literacy MVP
+            Phase 3.H. Renders nothing when entityLinks is empty/undefined,
+            so articles predating the entity-linker pipeline degrade
+            cleanly. */}
+        <EntityLinksList links={article.entityLinks} />
 
         {/* Meta */}
         <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-[var(--text-muted)] font-medium flex-wrap">

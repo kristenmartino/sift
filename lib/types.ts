@@ -50,6 +50,16 @@ export interface Article {
    * yet (graceful degradation: OutletBadge renders the plain source name).
    */
   outlet?: OutletProfile | null;
+  /**
+   * Resolved entity references — civic-literacy MVP Phase 3.H. Populated
+   * by the sift-api Phase 3.G entity_linker pipeline node from the
+   * curated profile tables. Empty array when the article hasn't been
+   * processed yet, when no entities were matched, or when the prod DB
+   * predates the entity_links column (graceful: EntityLinksList renders
+   * nothing). Distinct from `outlet` above — that's the article's own
+   * source; `entityLinks` are mentions inside the article text.
+   */
+  entityLinks?: EntityLink[];
 }
 
 // ─── Outlet Provenance ─────────────────────────────────
@@ -162,6 +172,30 @@ export interface OrgProfile {
   faraCountries: string[];
   externalLinks: OrgExternalLinks;
   notes: string | null;
+}
+
+// ─── Entity Links (Phase 3.H) ──────────────────────────
+
+/**
+ * The four entity types Sift can resolve from article text. Mirrors the
+ * `type` field in `articles.entity_links` JSONB rows produced by the
+ * sift-api Phase 3.G entity_linker pipeline node.
+ */
+export type EntityLinkType = "outlet" | "politician" | "org" | "bill";
+
+/**
+ * One resolved entity reference attached to an article. Each link points
+ * at exactly one curated row in `outlet_profiles` / `politician_profiles` /
+ * `org_profiles` / `bill_profiles`.
+ *
+ * `surfaceForm` preserves the original casing from the article text so
+ * the InlineGlossaryTooltip can render the matched span verbatim
+ * ("CHUCK SCHUMER said today" → tooltip shows "CHUCK SCHUMER").
+ */
+export interface EntityLink {
+  type: EntityLinkType;
+  canonicalId: string;
+  surfaceForm: string;
 }
 
 // ─── Politician Provenance (Phase 3.C) ─────────────────

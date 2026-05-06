@@ -105,6 +105,19 @@ export const COPY = {
     body: "Try different words \u2014 or let the AI surprise you.",
     button: "Browse today\u2019s stories",
   },
+  glossary: {
+    // Eyebrow shown above the inline list of resolved entities at the
+    // foot of an article card. Phase 3.H — civic-literacy MVP.
+    eyebrow: "Mentioned in this story",
+    // Per-type prefix glyphs in the small mono register. Kept short so
+    // the pills don't bloat the meta line.
+    typeGlyphs: {
+      politician: "◉",
+      org: "◆",
+      bill: "▸",
+      outlet: "▣",
+    } as Record<string, string>,
+  },
   primer: {
     // Eyebrow shown above the collapsed/expanded primer panel.
     eyebrow: "What you should know first",
