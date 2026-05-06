@@ -5,6 +5,7 @@ import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
+import OutletBadge from "./outlet/OutletBadge";
 import type { StoryCardProps } from "@/lib/types";
 
 // Tone labels are no longer rendered (civic-literacy pivot, Phase 0).
@@ -307,9 +308,12 @@ export default function StoryCard({
                         }}
                       >
                         <span aria-hidden className="story-row__rail" />
-                        <span className="story-row__source text-outlet font-semibold uppercase text-[var(--text)] shrink-0 min-w-[88px]">
-                          {article.sourceName}
-                        </span>
+                        <OutletBadge
+                          outlet={article.outlet}
+                          fallback={article.sourceName}
+                          variant="rail"
+                          className="story-row__source shrink-0 min-w-[88px]"
+                        />
                         <span
                           className="text-body text-[var(--text)] flex-1"
                           style={{

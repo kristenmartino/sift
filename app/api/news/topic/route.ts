@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { searchArticlesByEmbedding, insertArticle } from "@/lib/db";
+import {
+  searchArticlesByEmbedding,
+  insertArticle,
+  getOutletProfilesMap,
+  resolveOutletForSourceName,
+} from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
 import { stableHash, estimateReadTime } from "@/lib/utils";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
@@ -186,16 +191,16 @@ export async function GET(request: NextRequest) {
           setCachedEmbedding(query, embedding);
         }
 
-        // 2. Vector similarity search in Postgres
-        const rows = await searchArticlesByEmbedding(
-          embedding,
-          SIMILARITY_THRESHOLD,
-          MAX_RESULTS
-        );
+        // 2. Vector similarity search in Postgres + outlet map (parallel)
+        const [rows, outletMap] = await Promise.all([
+          searchArticlesByEmbedding(embedding, SIMILARITY_THRESHOLD, MAX_RESULTS),
+          getOutletProfilesMap(),
+        ]);
 
         // 3. Map DB rows to Article type
         const articles: Article[] = rows.map((row) => {
           const primer = parseContextPrimer(row.context_primer);
+          const outlet = resolveOutletForSourceName(outletMap, row.source_name);
           return {
             id: row.id,
             title: row.title,
@@ -211,6 +216,7 @@ export async function GET(request: NextRequest) {
             ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
             ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
             ...(primer ? { contextPrimer: primer } : {}),
+            ...(outlet ? { outlet } : {}),
           };
         });
 
@@ -229,11 +235,16 @@ export async function GET(request: NextRequest) {
 
           try {
             const fallbackArticles = await webSearchFallback(query);
-            // Dedupe against vector results
+            // Dedupe against vector results, then enrich with outlet provenance
+            // when the source_name matches a curated outlet (web-search results
+            // often surface the same outlets we ingest from).
             const seenIds = new Set(articles.map((a) => a.id));
-            const newArticles = fallbackArticles.filter(
-              (a) => !seenIds.has(a.id)
-            );
+            const newArticles = fallbackArticles
+              .filter((a) => !seenIds.has(a.id))
+              .map((a) => {
+                const outlet = resolveOutletForSourceName(outletMap, a.sourceName);
+                return outlet ? { ...a, outlet } : a;
+              });
 
             if (newArticles.length > 0) {
               controller.enqueue(

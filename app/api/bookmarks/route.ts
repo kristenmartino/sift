@@ -6,6 +6,8 @@ import {
   addBookmark,
   removeBookmark,
   getBookmarkedArticles,
+  getOutletProfilesMap,
+  resolveOutletForSourceName,
 } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
 import type { Article, CategoryId } from "@/lib/types";
@@ -28,9 +30,13 @@ export async function GET(request: NextRequest) {
     const full = request.nextUrl.searchParams.get("full") === "1";
 
     if (full) {
-      const rows = await getBookmarkedArticles(userId);
+      const [rows, outletMap] = await Promise.all([
+        getBookmarkedArticles(userId),
+        getOutletProfilesMap(),
+      ]);
       const articles: Article[] = rows.map((row) => {
         const primer = parseContextPrimer(row.context_primer);
+        const outlet = resolveOutletForSourceName(outletMap, row.source_name);
         return {
           id: row.id,
           title: row.title,
@@ -44,6 +50,7 @@ export async function GET(request: NextRequest) {
           ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
           ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
           ...(primer ? { contextPrimer: primer } : {}),
+          ...(outlet ? { outlet } : {}),
         };
       });
       return NextResponse.json({ articles });

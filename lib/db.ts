@@ -1,5 +1,8 @@
 import { Pool } from "pg";
 
+import { parseDbOutletProfile, type DbOutletProfileRow } from "./outlet";
+import type { OutletProfile } from "./types";
+
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
@@ -385,6 +388,119 @@ export async function deleteCustomTopic(id: string, userId: string): Promise<voi
     "DELETE FROM custom_topics WHERE id = $1 AND user_id = $2",
     [id, userId]
   );
+}
+
+// ─── Outlet Provenance (Phase 2.B) ─────────────────────
+
+/**
+ * Lookup map: lowercase `articles.source_name` → curated `OutletProfile`.
+ *
+ * Built from two relations:
+ *   1. `source_name_aliases` — explicit, hand-curated raw_source_name → outlet_slug
+ *   2. `outlet_profiles.LOWER(name)` — implicit fallback for outlets whose
+ *      RSS source_name happens to match the canonical name verbatim
+ *
+ * Aliases beat name-fallback when both are present for the same key.
+ *
+ * Cached at the module level for `OUTLET_CACHE_TTL_MS`. The underlying tables
+ * change quarterly (manual hand-curation), so a stale cache is harmless. If
+ * either table is missing (typical until sift-api Phase 2.A.1 lands in prod),
+ * `getOutletProfilesMap` returns an empty Map and the API mapping degrades to
+ * outlet=null, which OutletBadge renders as plain source-name text.
+ */
+const OUTLET_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+let outletCache: { data: Map<string, OutletProfile>; expiresAt: number } | null = null;
+let outletCacheInflight: Promise<Map<string, OutletProfile>> | null = null;
+
+async function loadOutletProfilesMap(): Promise<Map<string, OutletProfile>> {
+  const out = new Map<string, OutletProfile>();
+  let profilesBySlug: Map<string, OutletProfile>;
+
+  // 1. Load all outlet_profiles. Tolerate missing table.
+  try {
+    const result = await pool.query<DbOutletProfileRow>(
+      `SELECT slug, name, parent_company, parent_company_url, founded_year,
+              funding_model, allsides_rating, allsides_url, mbfc_factual, mbfc_url
+       FROM outlet_profiles`
+    );
+    profilesBySlug = new Map();
+    for (const row of result.rows) {
+      const profile = parseDbOutletProfile(row);
+      if (!profile) continue;
+      profilesBySlug.set(profile.slug, profile);
+      // Implicit name-match fallback (case-insensitive, trimmed).
+      out.set(profile.name.trim().toLowerCase(), profile);
+    }
+  } catch (err) {
+    const msg = String(err);
+    if (!msg.includes("does not exist")) throw err;
+    // outlet_profiles missing — return empty map; aliases lookup also pointless.
+    return out;
+  }
+
+  // 2. Layer source_name_aliases on top. Tolerate missing table.
+  try {
+    const result = await pool.query<{ raw_source_name: string; outlet_slug: string }>(
+      `SELECT raw_source_name, outlet_slug FROM source_name_aliases`
+    );
+    for (const { raw_source_name, outlet_slug } of result.rows) {
+      const profile = profilesBySlug.get(outlet_slug);
+      if (!profile) continue; // orphan alias; FK should prevent this but defend anyway
+      out.set(raw_source_name.trim().toLowerCase(), profile);
+    }
+  } catch (err) {
+    const msg = String(err);
+    if (!msg.includes("does not exist")) throw err;
+    // source_name_aliases missing — fall through with name-only matches.
+  }
+
+  return out;
+}
+
+/**
+ * Returns the cached source_name → OutletProfile map, refreshing if expired.
+ * Concurrent callers share a single in-flight fetch promise to avoid
+ * duplicate DB round-trips on cold starts.
+ */
+export async function getOutletProfilesMap(): Promise<Map<string, OutletProfile>> {
+  const now = Date.now();
+  if (outletCache && outletCache.expiresAt > now) return outletCache.data;
+  if (outletCacheInflight) return outletCacheInflight;
+
+  outletCacheInflight = loadOutletProfilesMap()
+    .then((data) => {
+      outletCache = { data, expiresAt: Date.now() + OUTLET_CACHE_TTL_MS };
+      return data;
+    })
+    .catch((err) => {
+      console.error("getOutletProfilesMap: failed to load", err);
+      // Don't cache failure; next caller will retry. Return empty map so the
+      // API still serves articles, just without outlet provenance.
+      return new Map<string, OutletProfile>();
+    })
+    .finally(() => {
+      outletCacheInflight = null;
+    });
+
+  return outletCacheInflight;
+}
+
+/**
+ * Resolve a single source_name to an OutletProfile via the cached map.
+ * Returns null when no alias/name match exists. Does not hit the DB itself.
+ */
+export function resolveOutletForSourceName(
+  outletMap: Map<string, OutletProfile>,
+  sourceName: string | null | undefined,
+): OutletProfile | null {
+  if (!sourceName) return null;
+  return outletMap.get(sourceName.trim().toLowerCase()) ?? null;
+}
+
+/** Test-only: reset the cache between unit-test runs. */
+export function _resetOutletCacheForTesting(): void {
+  outletCache = null;
+  outletCacheInflight = null;
 }
 
 export default pool;

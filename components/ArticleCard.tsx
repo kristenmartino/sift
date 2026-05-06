@@ -6,6 +6,7 @@ import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
 import BackgroundPrimer from "./primer/BackgroundPrimer";
+import OutletBadge from "./outlet/OutletBadge";
 import type { ArticleCardProps } from "@/lib/types";
 
 // Fan-out stagger: even-indexed cards drift from left, odd from right
@@ -210,9 +211,7 @@ export default function ArticleCard({
 
         {/* Meta */}
         <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-[var(--text-muted)] font-medium flex-wrap">
-          <span className="font-bold text-[var(--text-secondary)]">
-            {article.sourceName}
-          </span>
+          <OutletBadge outlet={article.outlet} fallback={article.sourceName} />
           <span className="opacity-30">&middot;</span>
           <span>{timeAgo(article.publishedDate)}</span>
           <span className="opacity-30">&middot;</span>
