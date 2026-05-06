@@ -63,6 +63,15 @@ export const COPY = {
         : count <= 3
           ? `How ${count} outlets framed it`
           : `How ${count} outlets covered this`,
+    // Eyebrow shown above the cross-spectrum L/C/R columns, in place of
+    // the standard "How N outlets framed it" header when the story
+    // qualifies for cross-spectrum (≥3 bucketed framings, ≥2 buckets).
+    crossSpectrumHeader: "Across the spectrum",
+    crossSpectrumBucketLabels: {
+      left: "Left",
+      center: "Center",
+      right: "Right",
+    } as const,
     compareRow: "See angles",
     expandedMeta: (when: string, count: number) =>
       `Updated ${when} · ${count} ${count === 1 ? "source" : "sources"}`,

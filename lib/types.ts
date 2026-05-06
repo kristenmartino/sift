@@ -142,6 +142,14 @@ export interface StoryFraming {
   sourceName: string;
   framing: string;
   tone: "neutral" | "urgent" | "analytical" | "critical" | "optimistic";
+  /**
+   * Outlet provenance — civic-literacy MVP Phase 2.C.2. Resolved at the API
+   * boundary by mapping `sourceName` through `source_name_aliases` →
+   * `outlet_profiles`. Drives the cross-spectrum bucketing + dossier link
+   * inside CrossSpectrumCompare. Null/undefined when the source_name has no
+   * curated outlet (graceful degradation: fallback to the flat list).
+   */
+  outlet?: OutletProfile | null;
 }
 
 export interface EntitySet {
