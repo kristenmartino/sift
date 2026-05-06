@@ -4,8 +4,10 @@ import {
   getLastRefreshed,
   getOutletProfilesMap,
   resolveOutletForSourceName,
+  getArticleEntityLinks,
 } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
+import { parseEntityLinks } from "@/lib/entityLinks";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
@@ -64,10 +66,20 @@ export async function GET(request: NextRequest) {
         getOutletProfilesMap(),
       ]);
 
+    // Phase 3.H: batch-fetch entity_links JSONB for every article touched
+    // by this request, in one query. Defensive: returns an empty Map if
+    // the column doesn't exist yet (pre-Phase-3.G prod).
+    const allArticleIds = [
+      ...standaloneArticles.map((r) => r.id),
+      ...Object.values(storyArticles).flat().map((r) => r.id),
+    ];
+    const entityLinksMap = await getArticleEntityLinks(allArticleIds);
+
     // Map standalone articles
     const articles: Article[] = standaloneArticles.map((row) => {
       const primer = parseContextPrimer(row.context_primer);
       const outlet = resolveOutletForSourceName(outletMap, row.source_name);
+      const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
       return {
         id: row.id,
         title: row.title,
@@ -82,6 +94,7 @@ export async function GET(request: NextRequest) {
         ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
         ...(primer ? { contextPrimer: primer } : {}),
         ...(outlet ? { outlet } : {}),
+        ...(entityLinks.length > 0 ? { entityLinks } : {}),
       };
     });
 
@@ -91,6 +104,7 @@ export async function GET(request: NextRequest) {
       const childArticles: Article[] = childRows.map((row) => {
         const primer = parseContextPrimer(row.context_primer);
         const outlet = resolveOutletForSourceName(outletMap, row.source_name);
+        const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
         return {
           id: row.id,
           title: row.title,
@@ -105,6 +119,7 @@ export async function GET(request: NextRequest) {
           ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
           ...(primer ? { contextPrimer: primer } : {}),
           ...(outlet ? { outlet } : {}),
+          ...(entityLinks.length > 0 ? { entityLinks } : {}),
         };
       });
 

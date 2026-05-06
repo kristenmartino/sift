@@ -5,8 +5,10 @@ import {
   insertArticle,
   getOutletProfilesMap,
   resolveOutletForSourceName,
+  getArticleEntityLinks,
 } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
+import { parseEntityLinks } from "@/lib/entityLinks";
 import { stableHash, estimateReadTime } from "@/lib/utils";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
@@ -196,11 +198,13 @@ export async function GET(request: NextRequest) {
           searchArticlesByEmbedding(embedding, SIMILARITY_THRESHOLD, MAX_RESULTS),
           getOutletProfilesMap(),
         ]);
+        const entityLinksMap = await getArticleEntityLinks(rows.map((r) => r.id));
 
         // 3. Map DB rows to Article type
         const articles: Article[] = rows.map((row) => {
           const primer = parseContextPrimer(row.context_primer);
           const outlet = resolveOutletForSourceName(outletMap, row.source_name);
+          const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
           return {
             id: row.id,
             title: row.title,
@@ -217,6 +221,7 @@ export async function GET(request: NextRequest) {
             ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
             ...(primer ? { contextPrimer: primer } : {}),
             ...(outlet ? { outlet } : {}),
+            ...(entityLinks.length > 0 ? { entityLinks } : {}),
           };
         });
 

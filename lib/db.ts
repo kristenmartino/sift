@@ -543,6 +543,39 @@ export async function getAllOutletProfiles(): Promise<OutletProfile[]> {
   }
 }
 
+// ─── Entity Links (Phase 3.H) ──────────────────────────
+
+/**
+ * Batch-fetch entity_links JSONB for a set of article IDs. Returns a
+ * Map keyed on article id for O(1) lookup at API mapping time.
+ *
+ * Defensive: catches "column entity_links does not exist" so this code
+ * is safe to deploy before sift-api Phase 3.G's migration lands in
+ * prod. Articles whose ids aren't in the result map render with empty
+ * entityLinks (graceful degradation — EntityLinksList renders nothing).
+ */
+export async function getArticleEntityLinks(
+  articleIds: string[],
+): Promise<Map<string, unknown>> {
+  if (articleIds.length === 0) return new Map();
+
+  try {
+    const result = await pool.query<{ id: string; entity_links: unknown }>(
+      `SELECT id, entity_links FROM articles WHERE id = ANY($1::text[])`,
+      [articleIds]
+    );
+    return new Map(result.rows.map((r) => [r.id, r.entity_links]));
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("entity_links") && msg.includes("does not exist")) {
+      // Pre-Phase-3.G prod — column not yet added. Fall through with
+      // empty map; the UI renders no glossary section.
+      return new Map();
+    }
+    throw err;
+  }
+}
+
 // ─── Politician Dossier (Phase 3.C) ────────────────────
 
 /**
