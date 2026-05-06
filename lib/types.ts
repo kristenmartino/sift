@@ -92,6 +92,63 @@ export interface OutletExternalLinks {
   [key: string]: string | undefined;
 }
 
+// ─── Politician Provenance (Phase 3.C) ─────────────────
+
+/**
+ * Chambers a curated politician can sit in. Mirrors the values stored in
+ * `politician_profiles.chamber`; the seed scripts validate against this set.
+ */
+export type PoliticianChamber = "senate" | "house" | "former" | "executive";
+
+/**
+ * Single donor-industry entry under
+ * `politician_profiles.top_industries_current_cycle`. amount_usd is the
+ * cycle-to-date cash from individuals + PACs in this industry per
+ * OpenSecrets. Null when the industry surfaced but the dollar amount didn't.
+ */
+export interface IndustryDonation {
+  industry: string;
+  amount_usd: number | null;
+}
+
+/**
+ * External-source links rendered as the citation footer of every dossier
+ * section. All keys optional; the dossier renders only the ones it knows
+ * about, plus any extras under their raw key. Same forward-compat shape as
+ * `OutletExternalLinks`.
+ */
+export interface PoliticianExternalLinks {
+  govtrack?: string;
+  opensecrets?: string;
+  votesmart?: string;
+  ballotpedia?: string;
+  wikipedia?: string;
+  [key: string]: string | undefined;
+}
+
+/**
+ * Curated politician metadata, mirrored from `politician_profiles` in
+ * Postgres. Phase 3.A seeded a small sample; Phase 3.B fills out all 535
+ * sitting Congress members via a GovTrack scrape; Phase 3.E enriches with
+ * OpenSecrets donor data + Vote Smart interest-group ratings.
+ *
+ * `interestGroupRatings` is an open dictionary because rating-org acronyms
+ * change over time (LCV, NRA, ADA, ACU, NEA, AFL-CIO, etc.). The UI renders
+ * them as a key/value list without assuming any particular keys exist.
+ */
+export interface PoliticianProfile {
+  bioguideId: string;
+  name: string;
+  party: string | null;             // 'D' | 'R' | 'I' | other (kept as raw string)
+  state: string | null;             // USPS code, e.g. 'NY'
+  chamber: PoliticianChamber | null;
+  committees: string[];
+  topIndustriesCurrentCycle: IndustryDonation[];
+  interestGroupRatings: Record<string, number | string>;
+  externalLinks: PoliticianExternalLinks;
+  notes: string | null;
+}
+
 /**
  * Curated outlet metadata, mirrored from `outlet_profiles` in Postgres.
  * Hand-maintained quarterly. The dossier page (Phase 2.C) renders the full

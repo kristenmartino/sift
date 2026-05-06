@@ -1,7 +1,11 @@
 import { Pool } from "pg";
 
 import { parseDbOutletProfile, type DbOutletProfileRow } from "./outlet";
-import type { OutletProfile } from "./types";
+import {
+  parseDbPoliticianProfile,
+  type DbPoliticianProfileRow,
+} from "./politician";
+import type { OutletProfile, PoliticianProfile } from "./types";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
@@ -534,6 +538,40 @@ export async function getAllOutletProfiles(): Promise<OutletProfile[]> {
   } catch (err) {
     const msg = String(err);
     if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
+// ─── Politician Dossier (Phase 3.C) ────────────────────
+
+/**
+ * Fetch a single politician profile by bioguide_id (Congress.gov canonical
+ * identifier, e.g. 'S000148' for Schumer). Returns null when the bioguide
+ * isn't curated (caller should call notFound() for the dossier route) or
+ * when the politician_profiles table doesn't exist yet (graceful for
+ * pre-Phase-3.A-merge prod).
+ */
+export async function getPoliticianByBioguide(
+  bioguideId: string,
+): Promise<PoliticianProfile | null> {
+  const trimmed = bioguideId.trim().toUpperCase();
+  if (!trimmed) return null;
+
+  try {
+    const result = await pool.query<DbPoliticianProfileRow>(
+      `SELECT bioguide_id, name, party, state, chamber,
+              committees, top_industries_current_cycle, interest_group_ratings,
+              external_links, notes
+       FROM politician_profiles
+       WHERE bioguide_id = $1
+       LIMIT 1`,
+      [trimmed]
+    );
+    if (result.rows.length === 0) return null;
+    return parseDbPoliticianProfile(result.rows[0]);
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return null;
     throw err;
   }
 }
