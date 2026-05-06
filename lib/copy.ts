@@ -114,6 +114,70 @@ export const COPY = {
     // Section header inside the expanded primer when there are key terms.
     termsLabel: "Key terms",
   },
+  methodology: {
+    eyebrow: "Methodology",
+    title: "How Sift sources the news",
+    lede:
+      "Sift reads from a hand-curated set of news outlets, surfaces ownership and funding for each, and links every bias and factual-reporting rating to its public source. The methodology is the product as much as the feature — here's exactly how it works.",
+    sections: {
+      includes: {
+        kicker: "What Sift reads",
+        body:
+          "Around 50 outlets, hand-picked to balance the political spectrum (AllSides Left → Center → Right), span sector specialties (finance, tech, science, climate, health), and clear a factual-reporting bar. Each outlet has a dossier with ownership, funding model, and external rating links — click any name below.",
+        bucketLabels: {
+          left: "Left",
+          center: "Center",
+          right: "Right",
+          unrated: "Unrated or specialty",
+        },
+        unratedNote:
+          "Outlets without an AllSides rating are typically peer-reviewed scientific journals (Nature, Science) or sector specialists (Carbon Brief, STAT News) where political-lean isn't the relevant axis. MBFC factual-reporting ratings still apply.",
+      },
+      excludes: {
+        kicker: "What Sift excludes",
+        body: "Some categories of source never enter the pipeline:",
+        items: [
+          "Aggregators (Google News, Yahoo News, MSN) — no original reporting.",
+          "AI-content farms — synthetic articles without identifiable bylines.",
+          "Outlets MBFC rates Low Factual or Very Low Factual — regardless of political lean.",
+          "Sites without identifiable bylines, mastheads, or corrections policies.",
+          "Crypto / health-supplement sites that brand themselves as news.",
+        ],
+      },
+      bias: {
+        kicker: "Where bias ratings come from",
+        body:
+          "Sift surfaces AllSides' political-lean rating for each outlet. AllSides classifies outlets into six buckets — Left, Lean Left, Center, Lean Right, Right, Mixed — based on a methodology that combines blind bias surveys, editorial reviews, and reader feedback. Sift never computes its own bias rating; we cite AllSides verbatim with a link to the source page on every dossier.",
+        cite: "AllSides — methodology and ratings (allsides.com)",
+        citeUrl: "https://www.allsides.com/media-bias/media-bias-rating-methods",
+      },
+      factual: {
+        kicker: "Where factual-reporting ratings come from",
+        body:
+          "For factual reporting, Sift surfaces Media Bias/Fact Check (MBFC) ratings on a six-tier scale — Very High, High, Mostly Factual, Mixed, Low, Very Low. MBFC's methodology weighs sourcing standards, fact-check track record, corrections policy, and frequency of false claims. Same rule as bias ratings: we cite verbatim, never compute our own, and link to MBFC for verification.",
+        cite: "Media Bias/Fact Check — methodology (mediabiasfactcheck.com)",
+        citeUrl: "https://mediabiasfactcheck.com/methodology/",
+      },
+      symmetric: {
+        kicker: "Symmetric application",
+        body:
+          "Every outlet gets the same treatment regardless of which side of the spectrum it sits on. Fox News and MSNBC are both shown with their AllSides ratings and MBFC factual-reporting tiers. National Review and The Nation get identical dossier shapes. Sift does not editorialize about which side is more or less reliable — that's the reader's call, with the data in front of them.",
+      },
+      cadence: {
+        kicker: "Refresh cadence",
+        body:
+          "AllSides + MBFC ratings drift over time as outlets shift editorial direction, get acquired, or change sourcing standards. Sift hand-reviews every rating quarterly and stores a last-verified date alongside each one — it's the small mono caption under each rating on the dossier page. Outlet additions happen on demand when readers flag gaps; the inclusion criteria above are the only filter.",
+      },
+      suggest: {
+        kicker: "Suggest an addition or correction",
+        body:
+          "If an outlet is missing, a rating looks stale, or anything in this methodology reads wrong, open an issue on GitHub or send a note. Sift is a portfolio project — corrections land fast.",
+        github: "kristenmartino/sift on GitHub",
+        githubUrl: "https://github.com/kristenmartino/sift/issues/new",
+      },
+    },
+    backLink: "Back to Sift",
+  },
   dossier: {
     // Eyebrow shown above the outlet name.
     eyebrow: "Outlet dossier",

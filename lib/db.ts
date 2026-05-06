@@ -505,6 +505,39 @@ export function _resetOutletCacheForTesting(): void {
   outletCacheInflight = null;
 }
 
+// ─── Methodology page (Phase 2.D) ──────────────────────
+
+/**
+ * Fetch every curated outlet, sorted alphabetically by name. Used by the
+ * methodology page to render the live list of outlets Sift reads from.
+ *
+ * Returns [] when outlet_profiles doesn't exist (graceful degradation —
+ * the methodology page falls back to its prose explanation without the
+ * outlet list).
+ */
+export async function getAllOutletProfiles(): Promise<OutletProfile[]> {
+  try {
+    const result = await pool.query<DbOutletProfileRow>(
+      `SELECT slug, name, parent_company, parent_company_url, founded_year,
+              funding_model, allsides_rating, allsides_url, allsides_last_checked,
+              mbfc_factual, mbfc_url, mbfc_last_checked,
+              major_funders, external_links, notes
+       FROM outlet_profiles
+       ORDER BY LOWER(name)`
+    );
+    const out: OutletProfile[] = [];
+    for (const row of result.rows) {
+      const profile = parseDbOutletProfile(row);
+      if (profile) out.push(profile);
+    }
+    return out;
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
 // ─── Outlet Dossier (Phase 2.C.1) ──────────────────────
 
 /**

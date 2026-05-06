@@ -290,11 +290,12 @@ export default function OutletDossier({
           >
             <span aria-hidden>←</span> Back to Sift
           </Link>
-          {/* Methodology link: queued for Phase 2.D. Until that route exists,
-              we render the hint as plain text rather than a broken link. */}
-          <span className="font-body text-meta text-[var(--text-muted)] italic">
+          <Link
+            href="/methodology"
+            className="font-body text-meta text-[var(--text-muted)] italic no-underline hover:text-[var(--accent)] hover:not-italic transition-colors"
+          >
             {COPY.dossier.methodologyHint}
-          </span>
+          </Link>
         </div>
       </main>
     </div>
