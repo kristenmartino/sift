@@ -13,7 +13,7 @@ export const COPY = {
     tagline: "The news, with footnotes",
   },
   footer: {
-    main: "Sift reads hundreds of sources, surfaces the civic context the news assumes you already know, and shows you who's behind every story. Every link goes to the original.",
+    main: "Sift reads from ~50 vetted outlets across the political spectrum, surfaces the civic context the news assumes you already know, and shows you who's behind every story. Every link goes to the original.",
   },
   error: {
     title: "We hit a snag pulling today's stories",
@@ -108,7 +108,7 @@ export const COPY = {
   landing: {
     // Single editorial paragraph below the lead story. The "what is this".
     explainer:
-      "Sift reads hundreds of sources every morning, summarizes the stories worth knowing, and links back to the originals \u2014 so you can stop checking ten tabs and get on with your day.",
+      "Sift reads from ~50 vetted outlets every morning, summarizes the stories worth knowing, and links back to the originals \u2014 so you can stop checking ten tabs and get on with your day.",
     leadEyebrow: "Today\u2019s lead",
     leadFallbackTitle: "Today\u2019s stories are still being filed",
     leadFallbackBody:
@@ -122,7 +122,7 @@ export const COPY = {
     compareCta: "Compare any topic",
     // Source colophon.
     colophonHeading: "Read from",
-    colophonSummary: "100+ outlets \u00b7 10 categories \u00b7 refreshed every 10 minutes",
+    colophonSummary: "~50 vetted outlets \u00b7 across the political spectrum \u00b7 refreshed every 10 minutes",
     // Footer colophon link.
     colophonLink: "Colophon",
   },
