@@ -105,6 +105,35 @@ export const COPY = {
     // Section header inside the expanded primer when there are key terms.
     termsLabel: "Key terms",
   },
+  dossier: {
+    // Eyebrow shown above the outlet name.
+    eyebrow: "Outlet dossier",
+    // Section labels (mono kicker style).
+    ownership: "Ownership",
+    funding: "Funding",
+    bias: "Political-lean rating",
+    factual: "Factual reporting",
+    links: "Where to read more",
+    notes: "Notes",
+    recentStories: "Recent stories on Sift",
+    // Citation footer notes.
+    citation: (source: string, lastChecked: string | null) =>
+      lastChecked
+        ? `Source: ${source} \u00b7 last verified ${lastChecked}`
+        : `Source: ${source}`,
+    methodologyHint: "Why these ratings? Read the methodology.",
+    // External-link labels.
+    externalLinkLabels: {
+      wikipedia: "Wikipedia",
+      official: "Official site",
+      ownership: "Ownership reference",
+    } as Record<string, string>,
+    // Funder list label.
+    majorFunders: "Major funders",
+    // Empty state for the recent-stories list.
+    noRecent:
+      "No recent stories from this outlet on Sift. The pipeline reads from this outlet \u2014 nothing has surfaced in the last day or two.",
+  },
   landing: {
     // Single editorial paragraph below the lead story. The "what is this".
     explainer:

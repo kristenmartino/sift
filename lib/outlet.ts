@@ -6,6 +6,7 @@
 
 import type {
   OutletAllSidesRating,
+  OutletExternalLinks,
   OutletFundingModel,
   OutletMbfcRating,
   OutletProfile,
@@ -79,13 +80,14 @@ export function formatMbfcLabel(
 // ─── DB-row parsing ───────────────────────────────────────────────────
 
 /**
- * Shape of a row from `outlet_profiles`. Fields are TEXT/INT/JSONB at the DB
- * layer; `parseDbOutletProfile` validates and maps them onto the typed
- * `OutletProfile` shape the client consumes.
+ * Shape of a row from `outlet_profiles`. Fields are TEXT/INT/JSONB/DATE at the
+ * DB layer; `parseDbOutletProfile` validates + normalizes them onto the
+ * typed `OutletProfile` shape the client consumes.
  *
- * Extra DB columns (notes, external_links, major_funders, *_last_checked,
- * updated_at) are intentionally omitted here — they're rendered on the
- * dossier page (Phase 2.C) but irrelevant to feed-card badges.
+ * Date columns arrive as `Date` instances from `pg`; we serialize to ISO
+ * YYYY-MM-DD so server→client transit is plain JSON.
+ *
+ * `updated_at` is intentionally omitted — internal-only, never surfaced.
  */
 export interface DbOutletProfileRow {
   slug: string;
@@ -96,8 +98,13 @@ export interface DbOutletProfileRow {
   funding_model: string | null;
   allsides_rating: string | null;
   allsides_url: string | null;
+  allsides_last_checked: Date | string | null;
   mbfc_factual: string | null;
   mbfc_url: string | null;
+  mbfc_last_checked: Date | string | null;
+  major_funders: unknown; // JSONB — validated below
+  external_links: unknown; // JSONB — validated below
+  notes: string | null;
 }
 
 function asAllSides(v: string | null): OutletAllSidesRating | null {
@@ -116,6 +123,52 @@ function asFunding(v: string | null): OutletFundingModel | null {
   if (!v) return null;
   const lower = v.toLowerCase();
   return FUNDING_VALUES.has(lower) ? (lower as OutletFundingModel) : null;
+}
+
+/**
+ * Coerce a Postgres date column value (Date | ISO string | null) to a stable
+ * `YYYY-MM-DD` string for serialization to Client Components. Returns null
+ * for invalid or missing values rather than throwing.
+ */
+function asIsoDate(v: Date | string | null | undefined): string | null {
+  if (v == null) return null;
+  if (v instanceof Date) {
+    if (Number.isNaN(v.getTime())) return null;
+    return v.toISOString().slice(0, 10);
+  }
+  // pg may return DATE columns as plain "YYYY-MM-DD" strings depending on
+  // type-parser config. Trust the prefix if it's well-formed, else null.
+  const trimmed = v.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+  return null;
+}
+
+/**
+ * Validate JSONB `major_funders` (expected shape: `string[]`). Drops any
+ * non-string entries, normalizes whitespace, returns `[]` for malformed
+ * inputs rather than throwing — the dossier renders nothing on `[]`.
+ */
+function asMajorFunders(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+/**
+ * Validate JSONB `external_links` (expected shape: `Record<string, string>`).
+ * Drops non-string values; returns `{}` for malformed inputs.
+ */
+function asExternalLinks(v: unknown): OutletExternalLinks {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const out: OutletExternalLinks = {};
+  for (const [key, value] of Object.entries(v as Record<string, unknown>)) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      out[key] = value.trim();
+    }
+  }
+  return out;
 }
 
 /**
@@ -141,7 +194,31 @@ export function parseDbOutletProfile(
     fundingModel: asFunding(row.funding_model),
     allSidesRating: asAllSides(row.allsides_rating),
     allSidesUrl: row.allsides_url?.trim() || null,
+    allSidesLastChecked: asIsoDate(row.allsides_last_checked),
     mbfcFactual: asMbfc(row.mbfc_factual),
     mbfcUrl: row.mbfc_url?.trim() || null,
+    mbfcLastChecked: asIsoDate(row.mbfc_last_checked),
+    majorFunders: asMajorFunders(row.major_funders),
+    externalLinks: asExternalLinks(row.external_links),
+    notes: row.notes?.trim() || null,
   };
+}
+
+// ─── Display labels for the rest of the dossier ─────────
+
+const FUNDING_LABELS: Record<OutletFundingModel, string> = {
+  subscription: "Subscription",
+  advertising: "Advertising",
+  foundation: "Foundation",
+  donations: "Reader donations",
+  mixed: "Mixed",
+  "public-service": "Public service",
+};
+
+/** Human label for a funding-model enum value. */
+export function formatFundingLabel(
+  model: OutletFundingModel | null | undefined,
+): string | null {
+  if (!model) return null;
+  return FUNDING_LABELS[model] ?? null;
 }

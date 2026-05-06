@@ -420,7 +420,9 @@ async function loadOutletProfilesMap(): Promise<Map<string, OutletProfile>> {
   try {
     const result = await pool.query<DbOutletProfileRow>(
       `SELECT slug, name, parent_company, parent_company_url, founded_year,
-              funding_model, allsides_rating, allsides_url, mbfc_factual, mbfc_url
+              funding_model, allsides_rating, allsides_url, allsides_last_checked,
+              mbfc_factual, mbfc_url, mbfc_last_checked,
+              major_funders, external_links, notes
        FROM outlet_profiles`
     );
     profilesBySlug = new Map();
@@ -501,6 +503,84 @@ export function resolveOutletForSourceName(
 export function _resetOutletCacheForTesting(): void {
   outletCache = null;
   outletCacheInflight = null;
+}
+
+// ─── Outlet Dossier (Phase 2.C.1) ──────────────────────
+
+/**
+ * Fetch a single outlet profile by slug. Returns null when the slug isn't
+ * curated (caller should call notFound() for the dossier route) or when the
+ * outlet_profiles table doesn't exist yet (pre-Phase-2.A-merge prod).
+ */
+export async function getOutletBySlug(slug: string): Promise<OutletProfile | null> {
+  const trimmed = slug.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  try {
+    const result = await pool.query<DbOutletProfileRow>(
+      `SELECT slug, name, parent_company, parent_company_url, founded_year,
+              funding_model, allsides_rating, allsides_url, allsides_last_checked,
+              mbfc_factual, mbfc_url, mbfc_last_checked,
+              major_funders, external_links, notes
+       FROM outlet_profiles
+       WHERE slug = $1
+       LIMIT 1`,
+      [trimmed]
+    );
+    if (result.rows.length === 0) return null;
+    return parseDbOutletProfile(result.rows[0]);
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return null;
+    throw err;
+  }
+}
+
+/**
+ * Fetch the N most recent articles published by an outlet, identified by
+ * slug. Resolves the slug → set of source_names via `source_name_aliases`
+ * (explicit) ∪ `outlet_profiles.name` (implicit fallback), then queries
+ * articles whose lower-cased source_name lands in that set.
+ *
+ * Tolerates missing tables (returns []) so the dossier can render the
+ * outlet's static metadata even before sift-api Phase 2.A.1 lands in prod.
+ */
+export async function getRecentArticlesByOutletSlug(
+  slug: string,
+  limit = 20
+): Promise<DbArticle[]> {
+  const trimmed = slug.trim().toLowerCase();
+  if (!trimmed) return [];
+
+  try {
+    const result = await pool.query<DbArticle>(
+      `WITH outlet_source_names AS (
+         SELECT LOWER(name) AS sn
+         FROM outlet_profiles
+         WHERE slug = $1
+         UNION
+         SELECT LOWER(raw_source_name) AS sn
+         FROM source_name_aliases
+         WHERE outlet_slug = $1
+       )
+       SELECT id, title, summary, source_url, source_name, image_url,
+              category, published_date, read_time, why_it_matters, importance_score,
+              context_primer, reading_levels, created_at
+       FROM articles
+       WHERE LOWER(source_name) IN (SELECT sn FROM outlet_source_names)
+         AND from_search = false
+         AND summary IS NOT NULL AND summary != ''
+         AND LOWER(summary) NOT LIKE 'unable to provide%'
+       ORDER BY COALESCE(published_date, created_at) DESC NULLS LAST
+       LIMIT $2`,
+      [trimmed, limit]
+    );
+    return result.rows;
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
 }
 
 export default pool;
