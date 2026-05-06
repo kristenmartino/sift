@@ -112,11 +112,16 @@ export async function GET(request: NextRequest) {
       const rawFramings = Array.isArray(s.framings) ? s.framings : [];
       const framings: StoryFraming[] = (rawFramings as unknown[])
         .filter((f): f is Record<string, unknown> => typeof f === "object" && f !== null)
-        .map((f) => ({
-          sourceName: stripHtml(String(f.source_name ?? "")),
-          framing: stripHtml(String(f.framing ?? "")),
-          tone: (typeof f.tone === "string" ? f.tone : "neutral") as StoryFraming["tone"],
-        }));
+        .map((f) => {
+          const sourceName = stripHtml(String(f.source_name ?? ""));
+          const outlet = resolveOutletForSourceName(outletMap, sourceName);
+          return {
+            sourceName,
+            framing: stripHtml(String(f.framing ?? "")),
+            tone: (typeof f.tone === "string" ? f.tone : "neutral") as StoryFraming["tone"],
+            ...(outlet ? { outlet } : {}),
+          };
+        });
 
       // Parse JSONB entities (validate types, sanitize external text)
       const rawEntities = Array.isArray(s.entities) ? s.entities : [];

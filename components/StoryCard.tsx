@@ -5,7 +5,9 @@ import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
+import CrossSpectrumCompare from "./CrossSpectrumCompare";
 import OutletBadge from "./outlet/OutletBadge";
+import { shouldRenderCrossSpectrum } from "@/lib/crossSpectrum";
 import type { StoryCardProps } from "@/lib/types";
 
 // Tone labels are no longer rendered (civic-literacy pivot, Phase 0).
@@ -84,6 +86,11 @@ export default function StoryCard({
   // Below threshold, the cluster reads as related coverage from one
   // outlet and the article-list expand still works as intended.
   const isMultiSource = uniqueSourceCount >= 2;
+  // Stricter check: the cross-spectrum L/C/R view needs ≥3 framings
+  // bucketed across ≥2 of the L/C/R buckets (the plan-recommended
+  // "Moderate" threshold). When this clears, render CrossSpectrumCompare;
+  // otherwise fall back to the existing flat-list framings render.
+  const renderCrossSpectrum = isMultiSource && shouldRenderCrossSpectrum(uniqueFramings);
 
   return (
     <article
@@ -210,8 +217,17 @@ export default function StoryCard({
         {/* Framings section — only render when 2+ unique outlets disagree
             on framing. Single-outlet clusters (one outlet, multiple
             near-duplicate articles) skip this section entirely so the card
-            never claims cross-outlet coverage that doesn't exist. */}
-        {isMultiSource && (
+            never claims cross-outlet coverage that doesn't exist.
+
+            When the cross-spectrum threshold clears (≥3 framings, ≥2 of
+            L/C/R buckets occupied — Phase 2.C.2), render the side-by-side
+            CrossSpectrumCompare. Otherwise render the historical flat list,
+            which still makes a multi-outlet point even without political
+            spectrum diversity (e.g. all framings from Lean Left outlets). */}
+        {isMultiSource && renderCrossSpectrum && (
+          <CrossSpectrumCompare framings={uniqueFramings} />
+        )}
+        {isMultiSource && !renderCrossSpectrum && (
           <div className="mt-1">
             <div className="flex items-center gap-3 mb-3">
               <p className="text-kicker font-bold uppercase text-[var(--text-muted)] shrink-0">
@@ -229,9 +245,12 @@ export default function StoryCard({
                   className="story-row flex items-start gap-4 py-2.5 border-b border-[color:var(--border-subtle)] last:border-b-0"
                 >
                   <span aria-hidden className="story-row__rail" />
-                  <span className="story-row__source text-outlet font-semibold uppercase text-[var(--text)] shrink-0 min-w-[88px]">
-                    {f.sourceName}
-                  </span>
+                  <OutletBadge
+                    outlet={f.outlet}
+                    fallback={f.sourceName}
+                    variant="rail"
+                    className="story-row__source shrink-0 min-w-[88px]"
+                  />
                   <span className="text-body text-[var(--text-secondary)] flex-1">
                     {f.framing}
                   </span>
