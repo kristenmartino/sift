@@ -1,12 +1,13 @@
 import { Pool } from "pg";
 
 import { parseDbOrgProfile, type DbOrgProfileRow } from "./org";
+import { parseDbBillProfile, type DbBillProfileRow } from "./bill";
 import { parseDbOutletProfile, type DbOutletProfileRow } from "./outlet";
 import {
   parseDbPoliticianProfile,
   type DbPoliticianProfileRow,
 } from "./politician";
-import type { OrgProfile, OutletProfile, PoliticianProfile } from "./types";
+import type { BillProfile, OrgProfile, OutletProfile, PoliticianProfile } from "./types";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
@@ -634,6 +635,38 @@ export async function getOrgBySlug(slug: string): Promise<OrgProfile | null> {
     );
     if (result.rows.length === 0) return null;
     return parseDbOrgProfile(result.rows[0]);
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return null;
+    throw err;
+  }
+}
+
+// ─── Bill Dossier (Phase 3.E) ──────────────────────────
+
+/**
+ * Fetch a single bill profile by canonical id (e.g. 'hr-5376-117').
+ * Returns null when the bill_id isn't curated or when the bill_profiles
+ * table doesn't exist yet. The route's notFound() renders the global
+ * 404 page on null.
+ */
+export async function getBillById(billId: string): Promise<BillProfile | null> {
+  const trimmed = billId.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  try {
+    const result = await pool.query<DbBillProfileRow>(
+      `SELECT bill_id, congress, title, short_title, sponsor_bioguide,
+              cosponsors, status, introduced_date,
+              lobbying_for_usd, lobbying_against_usd,
+              external_links, notes
+       FROM bill_profiles
+       WHERE bill_id = $1
+       LIMIT 1`,
+      [trimmed]
+    );
+    if (result.rows.length === 0) return null;
+    return parseDbBillProfile(result.rows[0]);
   } catch (err) {
     const msg = String(err);
     if (msg.includes("does not exist")) return null;

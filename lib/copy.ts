@@ -249,6 +249,40 @@ export const COPY = {
     annualBudgetLabel: (budget: string) => `Annual budget ~${budget}`,
     methodologyHint: "Funding data comes from IRS 990s and FARA. Read the methodology.",
   },
+  billDossier: {
+    eyebrow: "Bill dossier",
+    sections: {
+      status: "Status",
+      sponsor: "Sponsor",
+      cosponsors: "Cosponsors",
+      lobbying: "Lobbying spend",
+      introducedDate: "Introduced",
+      links: "Where to read more",
+      notes: "Notes",
+    },
+    externalLinkLabels: {
+      govtrack: "GovTrack",
+      congress: "Congress.gov",
+      opensecrets: "OpenSecrets (lobbying)",
+    } as Record<string, string>,
+    // Cosponsor count formatter — bill_profiles stores bioguide IDs only;
+    // we don't fetch each politician for the dossier (would be N round
+    // trips). Phase 3.F can backfill names if/when it's worth it.
+    cosponsorCount: (count: number) =>
+      count === 0
+        ? "No cosponsors recorded."
+        : count === 1
+          ? "1 cosponsor"
+          : `${count.toLocaleString("en-US")} cosponsors`,
+    // Lobbying-spend pair labels.
+    lobbyingFor: "For",
+    lobbyingAgainst: "Against",
+    lobbyingNotePending:
+      "Lobbying-spend totals come from OpenSecrets and update on the next refresh.",
+    // Status pills are rendered with the same Fraunces 26 register as the
+    // outlet dossier's bias/factual ratings.
+    methodologyHint: "Data comes from public records. Read the methodology.",
+  },
   dossier: {
     // Eyebrow shown above the outlet name.
     eyebrow: "Outlet dossier",
