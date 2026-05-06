@@ -92,6 +92,78 @@ export interface OutletExternalLinks {
   [key: string]: string | undefined;
 }
 
+// ─── Org Provenance (Phase 3.D) ────────────────────────
+
+/**
+ * Curated org-type taxonomy. Mirrors the values stored in
+ * `org_profiles.type`; the seed scripts validate against this set.
+ */
+export type OrgType =
+  | "think-tank"
+  | "advocacy"
+  | "union"
+  | "pac"
+  | "super-pac"
+  | "foundation"
+  | "industry-group"
+  | "other";
+
+/**
+ * Org political-lean buckets. Same six AllSides-aligned buckets that
+ * `OutletAllSidesRating` uses, plus `nonpartisan` for orgs that take no
+ * position (some industry groups, some foundations). The bucketize helper
+ * in lib/crossSpectrum.ts treats `nonpartisan` like `mixed` — neither
+ * lands in a L/C/R column.
+ */
+export type OrgPoliticalLean =
+  | "left"
+  | "lean-left"
+  | "center"
+  | "lean-right"
+  | "right"
+  | "mixed"
+  | "nonpartisan";
+
+/**
+ * External-source links rendered as the citation footer of the org
+ * dossier. ProPublica Nonprofit Explorer for 990s; FARA filings for
+ * registered foreign agents; Wikipedia + the official site for context.
+ * Open-ended for forward compatibility.
+ */
+export interface OrgExternalLinks {
+  propublica?: string;
+  irs_990?: string;
+  fara?: string;
+  wikipedia?: string;
+  official?: string;
+  [key: string]: string | undefined;
+}
+
+/**
+ * Curated org metadata, mirrored from `org_profiles` in Postgres. Phase
+ * 3.A seeded a small sample (10 think tanks + advocacy orgs spanning
+ * the political spectrum); a follow-up curation pass grows this to
+ * ~200 entries for production coverage.
+ *
+ * `faraRegistered` is the headline disclosure: orgs registered as
+ * foreign agents under FARA get a prominent callout with the country
+ * list. The methodology page documents that this is symmetric — every
+ * registered org gets the same treatment regardless of which country.
+ */
+export interface OrgProfile {
+  slug: string;
+  name: string;
+  type: OrgType | null;
+  politicalLean: OrgPoliticalLean | null;
+  foundedYear: number | null;
+  annualBudgetUsd: number | null;
+  majorFunders: string[];
+  faraRegistered: boolean;
+  faraCountries: string[];
+  externalLinks: OrgExternalLinks;
+  notes: string | null;
+}
+
 // ─── Politician Provenance (Phase 3.C) ─────────────────
 
 /**
