@@ -82,9 +82,23 @@ export type OutletFundingModel =
   | "public-service";
 
 /**
+ * Optional sub-shape: JSONB `external_links` from `outlet_profiles`. All keys
+ * optional and free-form; the dossier renders only the ones it knows about.
+ */
+export interface OutletExternalLinks {
+  wikipedia?: string;
+  official?: string;
+  ownership?: string;
+  [key: string]: string | undefined;
+}
+
+/**
  * Curated outlet metadata, mirrored from `outlet_profiles` in Postgres.
  * Hand-maintained quarterly. The dossier page (Phase 2.C) renders the full
  * shape; OutletBadge in feed cards renders only `name` + `allSidesRating`.
+ *
+ * Date fields are ISO YYYY-MM-DD strings (not Date) so Server Components can
+ * serialize them straight to Client Components without rehydration loss.
  */
 export interface OutletProfile {
   slug: string;
@@ -95,8 +109,13 @@ export interface OutletProfile {
   fundingModel: OutletFundingModel | null;
   allSidesRating: OutletAllSidesRating | null;
   allSidesUrl: string | null;
+  allSidesLastChecked: string | null;
   mbfcFactual: OutletMbfcRating | null;
   mbfcUrl: string | null;
+  mbfcLastChecked: string | null;
+  majorFunders: string[];
+  externalLinks: OutletExternalLinks;
+  notes: string | null;
 }
 
 export interface ContextPrimerTerm {
