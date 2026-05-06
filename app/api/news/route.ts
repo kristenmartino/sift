@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStoriesWithArticles, getLastRefreshed } from "@/lib/db";
+import {
+  getStoriesWithArticles,
+  getLastRefreshed,
+  getOutletProfilesMap,
+  resolveOutletForSourceName,
+} from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
@@ -52,14 +57,17 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [{ stories: dbStories, storyArticles, standaloneArticles }, lastRefreshed] = await Promise.all([
-      getStoriesWithArticles(category),
-      getLastRefreshed(category),
-    ]);
+    const [{ stories: dbStories, storyArticles, standaloneArticles }, lastRefreshed, outletMap] =
+      await Promise.all([
+        getStoriesWithArticles(category),
+        getLastRefreshed(category),
+        getOutletProfilesMap(),
+      ]);
 
     // Map standalone articles
     const articles: Article[] = standaloneArticles.map((row) => {
       const primer = parseContextPrimer(row.context_primer);
+      const outlet = resolveOutletForSourceName(outletMap, row.source_name);
       return {
         id: row.id,
         title: row.title,
@@ -73,6 +81,7 @@ export async function GET(request: NextRequest) {
         ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
         ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
         ...(primer ? { contextPrimer: primer } : {}),
+        ...(outlet ? { outlet } : {}),
       };
     });
 
@@ -81,6 +90,7 @@ export async function GET(request: NextRequest) {
       const childRows = storyArticles[s.id] || [];
       const childArticles: Article[] = childRows.map((row) => {
         const primer = parseContextPrimer(row.context_primer);
+        const outlet = resolveOutletForSourceName(outletMap, row.source_name);
         return {
           id: row.id,
           title: row.title,
@@ -94,6 +104,7 @@ export async function GET(request: NextRequest) {
           ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
           ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
           ...(primer ? { contextPrimer: primer } : {}),
+          ...(outlet ? { outlet } : {}),
         };
       });
 

@@ -43,6 +43,60 @@ export interface Article {
    * the pipeline starts writing this field.
    */
   readingLevels?: ReadingLevels | null;
+  /**
+   * Curated outlet provenance — civic-literacy MVP Phase 2.B. Resolved at
+   * the API boundary by mapping `sourceName` through `source_name_aliases`
+   * → `outlet_profiles`. Null/undefined when the source_name has no alias
+   * yet (graceful degradation: OutletBadge renders the plain source name).
+   */
+  outlet?: OutletProfile | null;
+}
+
+// ─── Outlet Provenance ─────────────────────────────────
+
+/** AllSides political-lean buckets. Mirrors `outlet_profiles.allsides_rating`. */
+export type OutletAllSidesRating =
+  | "left"
+  | "lean-left"
+  | "center"
+  | "lean-right"
+  | "right"
+  | "mixed";
+
+/** MBFC factual-reporting tiers. Mirrors `outlet_profiles.mbfc_factual`. */
+export type OutletMbfcRating =
+  | "very-high"
+  | "high"
+  | "mostly-factual"
+  | "mixed"
+  | "low"
+  | "very-low";
+
+/** Funding-model categories used in outlet dossiers. */
+export type OutletFundingModel =
+  | "subscription"
+  | "advertising"
+  | "foundation"
+  | "donations"
+  | "mixed"
+  | "public-service";
+
+/**
+ * Curated outlet metadata, mirrored from `outlet_profiles` in Postgres.
+ * Hand-maintained quarterly. The dossier page (Phase 2.C) renders the full
+ * shape; OutletBadge in feed cards renders only `name` + `allSidesRating`.
+ */
+export interface OutletProfile {
+  slug: string;
+  name: string;
+  parentCompany: string | null;
+  parentCompanyUrl: string | null;
+  foundedYear: number | null;
+  fundingModel: OutletFundingModel | null;
+  allSidesRating: OutletAllSidesRating | null;
+  allSidesUrl: string | null;
+  mbfcFactual: OutletMbfcRating | null;
+  mbfcUrl: string | null;
 }
 
 export interface ContextPrimerTerm {
