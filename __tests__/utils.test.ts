@@ -3,6 +3,7 @@ import {
   timeAgo,
   extractSourceDomain,
   stableHash,
+  formatUsdCompact,
 } from "@/lib/utils";
 
 // ─── estimateReadTime ───────────────────────────────────
@@ -116,5 +117,50 @@ describe("stableHash", () => {
 
   it("handles empty string", () => {
     expect(stableHash("")).toBe("0");
+  });
+});
+
+// ─── formatUsdCompact ────────────────────────────────────
+
+describe("formatUsdCompact", () => {
+  it("returns empty string for null/undefined", () => {
+    expect(formatUsdCompact(null)).toBe("");
+    expect(formatUsdCompact(undefined)).toBe("");
+  });
+
+  it("returns empty string for non-finite or negative", () => {
+    expect(formatUsdCompact(NaN)).toBe("");
+    expect(formatUsdCompact(Infinity)).toBe("");
+    expect(formatUsdCompact(-100)).toBe("");
+  });
+
+  it("formats sub-$10K with locale commas", () => {
+    expect(formatUsdCompact(0)).toBe("$0");
+    expect(formatUsdCompact(500)).toBe("$500");
+    expect(formatUsdCompact(7_470)).toBe("$7,470");
+    expect(formatUsdCompact(9_999)).toBe("$9,999");
+  });
+
+  // Regression: previously returned "$0K" for any amount in $10K-$999K
+  // because the K-branch divided by 1_000_000 instead of 1_000.
+  it("formats $10K through <$1M as rounded thousands", () => {
+    expect(formatUsdCompact(10_000)).toBe("$10K");
+    expect(formatUsdCompact(82_837)).toBe("$83K");
+    expect(formatUsdCompact(108_000)).toBe("$108K");
+    expect(formatUsdCompact(193_900)).toBe("$194K");
+    expect(formatUsdCompact(573_700)).toBe("$574K");
+    expect(formatUsdCompact(950_000)).toBe("$950K");
+    expect(formatUsdCompact(999_000)).toBe("$999K");
+  });
+
+  it("promotes $999.5K+ to $1M to avoid '$1000K'", () => {
+    expect(formatUsdCompact(999_500)).toBe("$1M");
+    expect(formatUsdCompact(999_999)).toBe("$1M");
+  });
+
+  it("formats $1M and up as rounded millions", () => {
+    expect(formatUsdCompact(1_000_000)).toBe("$1M");
+    expect(formatUsdCompact(1_500_000)).toBe("$1.5M");
+    expect(formatUsdCompact(2_300_000)).toBe("$2.3M");
   });
 });
