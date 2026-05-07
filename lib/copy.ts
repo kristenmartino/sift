@@ -338,4 +338,28 @@ export const COPY = {
     // Footer colophon link.
     colophonLink: "Colophon",
   },
+  civicIndex: {
+    eyebrow: "Civic dossiers",
+    headline: "Civic dossiers",
+    lede: "Curated context on the people, organizations, and bills that shape U.S. policy. Every dossier is sourced from public records \u2014 GovTrack, OpenSecrets, ProPublica's Nonprofit Explorer \u2014 with citations on every page.",
+    politiciansEyebrow: (count: number) => `Politicians \u00b7 ${count}`,
+    politiciansHeading: "Sitting members of Congress",
+    orgsEyebrow: (count: number) => `Organizations \u00b7 ${count}`,
+    orgsHeading: "Think tanks, advocacy groups, and PACs",
+    billsEyebrow: (count: number) => `Bills \u00b7 ${count}`,
+    billsHeading: "Landmark legislation",
+    filterAll: "All",
+    filterSenate: "Senate",
+    filterHouse: "House",
+    showingAll: (n: number) => `${n.toLocaleString("en-US")} total`,
+    showingFiltered: (shown: number, total: number) =>
+      `${shown.toLocaleString("en-US")} of ${total.toLocaleString("en-US")}`,
+    emptyPoliticians:
+      "No politicians match this filter. Try Senate, House, or All.",
+    emptyOrgs: "No organizations curated yet.",
+    emptyBills: "No bills curated yet.",
+    billsMoreSoon: "More bills as they're curated.",
+    backLink: "Back to Sift",
+    methodologyHint: "Data comes from public records. Read the methodology.",
+  },
 } as const;
