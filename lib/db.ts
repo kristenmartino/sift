@@ -7,7 +7,15 @@ import {
   parseDbPoliticianProfile,
   type DbPoliticianProfileRow,
 } from "./politician";
-import type { BillProfile, OrgProfile, OutletProfile, PoliticianProfile } from "./types";
+import type {
+  BillListItem,
+  BillProfile,
+  OrgListItem,
+  OrgProfile,
+  OutletProfile,
+  PoliticianListItem,
+  PoliticianProfile,
+} from "./types";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
@@ -670,6 +678,104 @@ export async function getBillById(billId: string): Promise<BillProfile | null> {
   } catch (err) {
     const msg = String(err);
     if (msg.includes("does not exist")) return null;
+    throw err;
+  }
+}
+
+// ─── Civic dossier index (`/civic`) ────────────────────
+
+/**
+ * Lite list of every curated politician for the civic index page. Pulls
+ * only the five fields the index actually renders (no committees / industries
+ * / etc.) so 536 rows fit in a small payload.
+ *
+ * Sorted by state then name so the index can group by state without a
+ * second sort pass on the client.
+ *
+ * Tolerates missing tables (returns []).
+ */
+export async function listAllPoliticiansLite(): Promise<PoliticianListItem[]> {
+  try {
+    const result = await pool.query<{
+      bioguide_id: string;
+      name: string;
+      party: string | null;
+      state: string | null;
+      chamber: string | null;
+    }>(
+      `SELECT bioguide_id, name, party, state, chamber
+       FROM politician_profiles
+       ORDER BY state ASC NULLS LAST, name ASC`,
+    );
+    return result.rows.map((r) => ({
+      bioguideId: r.bioguide_id,
+      name: r.name,
+      party: r.party?.trim() || null,
+      state: r.state?.trim() || null,
+      chamber: (r.chamber as PoliticianListItem["chamber"]) ?? null,
+    }));
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
+/**
+ * Lite list of every curated org for the civic index page. Sorted by type
+ * then name so the index can group by type without re-sorting client-side.
+ */
+export async function listAllOrgsLite(): Promise<OrgListItem[]> {
+  try {
+    const result = await pool.query<{
+      slug: string;
+      name: string;
+      type: string | null;
+      political_lean: string | null;
+    }>(
+      `SELECT slug, name, type, political_lean
+       FROM org_profiles
+       ORDER BY type ASC NULLS LAST, name ASC`,
+    );
+    return result.rows.map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      type: (r.type as OrgListItem["type"]) ?? null,
+      politicalLean: (r.political_lean as OrgListItem["politicalLean"]) ?? null,
+    }));
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
+/**
+ * Lite list of every curated bill for the civic index page. Currently only
+ * one bill (HR 5376-117 / IRA) — sorted newest-introduced-first to age well
+ * as more land.
+ */
+export async function listAllBillsLite(): Promise<BillListItem[]> {
+  try {
+    const result = await pool.query<{
+      bill_id: string;
+      congress: number;
+      short_title: string | null;
+      status: string | null;
+    }>(
+      `SELECT bill_id, congress, short_title, status
+       FROM bill_profiles
+       ORDER BY introduced_date DESC NULLS LAST, bill_id ASC`,
+    );
+    return result.rows.map((r) => ({
+      billId: r.bill_id,
+      congress: r.congress,
+      shortTitle: r.short_title?.trim() || null,
+      status: (r.status as BillListItem["status"]) ?? null,
+    }));
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
     throw err;
   }
 }

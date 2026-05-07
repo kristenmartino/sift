@@ -307,6 +307,40 @@ export interface PoliticianProfile {
 }
 
 /**
+ * Lite shape used by the civic index page (`/civic`). Just enough to render
+ * the grouped-by-state list — full PoliticianProfile isn't worth pulling for
+ * 536 rows when only five fields render. The query is `lib/db.ts`'s
+ * `listAllPoliticiansLite`.
+ */
+export interface PoliticianListItem {
+  bioguideId: string;
+  name: string;
+  party: string | null;
+  state: string | null;
+  chamber: PoliticianChamber | null;
+}
+
+/**
+ * Lite shape for orgs on the civic index. Subset of OrgProfile.
+ */
+export interface OrgListItem {
+  slug: string;
+  name: string;
+  type: OrgType | null;
+  politicalLean: OrgPoliticalLean | null;
+}
+
+/**
+ * Lite shape for bills on the civic index. Subset of BillProfile.
+ */
+export interface BillListItem {
+  billId: string;
+  congress: number;
+  shortTitle: string | null;
+  status: BillStatus | null;
+}
+
+/**
  * Curated outlet metadata, mirrored from `outlet_profiles` in Postgres.
  * Hand-maintained quarterly. The dossier page (Phase 2.C) renders the full
  * shape; OutletBadge in feed cards renders only `name` + `allSidesRating`.

@@ -53,6 +53,13 @@ export default function LandingMasthead() {
                 {darkMode ? "Newsprint" : "Late Edition"}
               </button>
             )}
+            <span className="text-[var(--text-muted)] hidden sm:inline">·</span>
+            <Link
+              href="/civic"
+              className="font-body text-outlet uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline hidden sm:inline"
+            >
+              Civic ↗
+            </Link>
             <span className="text-[var(--text-muted)]">·</span>
             <Link
               href="/news"
