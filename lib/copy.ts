@@ -195,7 +195,7 @@ export const COPY = {
     eyebrow: "Politician dossier",
     sections: {
       committees: "Committee assignments",
-      topIndustries: "Top donor industries this cycle",
+      topIndustries: "Top industries by PAC contributions (2022 cycle)",
       interestGroupRatings: "Interest-group ratings",
       links: "Where to read more",
       notes: "Notes",
