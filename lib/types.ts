@@ -149,6 +149,32 @@ export interface OrgExternalLinks {
   [key: string]: string | undefined;
 }
 
+// ─── Bill Provenance (Phase 3.E) ───────────────────────
+
+/**
+ * Lifecycle stages a bill can be in. Mirrors `bill_profiles.status`;
+ * the seed scripts validate against this set.
+ */
+export type BillStatus =
+  | "introduced"
+  | "committee"
+  | "passed-chamber"
+  | "enacted"
+  | "vetoed"
+  | "failed";
+
+/**
+ * External-source links rendered as the citation footer of the bill
+ * dossier. GovTrack + Congress.gov for the official text + status,
+ * OpenSecrets for the lobbying-spend breakdown.
+ */
+export interface BillExternalLinks {
+  govtrack?: string;
+  congress?: string;
+  opensecrets?: string;
+  [key: string]: string | undefined;
+}
+
 /**
  * Curated org metadata, mirrored from `org_profiles` in Postgres. Phase
  * 3.A seeded a small sample (10 think tanks + advocacy orgs spanning
@@ -196,6 +222,31 @@ export interface EntityLink {
   type: EntityLinkType;
   canonicalId: string;
   surfaceForm: string;
+}
+
+/**
+ * Curated bill metadata, mirrored from `bill_profiles` in Postgres.
+ * Phase 3.A seeded a small sample (HR 5376 — Inflation Reduction Act);
+ * Phase 3.F populates bills on-demand when articles reference one not
+ * yet curated.
+ *
+ * `billId` follows the canonical form `<chamber>-<number>-<congress>`,
+ * e.g. `hr-5376-117` or `s-1234-119`. The display formatter in
+ * `lib/bill.ts` rewrites this to `H.R. 5376 (117th Congress)`.
+ */
+export interface BillProfile {
+  billId: string;
+  congress: number;
+  title: string;
+  shortTitle: string | null;
+  sponsorBioguide: string | null;
+  cosponsors: string[];
+  status: BillStatus | null;
+  introducedDate: string | null;       // ISO YYYY-MM-DD
+  lobbyingForUsd: number | null;
+  lobbyingAgainstUsd: number | null;
+  externalLinks: BillExternalLinks;
+  notes: string | null;
 }
 
 // ─── Politician Provenance (Phase 3.C) ─────────────────
