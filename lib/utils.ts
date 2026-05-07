@@ -46,3 +46,25 @@ export function stableHash(str: string): string {
   }
   return Math.abs(hash).toString(36);
 }
+
+/**
+ * Format a USD amount compactly for narrow columns: "$574K", "$1.5M".
+ *
+ * - Below $10,000: full locale string with commas, e.g. "$7,470"
+ * - $10K to <$1M: rounded to the nearest thousand, e.g. "$574K"
+ * - $1M and up: rounded to one decimal of millions, e.g. "$1.5M" or "$1M"
+ *
+ * Returns "" for null/undefined, non-finite, or negative input — the
+ * dossier hides the column entirely in those cases anyway.
+ */
+export function formatUsdCompact(amount: number | null | undefined): string {
+  if (amount == null || !Number.isFinite(amount) || amount < 0) return "";
+  if (amount < 10_000) return `$${amount.toLocaleString("en-US")}`;
+  if (amount < 1_000_000) {
+    const k = Math.round(amount / 1_000);
+    // Guard the rounding bump: e.g. $999,750 → 1000K — promote to "$1M"
+    if (k >= 1000) return "$1M";
+    return `$${k}K`;
+  }
+  return `$${(amount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+}

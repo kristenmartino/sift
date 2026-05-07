@@ -4,6 +4,7 @@ import LandingMasthead from "@/components/landing/LandingMasthead";
 import { COPY } from "@/lib/copy";
 import { formatPoliticianLede } from "@/lib/politician";
 import type { PoliticianProfile } from "@/lib/types";
+import { formatUsdCompact } from "@/lib/utils";
 
 interface PoliticianDossierProps {
   politician: PoliticianProfile;
@@ -33,18 +34,6 @@ export default function PoliticianDossier({
     politician.party,
     politician.state,
   );
-
-  // Money formatter for donor industries — compact 1.2M-style for tight
-  // column widths, falls back to plain locale string under $10k.
-  const fmtUsd = (amount: number | null): string => {
-    if (amount == null) return "";
-    if (amount >= 10_000) {
-      return `$${(amount / 1_000_000).toFixed(amount >= 1_000_000 ? 1 : 0)}${
-        amount >= 1_000_000 ? "M" : "K"
-      }`.replace("0M", "0M").replace(".0M", "M");
-    }
-    return `$${amount.toLocaleString("en-US")}`;
-  };
 
   // Stable display order for external links. Govt records first
   // (GovTrack, OpenSecrets, Vote Smart), then encyclopedia refs.
@@ -142,7 +131,7 @@ export default function PoliticianDossier({
                   </span>
                   {entry.amount_usd != null && (
                     <span className="font-mono text-[13px] tabular-nums text-[var(--text-muted)]">
-                      {fmtUsd(entry.amount_usd)}
+                      {formatUsdCompact(entry.amount_usd)}
                     </span>
                   )}
                 </li>
