@@ -208,10 +208,15 @@ export const COPY = {
       ballotpedia: "Ballotpedia",
       wikipedia: "Wikipedia",
     } as Record<string, string>,
-    // Footer note shown when donor and rating data are both absent \u2014 the
-    // common case before sift-api Phase 3.E enrichment runs in prod.
+    // Footer note shown when donor and rating data are both absent. Common
+    // for senators not on the 2022 ballot (no PAC contributions during the
+    // cycle) and for politicians without a public OpenSecrets profile.
+    // Sift's PAC industry data comes from OpenSecrets bulk imports \u2014
+    // re-runs cycle-to-cycle, not on a daily refresh (the OpenSecrets API
+    // was discontinued April 2025). Interest-group ratings aren't yet
+    // imported.
     notYetEnriched:
-      "Donor and voting data populates from OpenSecrets and GovTrack on the next refresh. Until then, this dossier shows curated metadata only.",
+      "PAC contribution data isn't on file for the 2022 cycle \u2014 common for senators not on that year's ballot. Interest-group ratings aren't yet imported.",
     methodologyHint: "Data comes from public records. Read the methodology.",
     // Empty-state when industries/ratings are partially populated.
     industriesEmpty: "No donor-industry data yet for this cycle.",
@@ -278,7 +283,7 @@ export const COPY = {
     lobbyingFor: "For",
     lobbyingAgainst: "Against",
     lobbyingNotePending:
-      "Lobbying-spend totals come from OpenSecrets and update on the next refresh.",
+      "Lobbying-spend totals haven't been imported yet.",
     // Status pills are rendered with the same Fraunces 26 register as the
     // outlet dossier's bias/factual ratings.
     methodologyHint: "Data comes from public records. Read the methodology.",
