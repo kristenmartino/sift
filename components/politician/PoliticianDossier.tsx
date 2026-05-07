@@ -125,7 +125,7 @@ export default function PoliticianDossier({
           </section>
         )}
 
-        {/* Top donor industries (current cycle) */}
+        {/* Top industries by PAC contributions (2022 cycle, from OpenSecrets bulk) */}
         {!industriesEmpty && (
           <section className="mb-10">
             <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">

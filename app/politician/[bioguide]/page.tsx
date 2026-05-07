@@ -22,7 +22,7 @@ export async function generateMetadata({
   if (!politician) return { title: "Politician not found" };
   return {
     title: `${politician.name} — Politician dossier`,
-    description: `Committees, donor industries, and voting context for ${politician.name} on Sift.`,
+    description: `Committees, top industries by PAC contributions, and voting context for ${politician.name} on Sift.`,
   };
 }
 
