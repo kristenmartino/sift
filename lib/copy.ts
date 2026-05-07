@@ -89,6 +89,15 @@ export const COPY = {
     body: "We looked everywhere \u2014 even had the AI search for it. Let\u2019s get you back to the stories.",
     button: "Back to Sift",
   },
+  // Global error boundary (`app/error.tsx`). Triggers on any uncaught throw
+  // in a server or client component below the root layout. The not-found
+  // copy is intentionally playful; the error copy is intentionally plain.
+  errorBoundary: {
+    title: "Something broke on our end",
+    body: "Try reloading. If it keeps happening, the stories on the home page should still load.",
+    retry: "Try again",
+    home: "Back to Sift",
+  },
   topics: {
     modalTitle: "What do you want to track?",
     modalPlaceholder: "e.g. Florida utilities, AI in healthcare, Series A funding",

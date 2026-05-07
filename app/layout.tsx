@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
@@ -82,6 +83,10 @@ export default function RootLayout({
         </a>
         {children}
         <SpeedInsights />
+        {/* Vercel Analytics: privacy-friendly page-view counts (no cookies,
+            no cross-site tracking, GDPR/CCPA-clean by default). Free hobby
+            tier covers ~25k events/mo. */}
+        <Analytics />
       </body>
     </html>
   );
