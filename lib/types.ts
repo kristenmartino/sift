@@ -116,6 +116,7 @@ export type OrgType =
   | "super-pac"
   | "foundation"
   | "industry-group"
+  | "agency"
   | "other";
 
 /**
