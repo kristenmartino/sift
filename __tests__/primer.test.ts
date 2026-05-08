@@ -1,4 +1,5 @@
-import { parseContextPrimer } from "@/lib/primer";
+import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
+import type { ContextPrimer, EntityLink } from "@/lib/types";
 
 describe("parseContextPrimer", () => {
   describe("null-returning inputs", () => {
@@ -238,5 +239,140 @@ describe("parseContextPrimer", () => {
       });
       expect(result?.background).toBe("");
     });
+  });
+});
+
+// ─── attachPrimerTermLinks (Phase 3.G.4) ──────────────────────────
+
+describe("attachPrimerTermLinks", () => {
+  const primer: ContextPrimer = {
+    background: "background text",
+    terms: [
+      { term: "FCC petition", definition: "A formal request to the agency." },
+      { term: "filibuster", definition: "Senate procedure requiring 60 votes." },
+      { term: "Schumer's stance", definition: "His position on the bill." },
+    ],
+  };
+
+  const links: EntityLink[] = [
+    { type: "org", canonicalId: "fcc", surfaceForm: "FCC" },
+    {
+      type: "politician",
+      canonicalId: "S000148",
+      surfaceForm: "Chuck Schumer",
+    },
+    // Note: surfaceForm is "Schumer" alone — should match "Schumer's stance"
+    { type: "politician", canonicalId: "S000148", surfaceForm: "Schumer" },
+  ];
+
+  it("returns null primer untouched when input is null", () => {
+    expect(attachPrimerTermLinks(null, links)).toBeNull();
+  });
+
+  it("returns primer untouched when there are no entity links", () => {
+    const out = attachPrimerTermLinks(primer, []);
+    expect(out).toBe(primer);
+    expect(out?.terms.every((t) => t.link === undefined)).toBe(true);
+  });
+
+  it("attaches link when surface form is a substring of the term", () => {
+    const out = attachPrimerTermLinks(primer, links);
+    const fccTerm = out?.terms.find((t) => t.term === "FCC petition");
+    expect(fccTerm?.link).toEqual({ type: "org", canonicalId: "fcc" });
+  });
+
+  it("matches case-insensitively", () => {
+    const out = attachPrimerTermLinks(
+      { background: "", terms: [{ term: "fcc rule", definition: "x" }] },
+      [{ type: "org", canonicalId: "fcc", surfaceForm: "FCC" }],
+    );
+    expect(out?.terms[0].link).toEqual({ type: "org", canonicalId: "fcc" });
+  });
+
+  it("does not attach a link to terms that don't contain any surface form", () => {
+    const out = attachPrimerTermLinks(primer, links);
+    const filibuster = out?.terms.find((t) => t.term === "filibuster");
+    expect(filibuster?.link).toBeUndefined();
+  });
+
+  it("uses word boundaries — 'abcd' does NOT match surface 'abc'", () => {
+    const out = attachPrimerTermLinks(
+      { background: "", terms: [{ term: "abcdefg", definition: "x" }] },
+      [{ type: "org", canonicalId: "abc", surfaceForm: "ABC" }],
+    );
+    expect(out?.terms[0].link).toBeUndefined();
+  });
+
+  it("matches at word boundary — 'FCC's authority' matches 'FCC'", () => {
+    const out = attachPrimerTermLinks(
+      { background: "", terms: [{ term: "FCC authority", definition: "x" }] },
+      [{ type: "org", canonicalId: "fcc", surfaceForm: "FCC" }],
+    );
+    expect(out?.terms[0].link).toEqual({ type: "org", canonicalId: "fcc" });
+  });
+
+  it("prefers the longer surface form when multiple links could match", () => {
+    // 'Federal Reserve' is longer than 'Reserve'; should win.
+    const out = attachPrimerTermLinks(
+      {
+        background: "",
+        terms: [{ term: "Federal Reserve action", definition: "x" }],
+      },
+      [
+        { type: "org", canonicalId: "reserve", surfaceForm: "Reserve" },
+        { type: "org", canonicalId: "federal-reserve", surfaceForm: "Federal Reserve" },
+      ],
+    );
+    expect(out?.terms[0].link).toEqual({
+      type: "org",
+      canonicalId: "federal-reserve",
+    });
+  });
+
+  it("escapes regex metacharacters in surface forms", () => {
+    // Period-containing name like 'J.D. Vance' should match literally,
+    // not interpret '.' as regex any-char.
+    const out = attachPrimerTermLinks(
+      { background: "", terms: [{ term: "J.D. Vance memo", definition: "x" }] },
+      [{ type: "politician", canonicalId: "V000137", surfaceForm: "J.D. Vance" }],
+    );
+    expect(out?.terms[0].link).toEqual({
+      type: "politician",
+      canonicalId: "V000137",
+    });
+  });
+
+  it("ignores single-character surface forms (would over-match)", () => {
+    const out = attachPrimerTermLinks(
+      { background: "", terms: [{ term: "a single word", definition: "x" }] },
+      [{ type: "outlet", canonicalId: "x", surfaceForm: "a" }],
+    );
+    expect(out?.terms[0].link).toBeUndefined();
+  });
+
+  it("does not mutate the input primer", () => {
+    const input: ContextPrimer = {
+      background: "bg",
+      terms: [{ term: "FCC rule", definition: "x" }],
+    };
+    const inputTermsRef = input.terms;
+    attachPrimerTermLinks(input, [
+      { type: "org", canonicalId: "fcc", surfaceForm: "FCC" },
+    ]);
+    expect(input.terms).toBe(inputTermsRef);
+    expect(input.terms[0].link).toBeUndefined();
+  });
+
+  it("preserves other primer fields (background, generated_at)", () => {
+    const out = attachPrimerTermLinks(
+      {
+        background: "bg paragraph",
+        terms: [{ term: "FCC rule", definition: "x" }],
+        generated_at: "2026-05-08T12:00:00Z",
+      },
+      [{ type: "org", canonicalId: "fcc", surfaceForm: "FCC" }],
+    );
+    expect(out?.background).toBe("bg paragraph");
+    expect(out?.generated_at).toBe("2026-05-08T12:00:00Z");
   });
 });

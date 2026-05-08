@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { COPY } from "@/lib/copy";
-import type { ContextPrimer } from "@/lib/types";
+import { entityHref } from "@/lib/entityLinks";
+import type { ContextPrimer, ContextPrimerTerm } from "@/lib/types";
 
 interface BackgroundPrimerProps {
   primer: ContextPrimer | null | undefined;
@@ -101,14 +103,17 @@ export default function BackgroundPrimer({
           )}
 
           {/* Term/definition list — no "Key terms" label. Renders as a
-              reference panel rather than a textbook glossary. */}
+              reference panel rather than a textbook glossary.
+
+              Phase 3.G.4: terms whose text contains a curated entity (FCC,
+              Schumer, IRA, etc.) get a `link` attached server-side via
+              `attachPrimerTermLinks`. Linked terms render as click-through
+              into the dossier; unlinked terms remain plain text. */}
           {terms.length > 0 && (
             <dl className="flex flex-col gap-1.5">
               {terms.map((t) => (
                 <div key={t.term} className="text-body leading-snug">
-                  <dt className="inline font-semibold text-[var(--text)]">
-                    {t.term}
-                  </dt>
+                  <PrimerTermLabel term={t} />
                   <dd className="inline text-[var(--text-secondary)]">
                     {" — "}
                     {t.definition}
@@ -120,5 +125,42 @@ export default function BackgroundPrimer({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Term label inside the primer's term list. When the term has a `link`
+ * (Phase 3.G.4 — server-attached when the term text contains a curated
+ * entity surface form), renders as a click-through to the dossier with
+ * subtle accent styling. Otherwise renders as plain bold text matching
+ * the previous look.
+ *
+ * Click handler stops propagation so the surrounding card-link doesn't
+ * fire on term-tap (same pattern as EntityLinksList chips).
+ */
+function PrimerTermLabel({ term }: { term: ContextPrimerTerm }) {
+  if (!term.link) {
+    return (
+      <dt className="inline font-semibold text-[var(--text)]">{term.term}</dt>
+    );
+  }
+  // Reuse the shared dossier-routing helper so primer-term links + chip
+  // links can never drift apart.
+  const href = entityHref({
+    type: term.link.type,
+    canonicalId: term.link.canonicalId,
+    surfaceForm: term.term,
+  });
+  return (
+    <dt className="inline">
+      <Link
+        href={href}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={`Open dossier for ${term.term}`}
+        className="font-semibold text-[var(--text)] no-underline border-b border-dotted border-[var(--accent)] hover:text-[var(--accent)] hover:border-solid transition-colors"
+      >
+        {term.term}
+      </Link>
+    </dt>
   );
 }
