@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
+import { enrichLinksWithContext } from "@/lib/civicContext";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
@@ -123,6 +124,9 @@ export async function GET(request: NextRequest) {
         };
       });
 
+      // (entity-link enrichment runs once across all articles below,
+      // before the response is returned — see `enrichLinksWithContext`.)
+
       // Parse JSONB framings (validate types, sanitize external text)
       const rawFramings = Array.isArray(s.framings) ? s.framings : [];
       const framings: StoryFraming[] = (rawFramings as unknown[])
@@ -164,6 +168,27 @@ export async function GET(request: NextRequest) {
         articles: childArticles,
       };
     });
+
+    // Phase 3.G.3 — civic-context tooltip enrichment.
+    // One batched query across every politician chip on the page (typical
+    // homepage: 0-30 chips; we de-dupe by canonical_id inside). Mutates
+    // the EntityLink[] references in place so the article objects pick up
+    // `civicContext` without us needing to re-thread anything. Tolerant
+    // of missing tables (returns silently) — chips still navigate to the
+    // right dossier even when enrichment is unavailable.
+    const allLinks = [
+      ...articles.flatMap((a) => a.entityLinks ?? []),
+      ...stories.flatMap((s) => s.articles.flatMap((a) => a.entityLinks ?? [])),
+    ];
+    if (allLinks.length > 0) {
+      try {
+        await enrichLinksWithContext(allLinks);
+      } catch (err) {
+        // Don't break the feed if enrichment fails — chips just render
+        // without tooltips.
+        console.warn("civicContext enrichment failed:", err);
+      }
+    }
 
     return NextResponse.json<NewsApiResponse>({
       articles,

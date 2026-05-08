@@ -217,12 +217,39 @@ export type EntityLinkType = "outlet" | "politician" | "org" | "bill";
  * `surfaceForm` preserves the original casing from the article text so
  * the InlineGlossaryTooltip can render the matched span verbatim
  * ("CHUCK SCHUMER said today" → tooltip shows "CHUCK SCHUMER").
+ *
+ * `civicContext` is server-attached (not stored in `entity_links` JSONB):
+ * the API route enriches each politician chip with the politician's top
+ * PAC industries so the EntityLinksList chip-tooltip can show inline
+ * civic context without a per-hover round trip. Optional — articles whose
+ * chips don't resolve (or whose politicians have no industry data) render
+ * the chip without a tooltip preview, just navigating to the full dossier
+ * on click.
  */
 export interface EntityLink {
   type: EntityLinkType;
   canonicalId: string;
   surfaceForm: string;
+  civicContext?: CivicContext;
 }
+
+/**
+ * Inline civic context shown in the tooltip preview on an EntityLinksList
+ * chip. Server-enriched at API-route time from `politician_profiles` (and,
+ * later, `org_profiles` / `bill_profiles` / `outlet_profiles`). Lives on
+ * the wire; never persisted in DB.
+ *
+ * Schema is intentionally a flat union by `type` so the renderer can do a
+ * single discriminated switch rather than juggling four nullable shapes.
+ */
+export type CivicContext =
+  | {
+      type: "politician";
+      // Up to 3 top PAC industries by 2022-cycle amount, descending.
+      // Empty when the politician is in the roster but has no PAC data
+      // (off-cycle senators, post-2022 specials).
+      topIndustries: IndustryDonation[];
+    };
 
 /**
  * Curated bill metadata, mirrored from `bill_profiles` in Postgres.
