@@ -12,6 +12,7 @@ import {
 } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
+import { enrichLinksWithContext } from "@/lib/civicContext";
 import type { Article, CategoryId } from "@/lib/types";
 import { checkCsrf } from "@/lib/security";
 
@@ -58,6 +59,18 @@ export async function GET(request: NextRequest) {
           ...(entityLinks.length > 0 ? { entityLinks } : {}),
         };
       });
+      // Phase 3.G.3 — enrich politician chips with top-PAC-industry
+      // tooltips. Mutates the EntityLink references in place so
+      // articles[].entityLinks pick up civicContext without re-mapping.
+      // Tolerant of failures (chips still navigate without tooltip).
+      const allLinks = articles.flatMap((a) => a.entityLinks ?? []);
+      if (allLinks.length > 0) {
+        try {
+          await enrichLinksWithContext(allLinks);
+        } catch (err) {
+          console.warn("civicContext enrichment failed:", err);
+        }
+      }
       return NextResponse.json({ articles });
     }
 

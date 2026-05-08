@@ -9,6 +9,7 @@ import {
 } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
+import { enrichLinksWithContext } from "@/lib/civicContext";
 import { stableHash, estimateReadTime } from "@/lib/utils";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
@@ -224,6 +225,18 @@ export async function GET(request: NextRequest) {
             ...(entityLinks.length > 0 ? { entityLinks } : {}),
           };
         });
+
+        // Phase 3.G.3 — civic-context tooltip enrichment for the chips
+        // we're about to stream. Tolerant of failures (chips still
+        // navigate; tooltip just doesn't render).
+        const allLinks = articles.flatMap((a) => a.entityLinks ?? []);
+        if (allLinks.length > 0) {
+          try {
+            await enrichLinksWithContext(allLinks);
+          } catch (err) {
+            console.warn("civicContext enrichment failed:", err);
+          }
+        }
 
         // 4. Stream vector results immediately
         if (articles.length > 0) {

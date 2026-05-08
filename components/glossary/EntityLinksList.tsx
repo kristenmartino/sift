@@ -5,6 +5,7 @@ import Link from "next/link";
 import { COPY } from "@/lib/copy";
 import { entityHref, entityTypeLabel } from "@/lib/entityLinks";
 import type { EntityLink } from "@/lib/types";
+import EntityChipTooltip from "./EntityChipTooltip";
 
 interface EntityLinksListProps {
   links: EntityLink[] | undefined;
@@ -48,7 +49,14 @@ export default function EntityLinksList({ links }: EntityLinksListProps) {
         {links.map((link) => {
           const glyph = COPY.glossary.typeGlyphs[link.type];
           return (
-            <li key={`${link.type}:${link.canonicalId}`}>
+            // `relative group` is the anchor for the EntityChipTooltip's
+            // `group-hover:` / `group-focus-within:` reveal. The Tailwind
+            // group utility scopes the hover to this single chip, not
+            // the whole list, so other chips in the row don't flash.
+            <li
+              key={`${link.type}:${link.canonicalId}`}
+              className="relative group"
+            >
               <Link
                 href={entityHref(link)}
                 onClick={(e) => e.stopPropagation()}
@@ -65,6 +73,9 @@ export default function EntityLinksList({ links }: EntityLinksListProps) {
                 )}
                 <span className="font-medium">{link.surfaceForm}</span>
               </Link>
+              {link.civicContext && (
+                <EntityChipTooltip context={link.civicContext} />
+              )}
             </li>
           );
         })}

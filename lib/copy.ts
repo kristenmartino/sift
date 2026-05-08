@@ -126,6 +126,13 @@ export const COPY = {
       bill: "▸",
       outlet: "▣",
     } as Record<string, string>,
+    // Phase 3.G.3 — chip tooltip preview, shown on hover/focus.
+    tooltip: {
+      politicianTopIndustries: "Top industries by PAC contributions (2022 cycle)",
+      noPacData: "No PAC data on file for the 2022 cycle.",
+      // Click-through hint at the foot of the tooltip.
+      openDossierHint: "Open dossier →",
+    },
   },
   primer: {
     // Eyebrow shown above the collapsed/expanded primer panel.

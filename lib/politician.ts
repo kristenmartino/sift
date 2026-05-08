@@ -126,7 +126,7 @@ function asCommittees(v: unknown): string[] {
     .filter((entry) => entry.length > 0);
 }
 
-function asTopIndustries(v: unknown): IndustryDonation[] {
+export function asTopIndustries(v: unknown): IndustryDonation[] {
   if (!Array.isArray(v)) return [];
   const out: IndustryDonation[] = [];
   for (const entry of v) {
