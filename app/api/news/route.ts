@@ -6,7 +6,7 @@ import {
   resolveOutletForSourceName,
   getArticleEntityLinks,
 } from "@/lib/db";
-import { parseContextPrimer } from "@/lib/primer";
+import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
 import { enrichLinksWithContext } from "@/lib/civicContext";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
@@ -78,9 +78,12 @@ export async function GET(request: NextRequest) {
 
     // Map standalone articles
     const articles: Article[] = standaloneArticles.map((row) => {
-      const primer = parseContextPrimer(row.context_primer);
+      const rawPrimer = parseContextPrimer(row.context_primer);
       const outlet = resolveOutletForSourceName(outletMap, row.source_name);
       const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
+      // Phase 3.G.4 — link primer terms to dossiers when their text
+      // contains a curated entity surface form (FCC, Schumer, IRA, etc.).
+      const primer = attachPrimerTermLinks(rawPrimer, entityLinks);
       return {
         id: row.id,
         title: row.title,
@@ -103,9 +106,10 @@ export async function GET(request: NextRequest) {
     const stories: Story[] = dbStories.map((s) => {
       const childRows = storyArticles[s.id] || [];
       const childArticles: Article[] = childRows.map((row) => {
-        const primer = parseContextPrimer(row.context_primer);
+        const rawPrimer = parseContextPrimer(row.context_primer);
         const outlet = resolveOutletForSourceName(outletMap, row.source_name);
         const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
+        const primer = attachPrimerTermLinks(rawPrimer, entityLinks);
         return {
           id: row.id,
           title: row.title,

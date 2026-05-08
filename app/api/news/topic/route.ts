@@ -7,7 +7,7 @@ import {
   resolveOutletForSourceName,
   getArticleEntityLinks,
 } from "@/lib/db";
-import { parseContextPrimer } from "@/lib/primer";
+import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
 import { enrichLinksWithContext } from "@/lib/civicContext";
 import { stableHash, estimateReadTime } from "@/lib/utils";
@@ -203,9 +203,10 @@ export async function GET(request: NextRequest) {
 
         // 3. Map DB rows to Article type
         const articles: Article[] = rows.map((row) => {
-          const primer = parseContextPrimer(row.context_primer);
+          const rawPrimer = parseContextPrimer(row.context_primer);
           const outlet = resolveOutletForSourceName(outletMap, row.source_name);
           const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
+          const primer = attachPrimerTermLinks(rawPrimer, entityLinks);
           return {
             id: row.id,
             title: row.title,

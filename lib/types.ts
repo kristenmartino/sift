@@ -397,6 +397,24 @@ export interface ContextPrimerTerm {
   term: string;
   definition: string;
   source?: string;
+  /**
+   * Optional dossier link, server-attached at API time when the term text
+   * contains a curated entity from the article's `entity_links`. Lets the
+   * primer's "FCC petition" or "Schumer" surface link straight into the
+   * civic graph (org / politician / bill / outlet dossier) rather than
+   * stopping at a definition. Phase 3.G.4.
+   */
+  link?: PrimerTermLink;
+}
+
+/**
+ * Minimal pointer to a curated entity dossier — same shape used by
+ * `EntityLink` minus the `surfaceForm` (the primer term text already
+ * doubles as the link's display label).
+ */
+export interface PrimerTermLink {
+  type: EntityLinkType;
+  canonicalId: string;
 }
 
 export interface ContextPrimer {
