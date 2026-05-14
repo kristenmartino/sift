@@ -50,6 +50,20 @@ export default function PrivacyPage() {
           </section>
 
           <section>
+            <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">Search analytics</h2>
+            <p>
+              When you use Sift&apos;s topic search, we log the query text along with anonymous
+              technical metadata (per-stage latency, result counts, fallback usage, a coarse
+              user-agent class like &quot;mobile&quot; or &quot;desktop&quot;). Your IP address is
+              <em> never stored in raw form</em> &mdash; it&apos;s hashed with HMAC-SHA256 and a
+              server-side secret before we write it. Search-query logs are retained for{" "}
+              <strong>90 days</strong>, then deleted. We use these logs to understand what people
+              actually search for so we can improve the feature; we don&apos;t share them with
+              anyone outside Sift.
+            </p>
+          </section>
+
+          <section>
             <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">Your rights</h2>
             <p>
               You can delete your account and all associated data by contacting us. Local storage
@@ -59,7 +73,7 @@ export default function PrivacyPage() {
         </div>
 
         <p className="text-xs text-[var(--text-muted)] mt-10">
-          Last updated: April 2026
+          Last updated: May 2026
         </p>
       </div>
     </main>
