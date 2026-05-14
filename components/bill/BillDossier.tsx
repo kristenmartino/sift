@@ -207,9 +207,14 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
             </p>
             <ul className="space-y-2.5">
               {externalLinkEntries.map(({ key, url, label }) => (
+                // Stacked label-above-link on mobile; side-by-side on md+.
+                // The 200px fixed label column makes long URLs unreadable
+                // at 375px (only ~100px left for the URL after padding +
+                // gap), so on mobile we let the URL get the full width
+                // and put the small-caps label on its own line above.
                 <li
                   key={key}
-                  className="grid grid-cols-[200px_1fr] gap-x-6 items-baseline border-b border-[var(--border-subtle)] pb-2.5"
+                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[200px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-[var(--border-subtle)] pb-2.5"
                 >
                   <span className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)]">
                     {label}
