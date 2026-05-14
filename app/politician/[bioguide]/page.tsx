@@ -20,9 +20,29 @@ export async function generateMetadata({
   const { bioguide } = await params;
   const politician = await getPoliticianByBioguide(bioguide);
   if (!politician) return { title: "Politician not found" };
+
+  // Per-route metadata override so shared dossier links carry the
+  // politician's name, not the homepage's generic title. og:image still
+  // inherits the homepage OG — route-specific images are a Phase 2 polish.
+  const partyState =
+    politician.party && politician.state
+      ? ` (${politician.party}-${politician.state})`
+      : "";
+  const fullTitle = `${politician.name}${partyState} — Politician dossier | Sift`;
+  const description = `Committees, top industries by PAC contributions, and voting context for ${politician.name} on Sift.`;
   return {
     title: `${politician.name} — Politician dossier`,
-    description: `Committees, top industries by PAC contributions, and voting context for ${politician.name} on Sift.`,
+    description,
+    openGraph: {
+      title: fullTitle,
+      description,
+      type: "profile",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fullTitle,
+      description,
+    },
   };
 }
 

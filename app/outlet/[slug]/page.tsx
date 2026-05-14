@@ -21,9 +21,24 @@ export async function generateMetadata({
   const { slug } = await params;
   const outlet = await getOutletBySlug(slug);
   if (!outlet) return { title: "Outlet not found" };
+
+  // Per-route metadata override so shared outlet links carry the
+  // outlet's name in the unfurl card.
+  const fullTitle = `${outlet.name} — Outlet dossier | Sift`;
+  const description = `Ownership, funding, bias, and factual-reporting context for ${outlet.name} on Sift.`;
   return {
     title: `${outlet.name} — Outlet dossier`,
-    description: `Ownership, funding, bias, and factual-reporting context for ${outlet.name} on Sift.`,
+    description,
+    openGraph: {
+      title: fullTitle,
+      description,
+      type: "profile",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fullTitle,
+      description,
+    },
   };
 }
 

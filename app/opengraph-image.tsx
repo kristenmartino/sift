@@ -1,6 +1,12 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Sift — AI-Curated News";
+// Updated 2026-05: the original card baked in three stale claims —
+// "100+ sources" (true count is ~58), "Updated every 10 min" (pipeline
+// runs every 30 min after the cost-cut bump), and an "AI-Curated News"
+// positioning that doesn't communicate the actual differentiator (civic
+// context / cross-spectrum framing / money trail). The current version
+// uses the live product tagline and avoids numeric claims that go stale.
+export const alt = "Sift — The news, with footnotes";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -43,30 +49,43 @@ export default function OGImage() {
           Sift
         </span>
 
-        {/* Tagline */}
+        {/* Tagline — matches COPY.header.tagline */}
         <span
           style={{
-            fontSize: 28,
-            color: "rgba(255,255,255,0.6)",
-            marginTop: 20,
-            fontFamily: "sans-serif",
+            fontSize: 32,
+            color: "rgba(255,255,255,0.75)",
+            marginTop: 24,
+            fontFamily: "Georgia, serif",
+            fontStyle: "italic",
             fontWeight: 400,
           }}
         >
-          AI-Curated News, Already Read for You
+          The news, with footnotes.
         </span>
 
-        {/* Stats line */}
+        {/* Hairline rule */}
+        <div
+          style={{
+            width: 96,
+            height: 1,
+            background: "rgba(255,255,255,0.2)",
+            marginTop: 40,
+            marginBottom: 28,
+          }}
+        />
+
+        {/* Differentiator line — three durable claims, no numbers */}
         <span
           style={{
-            fontSize: 16,
-            color: "rgba(255,255,255,0.3)",
-            marginTop: 40,
+            display: "flex",
+            fontSize: 18,
+            color: "rgba(255,255,255,0.55)",
             fontFamily: "sans-serif",
-            letterSpacing: "0.05em",
+            letterSpacing: "0.04em",
+            textAlign: "center",
           }}
         >
-          100+ sources &middot; 10 categories &middot; Updated every 10 min
+          Civic context &middot; Cross-spectrum framing &middot; The money behind each story
         </span>
       </div>
     ),

@@ -13,10 +13,25 @@ import type { PoliticianChamber } from "@/lib/types";
 // page snappy without staleness mattering at this cadence.
 export const revalidate = 600;
 
+// Per-route metadata override so shared /civic links carry the index's
+// own title/description in unfurl cards (not the homepage default).
+const CIVIC_TITLE = "Civic dossiers — Sift";
+const CIVIC_DESC =
+  "Browse Sift's curated politician, organization, and bill dossiers. 536 sitting members of Congress, federal agencies, the major think-tanks shaping policy, and landmark bills.";
+
 export const metadata: Metadata = {
-  title: "Civic dossiers — Sift",
-  description:
-    "Browse Sift's curated politician, organization, and bill dossiers. 536 sitting members of Congress, the major think-tanks shaping policy, and landmark bills.",
+  title: CIVIC_TITLE,
+  description: CIVIC_DESC,
+  openGraph: {
+    title: CIVIC_TITLE,
+    description: CIVIC_DESC,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: CIVIC_TITLE,
+    description: CIVIC_DESC,
+  },
 };
 
 interface CivicPageProps {
