@@ -61,7 +61,13 @@ export default function EntityLinksList({ links }: EntityLinksListProps) {
                 href={entityHref(link)}
                 onClick={(e) => e.stopPropagation()}
                 aria-label={`${entityTypeLabel(link.type)}: ${link.surfaceForm}. Open dossier.`}
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] no-underline transition-colors duration-200 relative z-[2] border border-[var(--border)] text-[var(--text-secondary)] bg-[var(--card-bg)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                // Touch-target note: py-1.5 + 12px line-height + border = ~32px
+                // visible height on mobile, which is still under the 44px
+                // Apple HIG recommendation but materially better than the
+                // 22-24px the chip had originally. Side padding bumped from
+                // px-2 to px-2.5 for the same reason. Visual weight stays
+                // small enough to read as a "chip" not a "button."
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-0.5 rounded-full text-[12px] leading-none no-underline transition-colors duration-200 relative z-[2] border border-[var(--border)] text-[var(--text-secondary)] bg-[var(--card-bg)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
               >
                 {glyph && (
                   <span

@@ -208,9 +208,11 @@ export default function OutletDossier({
             </p>
             <ul className="space-y-2.5">
               {externalLinkEntries.map(({ key, url, label }) => (
+                // Stack on mobile so long URLs aren't crammed into the
+                // narrow value column at 375px. Side-by-side on md+.
                 <li
                   key={key}
-                  className="grid grid-cols-[180px_1fr] gap-x-6 items-baseline border-b border-[var(--border-subtle)] pb-2.5"
+                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[180px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-[var(--border-subtle)] pb-2.5"
                 >
                   <span className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)]">
                     {label}
