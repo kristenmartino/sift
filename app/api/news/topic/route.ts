@@ -10,6 +10,14 @@ import {
 import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
 import { enrichLinksWithContext } from "@/lib/civicContext";
+import {
+  classifyUserAgent,
+  countTokens,
+  extractClientIp,
+  hashIp,
+  normalizeQuery as normalizeQueryForLog,
+} from "@/lib/searchAnalytics";
+import { logSearchQuery } from "@/lib/searchAnalyticsLog";
 import { stableHash, estimateReadTime } from "@/lib/utils";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
@@ -168,9 +176,8 @@ export async function GET(request: NextRequest) {
 
   // Rate limit by IP + global fallback to prevent abuse
   // Use x-real-ip (set by reverse proxy) over x-forwarded-for (user-spoofable)
-  const ip = request.headers.get("x-real-ip")
-    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || "unknown";
+  const rawIp = extractClientIp(request.headers);
+  const ip = rawIp ?? "unknown";
   const perIp = rateLimit(`topic-search:${ip}`, { maxRequests: 20, windowMs: 60_000 });
   const global = rateLimit("topic-search:global", { maxRequests: 200, windowMs: 60_000 });
   if (!perIp.allowed || !global.allowed) {
@@ -181,6 +188,18 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Phase 1 instrumentation — capture per-stage timings + a session
+  // hint so we can analyze the search funnel after deploy. Header is
+  // set client-side (localStorage UUID); absent for direct/curl traffic.
+  const requestStartedAt = Date.now();
+  const sessionId = request.headers.get("x-sift-session-id");
+  const userAgent = request.headers.get("user-agent");
+  let latencyMsEmbed: number | null = null;
+  let latencyMsVector: number | null = null;
+  let latencyMsFallback: number | null = null;
+  let resultCountVector = 0;
+  let resultCountTotal = 0;
+
   const stream = new ReadableStream({
     async start(controller) {
       let totalArticles = 0;
@@ -188,17 +207,21 @@ export async function GET(request: NextRequest) {
 
       try {
         // 1. Embed the query (with cache)
+        const embedStartedAt = Date.now();
         let embedding = getCachedEmbedding(query);
         if (!embedding) {
           embedding = await embedQuery(query);
           setCachedEmbedding(query, embedding);
         }
+        latencyMsEmbed = Date.now() - embedStartedAt;
 
         // 2. Vector similarity search in Postgres + outlet map (parallel)
+        const vectorStartedAt = Date.now();
         const [rows, outletMap] = await Promise.all([
           searchArticlesByEmbedding(embedding, SIMILARITY_THRESHOLD, MAX_RESULTS),
           getOutletProfilesMap(),
         ]);
+        latencyMsVector = Date.now() - vectorStartedAt;
         const entityLinksMap = await getArticleEntityLinks(rows.map((r) => r.id));
 
         // 3. Map DB rows to Article type
@@ -246,12 +269,14 @@ export async function GET(request: NextRequest) {
           );
         }
         totalArticles = articles.length;
+        resultCountVector = articles.length;
 
         // 5. If < 3 results, run Claude web_search fallback
         if (articles.length < MIN_STRONG_RESULTS) {
           fallbackUsed = true;
           controller.enqueue(sseEvent("fallback-start", {}));
 
+          const fallbackStartedAt = Date.now();
           try {
             const fallbackArticles = await webSearchFallback(query);
             // Dedupe against vector results, then enrich with outlet provenance
@@ -276,8 +301,11 @@ export async function GET(request: NextRequest) {
             }
           } catch (err) {
             console.error("Web search fallback error:", err);
+          } finally {
+            latencyMsFallback = Date.now() - fallbackStartedAt;
           }
         }
+        resultCountTotal = totalArticles;
 
         // 6. Done
         const matchQuality: "strong" | "weak" =
@@ -293,6 +321,28 @@ export async function GET(request: NextRequest) {
         );
       } finally {
         controller.close();
+        // Phase 1 analytics — fire-and-forget. Failure is logged inside
+        // logSearchQuery; never blocks user response. Excluded by the
+        // SEARCH_LOGGING_ENABLED env var or when the table doesn't yet
+        // exist on the DB.
+        const queryNorm = normalizeQueryForLog(query);
+        logSearchQuery({
+          query,
+          queryNorm,
+          queryTokenCount: countTokens(queryNorm),
+          resultCountVector,
+          resultCountTotal,
+          fallbackUsed,
+          latencyMsTotal: Date.now() - requestStartedAt,
+          latencyMsEmbed,
+          latencyMsVector,
+          latencyMsFallback,
+          sessionId,
+          ipHash: hashIp(rawIp),
+          userAgentClass: classifyUserAgent(userAgent),
+        }).catch(() => {
+          /* already logged inside logSearchQuery */
+        });
       }
     },
   });
