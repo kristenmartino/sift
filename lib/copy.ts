@@ -350,7 +350,7 @@ export const COPY = {
     compareCta: "Compare any topic",
     // Source colophon.
     colophonHeading: "Read from",
-    colophonSummary: "~50 vetted outlets \u00b7 across the political spectrum \u00b7 refreshed every 10 minutes",
+    colophonSummary: "~50 vetted outlets \u00b7 across the political spectrum \u00b7 refreshed every 30 minutes",
     // Footer colophon link.
     colophonLink: "Colophon",
   },

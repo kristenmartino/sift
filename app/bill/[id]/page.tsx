@@ -19,11 +19,26 @@ export async function generateMetadata({
   const bill = await getBillById(id);
   if (!bill) return { title: "Bill not found" };
   const display = formatBillIdDisplay(bill.billId);
+
+  // Per-route metadata override so shared bill links carry the bill's
+  // name in the unfurl card. og:image inherits the site default.
+  const fullTitle = `${display} (${bill.shortTitle ?? "Bill"}) — Sift`;
+  const description = `Sponsor, cosponsors, status, and lobbying spend for ${
+    bill.shortTitle ?? display
+  } on Sift.`;
   return {
     title: `${display} — Bill dossier`,
-    description: `Sponsor, cosponsors, status, and lobbying spend for ${
-      bill.shortTitle ?? display
-    } on Sift.`,
+    description,
+    openGraph: {
+      title: fullTitle,
+      description,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fullTitle,
+      description,
+    },
   };
 }
 

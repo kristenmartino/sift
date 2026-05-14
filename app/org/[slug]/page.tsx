@@ -19,9 +19,25 @@ export async function generateMetadata({
   const { slug } = await params;
   const org = await getOrgBySlug(slug);
   if (!org) return { title: "Organization not found" };
+
+  // Per-route metadata override so shared org-dossier links carry the
+  // org's name in the unfurl card. og:image inherits the site default
+  // for now; per-route images are a Phase 2 polish.
+  const fullTitle = `${org.name} — Org dossier | Sift`;
+  const description = `Type, funding, political lean, and FARA disclosure for ${org.name} on Sift.`;
   return {
     title: `${org.name} — Org dossier`,
-    description: `Type, funding, political lean, and FARA disclosure for ${org.name} on Sift.`,
+    description,
+    openGraph: {
+      title: fullTitle,
+      description,
+      type: "profile",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fullTitle,
+      description,
+    },
   };
 }
 

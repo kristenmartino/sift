@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     absolute: "Sift — The news, with footnotes.",
   },
   description:
-    "Sift reads hundreds of sources and adds the footnotes the news assumes you don't need — civic context, cross-spectrum framing, and the money behind every story. Linked to public records. Refreshed every 10 minutes.",
+    "Sift reads from ~50 vetted outlets across the political spectrum and adds the civic context, cross-spectrum framing, and money trail the news assumes you already know. Every claim links to a public record.",
 };
 
 // ISR: re-render at most once every 10 minutes — same heartbeat as the

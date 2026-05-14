@@ -24,7 +24,7 @@ const ARCHITECTURE = [
   "Articles load in under 50ms — AI processing happens in the background, not when you read.",
   "Works without an account — sign in only if you want bookmarks synced across devices.",
   "Graceful degradation: every feature works independently, so one slow service never blocks the page.",
-  "100+ sources are ingested, deduplicated, and ranked every 10 minutes before you open the app.",
+  "~50 vetted sources are ingested, deduplicated, and ranked every 30 minutes before you open the app.",
 ];
 
 export default function ColophonPage() {
