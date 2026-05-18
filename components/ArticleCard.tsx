@@ -207,6 +207,8 @@ export default function ArticleCard({
           <BackgroundPrimer
             primer={article.contextPrimer}
             defaultExpanded={!!featured}
+            articleId={article.id}
+            surface="feed"
           />
         )}
 

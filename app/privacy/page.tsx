@@ -64,6 +64,17 @@ export default function PrivacyPage() {
           </section>
 
           <section>
+            <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">Primer-panel analytics</h2>
+            <p>
+              When you open the &quot;What you should know first&quot; panel on an article card,
+              we log a single anonymous event with the article id, a coarse user-agent class,
+              an anonymous session id, and an HMAC-hashed IP (never raw). We do this to
+              understand whether the panel is being read so we know whether to keep investing
+              in it. Same <strong>90-day retention</strong> as search analytics.
+            </p>
+          </section>
+
+          <section>
             <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">Your rights</h2>
             <p>
               You can delete your account and all associated data by contacting us. Local storage
