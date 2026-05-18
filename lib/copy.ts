@@ -336,7 +336,7 @@ export const COPY = {
   landing: {
     // Single editorial paragraph below the lead story. The "what is this".
     explainer:
-      "Sift reads from ~50 vetted outlets every morning, summarizes the stories worth knowing, and links back to the originals \u2014 so you can stop checking ten tabs and get on with your day.",
+      "Sift reads the day's news and adds the civic footnotes. Politicians, organizations, bills, and political terms link to plain-English explainers \u2014 sourced from public records. Follow what's happening without already knowing the players.",
     leadEyebrow: "Today\u2019s lead",
     leadFallbackTitle: "Today\u2019s stories are still being filed",
     leadFallbackBody:
@@ -346,7 +346,7 @@ export const COPY = {
     // Section heading for the multi-source comparison demo.
     compareEyebrow: "How outlets framed it",
     compareTitle: "The Federal Reserve\u2019s May rate decision",
-    compareSubtitle: "One story, three angles. This is what Sift\u2019s compare view does on every topic.",
+    compareSubtitle: "One story, three angles. Sift shows what each outlet chose to emphasize \u2014 described, not labeled \u201cbiased\u201d or \u201cobjective.\u201d You read; the product does the legwork.",
     compareCta: "Compare any topic",
     // Source colophon.
     colophonHeading: "Read from",
