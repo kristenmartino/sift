@@ -19,24 +19,25 @@ Browser --> Vercel (Next.js) --reads--> Neon Postgres (pgvector)
 - **sift-api**: Python FastAPI + LangGraph on Railway — background pipeline + comparison workflow
 - **Database**: Neon Postgres (pgvector) — shared source of truth
 
-## Features (current)
+## Civic-literacy layer (what makes Sift Sift)
 
-- **10 categories**: Top, Technology, Business, Science, Energy, World, Health, Politics, Sports, Entertainment
-- **AI summaries**: Every article summarized by Claude Haiku 4.5
-- **Topic search**: Vector similarity (Voyage AI embeddings + pgvector), SSE streaming, Claude web search fallback
-- **Multi-source comparison**: LangGraph workflow — fan-out web search across outlets, extract claims, compare
-- **Bookmarks**: localStorage + Clerk server sync
-- **Dark/light themes**: "Late Edition" (dark) and "Newsprint" (light) with warm editorial tones
-- **SiftLogo**: Diamond mark brand identity across all touchpoints
-- **Auth**: Clerk (free to 10K MAU)
+- **Civic dossiers**: every politician, organization, bill, and outlet in an article links to a structured dossier — committee assignments, top industries by PAC contributions, ownership, funding, FARA registration, voting records, AllSides + MBFC ratings. Sourced from OpenSecrets, GovTrack, ProPublica Nonprofit Explorer, FARA, Vote Smart, and FEC. Citations on every page.
+- **Inline glossary**: civic terms surface contextually inside the article — defined where the reader needs them, in the language they need.
+- **Adaptive primers**: *"What you should know first"* + key terms, AI-generated at ingest. Expands when a story sits on top of complex policy.
+- **Cross-spectrum framing**: how outlets across left / center / right framed the same story. Sift surfaces AllSides + MBFC ratings verbatim — never computes its own.
+- **Methodology**: source curation policy and symmetric-application rules public at `/methodology`.
+- **Civic dossier index**: searchable, filterable view of curated politicians, organizations, and bills at `/civic`.
 
-## Features (civic-literacy MVP, in progress — see plan)
+## Foundation (the reader surface)
 
-- **Background primer**: *"What you should know first"* + 3–5 term definitions, AI-generated at ingest
-- **Cross-spectrum comparison**: how outlets across left / center / right framed the same story, with AllSides + MBFC ratings shown for each outlet
-- **Reading-level adjuster**: Simpler / Standard / Detailed slider, Claude-rewritten and cached
-- **Inline glossary with financial AND political context**: hover any entity (outlet, politician, think tank, pundit, bill) for an externally-sourced dossier — ownership, donors, voting records, foreign funding (FARA), interest-group ratings. All linked to AllSides, MBFC, OpenSecrets, GovTrack, ProPublica Nonprofit Explorer, FARA, Vote Smart, and FEC
-- **Methodology**: source curation policy and symmetric-application rules public at `/methodology`
+- **10 categories**: Top, Technology, Business, Science, Energy, World, Health, Politics, Sports, Entertainment.
+- **AI summaries**: every article summarized by Claude Haiku 4.5 in the background pipeline — user requests never touch Claude.
+- **Topic search**: vector similarity (Voyage AI embeddings + pgvector), SSE streaming, Claude web-search fallback for niche queries.
+- **Multi-source comparison**: LangGraph workflow — fan-out search across outlets, extract claims, compare. Described, not labeled.
+- **Bookmarks**: localStorage + Clerk server sync.
+- **Dark/light themes**: "Late Edition" (dark) and "Newsprint" (light) with warm editorial tones.
+- **SiftLogo**: diamond mark brand identity across all touchpoints.
+- **Auth**: Clerk (free to 10K MAU).
 
 ## Quick start
 

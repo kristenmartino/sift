@@ -1,40 +1,40 @@
 # Sift — Product Requirements Document
 
-**Version:** 2.1
-**Date:** March 31, 2026
+**Version:** 3.0 (civic-literacy)
+**Date:** May 18, 2026
 **Author:** Martino
 **Domain:** siftnews.kristenmartino.ai
-**Status:** Production live
+**Status:** Production live; civic-literacy MVP shipped, in iteration
 
 ---
 
 ## Vision
 
-Sift is a news reader where AI does the reading for you. Open it, see the top stories across 10 categories, each with a concise summary written for comprehension — not a headline written for clicks. Search any topic, compare coverage across outlets. Close it. 60 seconds. That's the experience.
+**Read the news with civic footnotes.** Sift is a news reader where every politician, organization, bill, and political term in an article links to a plain-English explainer — sourced from public records, threaded into the reading flow. Open it, read a story, click any entity, get the dossier that wasn't in the article. For people who want to follow what's happening without already knowing the players.
 
 ## Value proposition
 
-**For users:** "Open Sift. In 60 seconds, know what's happening across 10 categories — tech, business, science, energy, world, health, politics, sports, entertainment, and curated top stories. Search any topic. Compare how different outlets cover the same story. Every summary is AI-written."
+**For readers:** Open Sift. Read a story about a Senate vote. Click any name — senator, lobbying group, bill — and get who they are, what they've done, and what they want. Sourced from public records. *Read the headline; learn the civics as you go.*
 
-**For hiring managers:** "I built a hybrid AI system from 0 to 1: Next.js frontend on Vercel, Python/LangGraph backend on Railway, Neon Postgres with pgvector, background content pipeline with 100+ RSS feeds, multi-source comparison via fan-out web search, topic search via vector similarity with SSE streaming — all for ~$9/month."
+**For hiring managers:** I built a civic-literacy news product end-to-end — Next.js + Postgres frontend on Vercel, Python FastAPI + LangGraph backend on Railway, civic dossier graph over Postgres entity tables, scheduled AI pipeline that does the analytical work off the user's critical path. Live latency stays under 100ms because the AI moved to a background pipeline that writes to Postgres; the frontend is a database read.
 
 ---
 
 ## What makes Sift different
 
-1. **AI summaries from RSS feeds** — not raw publisher descriptions, not chatbot Q&A. A curated reading experience.
-2. **Custom topics via vector search** — type anything, get instant results from a pre-built article index. Falls back to Claude web_search for niche queries.
-3. **Multi-source comparison** — see how Reuters, BBC, and AP covered the same story, with agreements and disputes identified.
-4. **Background pipeline** — content is always fresh. User requests are pure database reads. No loading spinners.
-5. **Domain-specific coverage** — Energy category with grid, renewables, utilities, NextEra, FPL coverage that no mainstream aggregator provides.
+1. **Civic dossiers, not just summaries.** Every politician, organization, bill, and news outlet has a structured page sourced from public records (OpenSecrets, GovTrack, ProPublica Nonprofit Explorer, FARA, FEC, Vote Smart). News stories link out to them inline.
+2. **Inline glossary that respects the reader.** Civic terms surface contextually inside the article — not in a separate panel. Defined where the reader needs them, in the language they need.
+3. **Adaptive primers for complex policy.** When a story sits on top of complex policy (the Inflation Reduction Act, debt-ceiling mechanics, FTC consent decrees), the primer expands to fit what the reader needs.
+4. **Cross-spectrum framing, observed not labeled.** When multiple outlets cover the same story, Sift shows what each chose to emphasize. AllSides political-lean and MBFC factual-reporting ratings shown verbatim — Sift never computes its own. The reader does the interpretation; the product does the legwork.
+5. **AI off the critical path.** Earlier versions did live click-time generation and ran 15+ seconds per category load. Sift moved the AI to a background pipeline that writes enriched content to Postgres. User requests are pure database reads — ~50ms.
 
 ---
 
 ## Target users
 
-1. **Primary:** Professionals who want a morning news scan across multiple domains in 60 seconds
-2. **Secondary:** People interested in niche topics (energy/utilities, AI policy) underserved by mainstream aggregators
-3. **Tertiary:** Hiring managers evaluating AI engineering skills
+1. **Primary:** Engaged citizens who follow politics but don't already know who every senator, lobbying body, or think tank is — and want to. The "I read the news and feel like I'm missing context" reader.
+2. **Secondary:** Civic-literacy educators, journalists, and policy folks who need quick context on the players and history behind a story.
+3. **Tertiary:** Hiring managers evaluating product, design, and engineering judgment.
 
 ---
 
@@ -42,111 +42,74 @@ Sift is a news reader where AI does the reading for you. Open it, see the top st
 
 Two services, one database:
 
-- **Next.js on Vercel** — frontend, API routes (Postgres reads), Clerk auth, SSE streaming
-- **Python FastAPI + LangGraph on Railway** — background pipeline (RSS → Claude → Voyage → Postgres), multi-source comparison, asyncio scheduler
-- **Neon Postgres + pgvector** — single source of truth for articles, embeddings, custom topics, bookmarks
+- **Next.js on Vercel** — frontend, API routes (Postgres reads), Clerk auth, civic dossier pages, methodology page, SSE streaming for topic search.
+- **Python FastAPI + LangGraph on Railway** — background pipeline: primer generation, entity extraction, entity linking to dossiers, summarization, story synthesis, story clustering, civic context generation, batched API client, cross-source comparison workflow, usage tracking.
+- **Neon Postgres + pgvector** — single source of truth for articles, embeddings, entity dossiers, bookmarks.
 
-Content pipeline runs every 10 minutes via Railway's background scheduler. User requests never touch Claude — they read from Postgres in <50ms.
+Pipeline runs every 10 minutes via asyncio scheduler on Railway. User requests never touch Claude — they read from Postgres in <50ms.
 
-Total cost: ~$9/month.
-
-Full technical details: SIFT_ARCHITECTURE_v2.md and SIFT_TECHNICAL_SPEC.md.
+Full technical details: `ARCHITECTURE.md` and `TECHNICAL_SPEC.md`.
 
 ---
 
 ## Feature specification
 
-### Tier 0 — Ship blockers (Week 1-2)
+### Foundation (the reader surface — shipped)
 
-| ID | Feature | Effort |
+| ID | Feature |
+|---|---|
+| F1 | 10-category news feed (Top, Tech, Business, Science, Energy, World, Health, Politics, Sports, Entertainment) |
+| F2 | AI article summaries in the background pipeline (Claude Haiku 4.5) |
+| F3 | Topic search via vector similarity (Voyage AI + pgvector) with SSE streaming + Claude web-search fallback |
+| F4 | Multi-source comparison (LangGraph fan-out → claim extraction → side-by-side framing) |
+| F5 | Bookmarks (localStorage + Clerk server sync) |
+| F6 | Dark/light themes ("Late Edition" / "Newsprint") |
+| F7 | Auth (Clerk, free to 10K MAU) |
+| F8 | Landing page + methodology page |
+| F9 | SiftLogo brand mark across touchpoints |
+
+### Civic-literacy layer (shipped + in iteration)
+
+| ID | Feature | Status |
 |---|---|---|
-| S0 | Postgres schema + migrations | 2 hr |
-| S1 | Python FastAPI service scaffold on Railway | 3 hr |
-| S2 | LangGraph pipeline workflow (RSS → Claude → Voyage → store) | 6 hr |
-| S3 | RSS feed integration (100+ feeds, 10 categories) | 4 hr |
-| S4 | Next.js API routes rewrite (Postgres reads) | 3 hr |
-| S5 | Card redesign — text-first + RSS images | 3 hr |
-| S6 | Vercel Cron configuration | 30 min |
-| S7 | Clerk auth integration | 1 hr |
+| C1 | Background primer — *"What you should know first"* + key terms, AI-generated at ingest | Shipped |
+| C2 | Inline glossary — civic terms surface contextually inside articles, with chip tooltips and dossier click-through | Shipped (Phase 3.G + 3.H) |
+| C3 | Politician dossiers — committee assignments, top industries by PAC contributions, interest-group ratings, external links to GovTrack / OpenSecrets / Vote Smart / Ballotpedia / Wikipedia | Shipped (Phase 3.C) |
+| C4 | Organization dossiers — political lean, finances, major funders, FARA registration, external links to ProPublica Nonprofit Explorer / IRS 990 / FARA / official site | Shipped (Phase 3.D) |
+| C5 | Bill dossiers — status, sponsor, cosponsors, lobbying spend, external links to GovTrack / Congress.gov / OpenSecrets | Shipped (Phase 3.E) |
+| C6 | Outlet dossiers — ownership, funding, AllSides political-lean rating, MBFC factual-reporting rating, recent stories | Shipped (Phase 2.B + 2.C) |
+| C7 | Cross-spectrum compare — three-bucket (L / C / R) framing comparison, AllSides-rated | Shipped (Phase 2.C.2) |
+| C8 | Civic dossier index — searchable, filterable, all entity types | Shipped (Phase 3.I) |
+| C9 | Reading-level adjuster — Simpler / Standard / Detailed slider, Claude-rewritten and cached | In design |
+| C10 | Primer expansion instrumentation — measure what users actually expand | In progress |
+| C11 | Per-paragraph primer triggering — surface primers in the reading flow, not above the fold | Next |
 
-### Tier 1 — Core product (Week 2-3)
+### Non-goals
 
-| ID | Feature | Effort |
-|---|---|---|
-| T1 | Custom topics — vector search + fallback | 6 hr |
-| T2 | SSE streaming for article delivery | 4 hr |
-| T3 | LangGraph comparison workflow | 6 hr |
-| T4 | Bookmarks synced to Postgres (via Clerk user ID) | 2 hr |
-| T5 | Landing page at siftnews.kristenmartino.ai | 4 hr |
-
-### Tier 2 — Differentiation (Week 3-4)
-
-| ID | Feature | Effort |
-|---|---|---|
-| T6 | Morning briefing — single paragraph top 3 stories | 3 hr |
-| T7 | "Why this matters" context line per article | 3 hr |
-| T8 | Share article (copy link + native share) | 1 hr |
-| T9 | Trend detection — "this topic appeared 4 of 5 days" | 4 hr |
-| T10 | Favicon + OG image + visual identity | 3 hr |
-
-### Tier 3 — Portfolio showcase (Post-launch)
-
-| ID | Feature | Effort |
-|---|---|---|
-| T11 | Summary customization (ELI5 / Technical / Executive) | 3 hr |
-| T12 | Semantic search across past articles | 4 hr |
-| T13 | Daily digest email | 6 hr |
-| T14 | Reading analytics dashboard | 4 hr |
-| T15 | Multi-language support | 4 hr |
-
----
-
-## Card design
-
-**Mixed layout — RSS images when available, text-first when not.**
-
-Cards with images: image at top, content below. Standard news card pattern.
-
-Cards without images: thin category color accent bar at top (3px, category color), no image area at all. Badge, headline in Playfair Display, AI summary, source metadata. Clean editorial layout.
-
-Both card types coexist in the grid. No gradient fallbacks, no placeholder icons, no OG scraping.
-
----
-
-## Non-goals
-
-- Not a real-time ticker (refreshes every 10-15 min, not live)
-- Not a social platform (no comments, no voting)
-- Not a full-text reader (links to original sources)
-- Not a chatbot (browse, don't interrogate)
+- Not a chatbot interface. Browse, don't interrogate.
+- Not a trust-judgment layer. Sift surfaces AllSides + MBFC ratings verbatim; it does not compute its own.
+- Not a propaganda decoder. (Different product, different corpus, different audience.)
+- Not a real-time ticker. Refreshes every 10–15 minutes.
+- Not a full-text reader. Links to original sources.
+- Not a social platform. No comments, no voting.
 
 ---
 
 ## Competitive landscape
 
-| Product | Sift's advantage |
-|---|---|
-| Google News | Sift provides AI summaries, not just headlines |
-| Apple News | Sift doesn't need publisher deals |
-| Feedly | Sift handles source discovery automatically |
-| Perplexity Daily | Sift is purpose-built for browsing, not search |
-| Hacker News | Sift covers 7 domains + custom topics, with summaries |
+| Product | What it does | Where Sift differs |
+|---|---|---|
+| Apple News / Google News | Aggregates headlines + summaries from publishers | Sift adds civic dossiers + inline glossary + adaptive primers — context the news assumes the reader already has |
+| Perplexity Discover | AI-curated news with web-search-style summaries | Sift is structured around an entity-dossier graph, not a retrieval/chat loop |
+| NewsGuard / AllSides / Ad Fontes | Site-level trust/bias ratings | Sift surfaces those ratings inline (verbatim) and adds entity-level context around them |
+| OpenSecrets / GovTrack / ProPublica | Public-records databases by entity type | Sift threads them together at point-of-reading, so the reader doesn't have to leave the article |
+| Civic-education content (Civics 101, Ground News context blocks) | Standalone civic content | Sift integrates civic context directly into the news reading flow |
 
 ---
 
-## Build sequence
+## Open questions
 
-```
-Week 1:  Python service + Postgres + LangGraph pipeline + RSS
-Week 2:  Next.js rewrite (DB reads) + card redesign + Clerk + SSE
-Week 3:  Comparison workflow + custom topics + landing page
-Week 4:  QA + monitoring + deploy to production + share with 10 people
-```
-
----
-
-## Open questions (for Stark)
-
-1. **Custom topics — what's the UI?** Freeform text field? Suggested topics? Both?
-2. **Comparison — where does it live?** Button on each article? Separate tab? Triggered by detecting the same story across categories?
-3. **Monetization — ever?** Custom topics and comparison could be premium features behind Clerk auth. But this is portfolio-first.
+1. **Glossary scope.** Currently civic-only. Could extend to financial, scientific, or technical terms. Where to draw the line?
+2. **Primer triggering granularity.** Article-level (current) vs. per-paragraph vs. user-paced. Empirical question, needs the instrumentation now landing.
+3. **Dossier coverage.** ~600 sitting members of Congress + curated orgs + landmark bills. Where's the next expansion — historical politicians, state-level, lobbying firms, federal agencies?
+4. **Monetization.** Portfolio-first for now. The structural feature most likely to support paid: research-grade exports (PDF dossier packets, custom briefings) for institutional users.
