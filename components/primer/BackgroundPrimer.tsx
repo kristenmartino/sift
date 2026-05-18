@@ -15,6 +15,16 @@ interface BackgroundPrimerProps {
    * in this first cut — Phase 1C just renders the affordance.
    */
   defaultExpanded?: boolean;
+  /**
+   * Optional article id + surface for Phase 1 primer-expand instrumentation.
+   * When both are present, the first user-initiated expand fires a single
+   * fire-and-forget POST to /api/primer/expand so we can measure how often
+   * anyone actually opens the panel. Default-expanded cards (e.g. featured
+   * hero) do NOT count as user expands — we only fire on the click that
+   * flips state from collapsed → expanded.
+   */
+  articleId?: string;
+  surface?: "feed" | "bookmarks";
 }
 
 /**
@@ -40,6 +50,8 @@ interface BackgroundPrimerProps {
 export default function BackgroundPrimer({
   primer,
   defaultExpanded = false,
+  articleId,
+  surface,
 }: BackgroundPrimerProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -48,15 +60,33 @@ export default function BackgroundPrimer({
   const { background, terms } = primer;
   if (!background && terms.length === 0) return null;
 
+  // Fire-and-forget analytics POST when the user-initiated click flips
+  // state collapsed → expanded. Skipped on the auto-expanded path (e.g.
+  // featured hero card) since that's not a user action. Failure is
+  // swallowed; the UI flips state either way.
+  const handleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpanded(true);
+    if (articleId) {
+      // Body is null-safe — surface omitted is fine (server logs null).
+      fetch("/api/primer/expand", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articleId, ...(surface ? { surface } : {}) }),
+        // Keep the request lightweight; no need to wait, no need to retry.
+        keepalive: true,
+      }).catch(() => {
+        /* analytics is best-effort; ignore */
+      });
+    }
+  };
+
   return (
     <div className="my-1 relative z-[2]">
       {!expanded && (
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setExpanded(true);
-          }}
+          onClick={handleExpand}
           aria-expanded={false}
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-[0.04em] uppercase border border-[var(--border)] bg-transparent text-[var(--text-secondary)] hover:text-[var(--text)] hover:border-[var(--text-muted)] transition-colors duration-200 cursor-pointer"
         >
