@@ -10,23 +10,39 @@
 
 ## Vision
 
-**Read the news with civic footnotes.** Sift is a news reader where every politician, organization, bill, and political term in an article links to a plain-English explainer — sourced from public records, threaded into the reading flow. Open it, read a story, click any entity, get the dossier that wasn't in the article. For people who want to follow what's happening without already knowing the players.
+**A news aggregator with civic footnotes.** Sift is an AI-powered news aggregator across 10 categories — with a civic-literacy layer on top. Open it, read today's stories across categories. Search any topic. Compare how outlets covered the same story. And on every story, click any name — senator, lobbying group, bill — to get who they are, what they've done, and what they want. Sourced from public records.
 
 ## Value proposition
 
-**For readers:** Open Sift. Read a story about a Senate vote. Click any name — senator, lobbying group, bill — and get who they are, what they've done, and what they want. Sourced from public records. *Read the headline; learn the civics as you go.*
+**For readers:** Open Sift. Today's stories across 10 categories — Top, Tech, Business, Science, Energy, World, Health, Politics, Sports, Entertainment, each AI-summarized. Search any topic. Compare coverage across outlets. And on every story: *"What you should know first,"* an inline glossary for civic terms, and structured dossiers on the politicians, organizations, and bills involved. *Read the headline; learn the civics as you go.*
 
-**For hiring managers:** I built a civic-literacy news product end-to-end — Next.js + Postgres frontend on Vercel, Python FastAPI + LangGraph backend on Railway, civic dossier graph over Postgres entity tables, scheduled AI pipeline that does the analytical work off the user's critical path. Live latency stays under 100ms because the AI moved to a background pipeline that writes to Postgres; the frontend is a database read.
+**For hiring managers:** I built an AI-powered news aggregator + civic-literacy layer end-to-end — Next.js + Postgres frontend on Vercel, Python FastAPI + LangGraph backend on Railway. The architectural move that matters is splitting AI by SLA: the browse path (categories, summaries, dossiers, primers) is pre-computed in a background pipeline and served from Postgres in ~50ms; the live AI path (multi-source compare, topic search) runs on request and streams, accepting ~10–15s because the user is asking for analysis, not browsing.
 
 ---
 
 ## What makes Sift different
 
-1. **Civic dossiers, not just summaries.** Every politician, organization, bill, and news outlet has a structured page sourced from public records (OpenSecrets, GovTrack, ProPublica Nonprofit Explorer, FARA, FEC, Vote Smart). News stories link out to them inline.
-2. **Inline glossary that respects the reader.** Civic terms surface contextually inside the article — not in a separate panel. Defined where the reader needs them, in the language they need.
-3. **Adaptive primers for complex policy.** When a story sits on top of complex policy (the Inflation Reduction Act, debt-ceiling mechanics, FTC consent decrees), the primer expands to fit what the reader needs.
-4. **Cross-spectrum framing, observed not labeled.** When multiple outlets cover the same story, Sift shows what each chose to emphasize. AllSides political-lean and MBFC factual-reporting ratings shown verbatim — Sift never computes its own. The reader does the interpretation; the product does the legwork.
-5. **AI off the critical path.** Earlier versions did live click-time generation and ran 15+ seconds per category load. Sift moved the AI to a background pipeline that writes enriched content to Postgres. User requests are pure database reads — ~50ms.
+The product is two layers stacked, plus an architectural move that makes both work:
+
+### Foundation — AI-powered news aggregator
+
+1. **10 categories** from ~50 vetted outlets across the political spectrum.
+2. **AI summaries** on every article, pre-computed in the background pipeline.
+3. **Topic search** via vector similarity (Voyage AI + pgvector), SSE streaming, with Claude web-search fallback for niche queries.
+4. **Multi-source comparison** via LangGraph fan-out: pulls coverage across outlets, extracts claims, shows side-by-side framing.
+5. **Bookmarks** (Clerk-synced), dark/light themes, auth.
+
+### Differentiator — civic-literacy layer
+
+6. **"What you should know first"** — adaptive primer above each story; key terms and context the article assumes you already have.
+7. **Inline glossary** — civic terms surface contextually inside the article, with chip tooltips and click-through to the full dossier.
+8. **Civic dossiers** — every politician, organization, bill, and news outlet has a structured page sourced from public records (OpenSecrets, GovTrack, ProPublica Nonprofit Explorer, FARA, FEC, Vote Smart). News stories link out to them inline.
+9. **Cross-spectrum framing** — when multiple outlets cover the same story, what each Left / Center / Right outlet chose to emphasize. AllSides + MBFC ratings shown verbatim — Sift never computes its own.
+
+### Architecture move — AI split by SLA
+
+10. **Browse path:** pre-computed in a background pipeline; frontend reads from Postgres in ~50ms. The whole category-browsing experience is a database read.
+11. **Live AI path:** multi-source compare and topic search run live, accept ~10–15s, and stream as they go. Different work, different SLA.
 
 ---
 
