@@ -336,7 +336,7 @@ export const COPY = {
   landing: {
     // Single editorial paragraph below the lead story. The "what is this".
     explainer:
-      "Sift reads the day's news and adds the civic footnotes. Politicians, organizations, bills, and political terms link to plain-English explainers \u2014 sourced from public records. Follow what's happening without already knowing the players.",
+      "Sift surfaces today's news across categories from ~50 outlets \u2014 and adds civic footnotes to every story. What you should know first, terms you may not know, the political viewpoint of the outlet, dossiers on the senators and organizations involved, and side-by-side coverage across sources.",
     leadEyebrow: "Today\u2019s lead",
     leadFallbackTitle: "Today\u2019s stories are still being filed",
     leadFallbackBody:
