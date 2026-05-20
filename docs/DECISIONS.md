@@ -1,7 +1,7 @@
 # Sift — Architecture Decision Register
 
-**Last updated:** March 31, 2026
-**Status:** All decisions implemented — production live at siftnews.kristenmartino.ai
+**Last updated:** May 20, 2026
+**Status:** D1–D30 settled (v1 production live); D31–D34 added for v1.5 / v2 direction (May 2026)
 
 ---
 
@@ -36,6 +36,10 @@
 | D28 | Entity extraction visibility | Entity tags visible in UI on StoryCard | $0 | SETTLED |
 | D29 | Story ID stability | SHA256 hash of sorted article IDs | $0 | SETTLED |
 | D30 | Pipeline-time vs request-time | Pipeline-time — zero user-facing latency | $0 | SETTLED |
+| D31 | Project state mgmt scaffolding | STATUS.md + CLAUDE.md per repo; V0–V4 milestone tiers | $0 | SETTLED (May 2026) |
+| D32 | iOS plan v1 status | Under review — parity-shaped scope, premature canonical API, missing KPIs | $0 | OPEN (May 2026) |
+| D33 | Canonical /v1/* mobile API in sift-api | Deferred — reuse Next.js routes for now, collapse later | $0 | DEFERRED (May 2026) |
+| D34 | github-projects MCP server | Installed via .mcp.json + .claude/settings.json (Projects v2 tools for future sessions) | $0 | SETTLED (May 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -549,3 +553,85 @@ Pipeline store_node completes
 - StoryCards render inline with ArticleCards — stories surface naturally
 
 **Graceful degradation:** If a category has no multi-source coverage, the API returns an empty `stories[]` array and the UI shows only ArticleCards. No special handling needed.
+
+---
+
+## v1.5 / v2 direction (May 2026 onward)
+
+The next four decisions are added after the v1 production launch. They steer v1.5 (civic-literacy pivot, in flight) and v2 (native clients, planned). Some are settled and net-additive (D31, D34); some are open or actively deferred (D32, D33).
+
+---
+
+### D31. Project state management — STATUS.md + CLAUDE.md per repo, V0–V4 milestone tiers
+**Decision:** Adopt per-repo `STATUS.md` (repo root) for active state + `CLAUDE.md` (repo root) for agent orientation. Roadmap tiers labeled `tier-v1` / `tier-v1.5` / `tier-v2` / `tier-v3` / `tier-v4`. Plus a SessionStart hook that auto-loads `STATUS.md` into the agent context.
+
+**Why:**
+- High velocity (10+ PRs/week sustained) means context loss between sessions is real. `STATUS.md` is the always-fresh "Active focus / Open question / Next 3 / Blocked-on / Recent decisions" surface.
+- Per-repo `CLAUDE.md` codifies the pre-session ritual + end-of-PR doc-impact check. Standardizes what agents do on session start and PR close.
+- V1–V4 milestone tiers fit Sift's lifecycle better than OKRs at this stage: v1 shipped, v1.5 civic-literacy pivot in flight, v2 native clients, v3+ speculative.
+- SessionStart hook (`.claude/settings.json`) injects `STATUS.md` content into every new session — eliminates "stale context" failures.
+
+**Where it lands:** root-level `STATUS.md` + `CLAUDE.md` in both `sift` and `sift-api`. GitHub Issues stay actionable units; user-level Project ("Kristen Portfolio" — `users/kristenmartino/projects/3`) visualizes status across repos. Labels: `effort-{day,week,weeks}` + `tier-v{1,1.5,2,3,4}`.
+
+**Cost:** $0 — pure docs + hook config.
+
+---
+
+### D32. iOS plan v1 status — under review (parity-shaped scope critique)
+**Decision (status: OPEN):** Mark the original iOS app plan as **"under review"** pending revision. Don't start native implementation against the current v1 plan.
+
+**The plan as drafted:** native Swift / SwiftUI, focused reader MVP, single canonical `/v1/*` API in `sift-api`, four iOS-native features (push, widget, share extension, offline cache), 8-week TestFlight timeline. See [`docs/IOS_APP_PLAN.md`](./IOS_APP_PLAN.md) for the full plan as written.
+
+**The critique (cross-functional, 12 voices):** Full text in [`docs/IOS_APP_ASSESSMENT.md`](./IOS_APP_ASSESSMENT.md). Key findings:
+
+1. **Scope is parity-shaped, not MVP-shaped.** Four iOS-native features + a full reader + a new API surface + auth + bookmarks sync in 8 weeks is a parity build with extra steps.
+2. **Canonical `/v1/*` API is premature.** "What mature publishers do" is correct in steady state, wrong for pre-PMF (see D33).
+3. **KPIs and monetization missing.** Health metrics (crash-free rate, p95 latency) are present; success metrics (D30 retention, push CTR, share-extension WAU) are absent.
+4. **Design work isn't started.** No screens, flows, or wireframes referenced — the civic-literacy primer doesn't translate to iPhone-sized progressive disclosure as-is.
+5. **Apple Developer enrollment lead time isn't budgeted.** Can take 4–8 weeks for new entities; iOS work would slip silently.
+6. **Civic-literacy pivot (v1.5) is in flight.** Shipping iOS now means shipping a snapshot of an in-flight product.
+
+**Direction (still open):** Revise toward either (a) **share-extension-only MVP** (4 weeks, one feature, validates the "what's the actual story?" gesture) or (b) **defer native entirely** until web civic-literacy pivot is shipped (Q3 2026+). Final call dependent on D34 (platform-first call — see [`docs/IOS_VS_ANDROID.md`](./IOS_VS_ANDROID.md)).
+
+---
+
+### D33. Canonical `/v1/*` mobile API in `sift-api` — deferred
+**Decision (status: DEFERRED):** Don't build the `/v1/feed`, `/v1/topic`, `/v1/articles/:id`, `/v1/widget/today` endpoints proposed in the iOS plan. Native clients (when built) read from existing Next.js routes; add Edge caching if cold starts hurt.
+
+**Why:**
+- "Real companies have one canonical API" is true at maturity, not at pre-PMF. With one client (web) and one API (Next.js routes), building a second API runs two read paths in parallel for months.
+- The Next.js routes can be migrated to a canonical surface later, after a second client validates the need.
+- Net-new endpoints required for actual *new* functionality in v2: `POST /v1/devices/register`, `POST /v1/share/sift-this`, `GET /v1/widget/today`. Those land in `sift-api` when the native client work begins — not before.
+
+**Reconsider when:** web is being migrated to read from `sift-api` regardless, OR a third client (e.g., Android, watchOS) is in flight. At that point, the dedup math flips and one canonical API surface is worth the migration cost.
+
+**Cost (avoided):** ~2 weeks of net-new Python endpoints that would have been pure rename of existing TypeScript handlers.
+
+---
+
+### D34. github-projects MCP server — installed for Claude Code sessions
+**Decision:** Add `.mcp.json` + `.claude/settings.json` enabling the official `github-mcp-server` (HTTP variant at `https://api.githubcopilot.com/mcp/`) as a project-scoped MCP server in both `sift` and `sift-api`.
+
+**Why:**
+- The default Claude Code web harness exposes a useful subset of GitHub tools (`mcp__github__*`) — files, issues, PRs, branches, labels — but lacks **Projects v2 mutations** (`addProjectV2ItemById`, `updateProjectV2ItemFieldValue`).
+- Future sessions in either repo now have full Projects v2 + broader official tool surface (releases, advanced search, workflow dispatch, etc.).
+- Repeats per repo because MCP server configs are repo-scoped via `.mcp.json`.
+
+**Auth:** Bearer token from env var `GITHUB_PROJECTS_TOKEN` (set once in Claude Code web env vars, applies to both repos). PAT scopes: classic `project` (full) + `repo` — *or* fine-grained `Contents/Issues/PRs: Read+write` + `Projects: Read+write` (account-level).
+
+**Cost:** $0 — uses GitHub Copilot API quota (free for personal accounts within reasonable limits).
+
+**Naming:** server named `github-projects` (not `github`) to coexist with the existing harness server without name collision.
+
+---
+
+## Open questions (May 2026)
+
+Tracked here so they don't get lost between session restarts. Promoted to settled decisions when resolved.
+
+| # | Question | Where to decide |
+|---|----------|-----------------|
+| OQ1 | Native platform first — iOS vs Android vs PWA-only? | Lean: Android-first while iOS enrollment processes. See [`docs/IOS_VS_ANDROID.md`](./IOS_VS_ANDROID.md). |
+| OQ2 | DMCA fair-use posture for AI summarization on Railway | Audit + methodology update in flight (sift-api#54) |
+| OQ3 | Monetization — when, what, and at what tier | Not until v1.5 KPIs validate D30 ≥ 20% |
+| OQ4 | Cross-platform vs native-per-platform if both ship | Decide after platform-first is settled |
