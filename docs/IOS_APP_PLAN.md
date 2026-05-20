@@ -1,10 +1,18 @@
 # Sift — iPhone App Plan (sift-ios v1)
 
 **Date:** May 20, 2026
-**Status:** Plan — not yet started
-**Companion docs:** [`PRD.md`](./PRD.md), [`PROJECT_PLAN.md`](./PROJECT_PLAN.md), [`TECHNICAL_SPEC.md`](./TECHNICAL_SPEC.md), [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+**Status:** ⚠️ **Under review — do not act on this plan as written.** See companion docs below.
+**Companion docs:** [`IOS_APP_ASSESSMENT.md`](./IOS_APP_ASSESSMENT.md), [`IOS_VS_ANDROID.md`](./IOS_VS_ANDROID.md), [`PRD.md`](./PRD.md), [`PROJECT_PLAN.md`](./PROJECT_PLAN.md), [`TECHNICAL_SPEC.md`](./TECHNICAL_SPEC.md), [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 **Sibling repos today:** `kristenmartino/sift` (Next.js, Vercel), `kristenmartino/sift-api` (FastAPI, Railway)
 **New repo proposed:** `kristenmartino/sift-ios` (Swift, App Store Connect)
+
+> ### Review summary (May 20, 2026)
+>
+> A cross-functional assessment of this plan (see [`IOS_APP_ASSESSMENT.md`](./IOS_APP_ASSESSMENT.md)) identified material issues — most importantly that the v1 scope is parity-shaped not MVP-shaped, the new `/v1/*` API in `sift-api` is premature for a pre-PMF product, and KPIs / monetization are missing. A separate platform analysis ([`IOS_VS_ANDROID.md`](./IOS_VS_ANDROID.md)) argues Android-first is the stronger call for Sift's civic-literacy mission, with PWA-improved web as the cheapest interim step.
+>
+> **Current direction (open):** revise toward a much smaller scope (likely "share extension only" on whichever platform ships first), or defer native entirely and improve PWA on web. Decision pending.
+>
+> Plan body retained below as the reference artifact for the original proposal. Do not start implementation against it.
 
 ---
 
