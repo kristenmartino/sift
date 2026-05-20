@@ -23,6 +23,23 @@ Before opening the PR:
 - Did this change how the app boots / runs locally? Update the Quick Start in `README.md`.
 - Touched `docs/IOS_*.md` (plan / assessment / platform analysis)? Update the status banner at the top to reflect current state (Active / Under review / Archived).
 
+## Where to file new work (decision tree)
+
+When you discover something during a session that's worth tracking, use this to decide where it goes. The goal: **never lose anything, but don't over-file** either.
+
+| What you found | Where it goes |
+|---|---|
+| **Bug blocking current work** | Fix in active branch. Don't file. |
+| **Concrete feature committing to in next ~2 weeks** | GitHub issue with `tier-v1.5` / `tier-v2` + `effort-*` labels. Add to STATUS.md "Next 3" if it bumps something. |
+| **Concrete feature wanted eventually, no commitment** | Note in `STATUS.md` "Recent decisions" if it's a decision; otherwise wait until you're ready to commit, then file an issue. |
+| **Quirk or minor bug, not urgent** | GitHub issue with `bug` label. No need to surface in STATUS.md unless it blocks Next 3. |
+| **Critical bug found but not fixed** | GitHub issue with `bug` label, then mention in STATUS.md "Blocked-on" if it blocks Next 3. |
+| **Strategic question / open architectural decision** | STATUS.md "Open strategic question" — never a GitHub issue. Questions get answered through usage/conversation, not engineering work. |
+| **Architectural decision now made** | STATUS.md "Recent decisions" with a date. If substantial, also add a row in [`docs/DECISIONS.md`](./docs/DECISIONS.md). |
+| **Out-of-scope idea surfaced during work** | If it's tied to a specific file, use the spawned-task chip in your editor. Otherwise note in STATUS.md "Recent decisions" or open an issue if scoped. |
+
+**The rule:** dated + scoped → file an issue. Half-formed → leave in STATUS.md context or a casual note. Issues you'll never close are noise.
+
 ## Sibling repos
 
 | Repo | Role | Notes |
