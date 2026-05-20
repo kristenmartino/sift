@@ -23,9 +23,9 @@ Civic-literacy on the web has space. Each article page has:
 On a phone, surfacing all of this at once is a wall of text + chrome that nobody reads. The translation pattern is **progressive disclosure with editorial defaults**:
 
 1. **Above the fold (always visible):** title, source name + reading time, the AI summary (3–4 lines), one tap-to-expand "What you should know" affordance, a "Read at source" button.
-2. **Tap-to-expand:** the primer panel opens inline. Background paragraph + term chips appear.
-3. **Tap a term chip:** modal bottom sheet with the term definition + "Open full dossier" CTA.
-4. **Tap an entity chip (inline in the summary):** same modal bottom sheet pattern → dossier in Custom Tabs.
+2. **Tap-to-expand:** the primer panel opens inline. Background paragraph + 1–2 **inline definitions** (term + plain-English explanation, visible without further taps) appear. Overflow terms (3rd+) become chips for tap-to-dossier.
+3. **Tap a `→ dossier` link inside a primer definition:** direct to Custom Tabs (no bottom-sheet step — the user already read the definition inline).
+4. **Tap an entity chip** (e.g., "Schumer", "S. 1234" in the Mentioned-in-this-story row): modal bottom sheet with the entity preview (politician's top industries / bill status / org lean / outlet ratings) + "Open full dossier" CTA → Custom Tabs.
 5. **Tap the outlet badge:** outlet dossier in Custom Tabs.
 6. **Swipe up from the summary (or scroll past it):** cross-spectrum framing comparison appears as a section.
 
@@ -48,6 +48,12 @@ Six surfaces in v1. Listed in order of importance to the civic-literacy mission.
 
 ---
 
+## Design revisions
+
+- **2026-05-20 (rev 1)** — **Primer pattern: chip-and-sheet → inline definitions.** The original draft surfaced primer terms as `SuggestionChip`s that opened a `ModalBottomSheet` on tap. Revised after visual review of the first Figma pass: the primer's job is to **teach** in one read; gating each definition behind another tap adds friction without value, and the rendered chip-only state felt empty / sparse. New pattern shows 1–2 definitions inline (term + plain-English explanation), with `→ dossier` link to Custom Tabs for the rare case the reader wants to go deeper. The bottom-sheet pattern is now reserved exclusively for **entity chips** (people / orgs / bills / outlets mentioned in the article body), where a preview card is genuinely useful before click-through. See §Screen 1 § Primer panel — expanded state.
+
+---
+
 ## Screen 1: Article Detail (the big one)
 
 ### Information architecture
@@ -62,7 +68,7 @@ Anatomy, top to bottom:
    - Source name · published date · read time (single line, muted)
    - Outlet badge (compact — outlet name + AllSides political-lean dot)
 3. **AI summary** (body, 16sp, 1.5 line-height) — 2–4 paragraphs.
-4. **"What you should know first" panel (expandable)** — collapsed by default below the summary. Tap to expand.
+4. **"What you should know first" panel (expandable)** — collapsed by default below the summary. Tap to expand → background paragraph + 1–2 inline definition cards (term + definition visible at once, no further tap required to read). Overflow terms (3rd+) become tap-to-dossier chips at the bottom of the panel.
 5. **Cross-spectrum framing** (when available from story threading) — collapsed by default, similar pattern.
 6. **Entity chips section** — `EntityLink[]` from the article, displayed as a horizontal-scrolling row of `SuggestionChip` components. Tap → bottom sheet → dossier in Custom Tabs.
 7. **Sticky bottom CTA** — "Read at source" pill button. Always visible regardless of scroll.
@@ -119,48 +125,86 @@ Anatomy, top to bottom:
 
 ### Primer panel — expanded state
 
-```
-   ┌────────────────────────────────────┐
-   │ 📖 What you should know first    ▲ │
-   ├────────────────────────────────────┤
-   │                                    │
-   │ Background:                        │
-   │ The bill follows months of debate  │
-   │ over how the federal government    │
-   │ should evaluate AI vendors.        │
-   │ A previous version stalled in      │
-   │ committee in March.                │
-   │                                    │
-   │ Key terms:                         │
-   │  ╭──────────╮ ╭──────────────────╮ │
-   │  │ cloture  │ │ procurement      │ │   <- Term chips
-   │  ╰──────────╯ ╰──────────────────╯ │
-   │  ╭──────────────────╮              │
-   │  │ S. 1234 (H.R.…)  │              │
-   │  ╰──────────────────╯              │
-   │                                    │
-   └────────────────────────────────────┘
-```
+The primer is the **teaching surface**. Its job: answer *"what do I need to know to understand this article?"* in one read, without further taps.
 
-Tap a term chip → modal bottom sheet:
+Pattern: background paragraph + 1–2 **inline definition cards** (term name + plain-English definition, visible at once). Overflow terms (3rd+) become `SuggestionChip`s at the bottom of the panel for tap-to-dossier. Cap: 2 inline definitions to keep primer height bounded — articles with many obscure terms surface the rest as chips.
 
 ```
-   ────────────────────────────────────
-                   ━━━            <- drag handle
-
-   cloture
-
-   A Senate procedure that requires
-   60 votes to end debate on most
-   legislation.
-
-   Source: U.S. Senate Glossary
-   ───
-   ╭────────────────────────────────╮
-   │ Open full dossier ↗            │
-   ╰────────────────────────────────╯
-   ────────────────────────────────────
+   ┌──────────────────────────────────────────┐
+   │ 📖  What you should know first         ▲ │
+   ├──────────────────────────────────────────┤
+   │                                          │
+   │ The bill follows months of debate over   │
+   │ how the federal government should        │
+   │ evaluate AI vendors. A previous version  │
+   │ stalled in committee in March after      │
+   │ disagreements over disclosure            │
+   │ thresholds.                              │
+   │                                          │
+   │ ─────────────────────────                │
+   │                                          │
+   │ cloture                     → dossier    │   <- inline definition 1
+   │ A Senate procedure that requires 60      │
+   │ votes to end debate and force a final    │
+   │ vote on most legislation.                │
+   │                                          │
+   │ procurement                              │   <- inline definition 2
+   │ How the federal government buys goods    │
+   │ or services from private vendors —       │
+   │ contracts, RFPs, vendor evaluation.      │
+   │                                          │
+   │ ─────────────────────────                │
+   │                                          │
+   │ More terms:                              │
+   │  ╭──────────────────╮                    │
+   │  │ S. 1234 (H.R.…)  │                    │   <- overflow chip (3rd+ term)
+   │  ╰──────────────────╯                    │
+   │                                          │
+   └──────────────────────────────────────────┘
 ```
+
+Each inline definition card:
+- **Term name** (semibold, 14sp) + optional `→ dossier` link (only when the term resolves to a curated entity — e.g., a bill with a `bill_profile` row, or a regulatory concept with an org dossier).
+- **Definition body** (regular, 13sp, ~1–2 sentences, 8th-grade reading level).
+- Tap the `→ dossier` link → Custom Tabs to the dossier page. **No bottom sheet step** — the user already read the definition inline.
+
+The 3rd+ key term renders as a `SuggestionChip` under "More terms:" — tap → bottom sheet (entity-chip pattern below) for the rare case the reader wants depth on an additional term.
+
+**Why inline vs the chip-and-sheet pattern originally drafted:** see the §Design revisions section above. Short version: the primer's job is to teach in one read; a bottom sheet for every term turns teaching into a treasure hunt. The bottom-sheet pattern is reserved for entity chips below.
+
+### Entity chip → bottom sheet pattern
+
+Different from primer terms. When the user taps an entity chip in the "Mentioned in this story" row at the bottom of the article (a person, org, bill, or outlet), a `ModalBottomSheet` shows a preview card sourced from the curated dossier — *before* the user commits to leaving the article for Custom Tabs:
+
+```
+   ╭──────────────────────────────────────────╮
+   │                  ━━━                     │   <- drag handle
+   ├──────────────────────────────────────────┤
+   │                                          │
+   │ Chuck Schumer                            │
+   │ D-NY · Senate Majority Leader            │
+   │                                          │
+   │ TOP PAC INDUSTRIES (2022 cycle)          │
+   │   Securities & Investment      $2.4M     │
+   │   Real Estate                  $1.1M     │
+   │   Lawyers & Law Firms          $0.9M     │
+   │                                          │
+   │ Source: OpenSecrets                      │
+   │                                          │
+   │ ╭──────────────────────────────────────╮ │
+   │ │ Open full dossier ↗                  │ │
+   │ ╰──────────────────────────────────────╯ │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+```
+
+Preview content varies by entity type (server returns the right shape based on `EntityLinkType`):
+- **Politician** → party + chamber + state + top 3 PAC industries
+- **Bill** → short title + status + sponsor name + cosponsors count
+- **Org** → type + political lean + funding model + FARA registration flag
+- **Outlet** → AllSides political-lean rating + MBFC factual rating + parent company
+
+Tap **Open full dossier** → Custom Tabs to the corresponding web page (`/politician/:bioguideId`, `/bill/:billId`, `/org/:slug`, `/outlet/:slug`).
 
 ### Cross-spectrum framing — expanded
 
@@ -188,8 +232,9 @@ Tap a term chip → modal bottom sheet:
 - **Bookmark toggle (☆/★)** — Material 3 IconButton in app bar. Toggle state on tap with a brief "Saved to bookmarks" snackbar. Bookmark persists locally first (Room), syncs to Clerk + Postgres in background.
 - **Share button (⤴)** — Android share sheet. Pre-fills the article URL + title.
 - **Primer panel expand** — `AnimatedVisibility` with `expandVertically()` + `fadeIn()`. ~200ms. No jank — measure on Pixel 9 with `BeyondBoundsLayout`.
-- **Term chip tap** — opens `ModalBottomSheet` with `WindowInsets.ime` aware. Dragdownable. "Open full dossier" closes the sheet + launches Custom Tabs.
-- **Entity chip tap** — same as term chip but the bottom sheet shows the entity's preview card (politician's top industries / org's lean / etc.).
+- **`→ dossier` link in primer (inline definition)** — direct launch into Custom Tabs. No bottom-sheet step; the user has already seen the definition inline.
+- **Overflow term chip tap** (rare — 3rd+ key term in primer) — opens `ModalBottomSheet` with the term definition + "Open full dossier" CTA.
+- **Entity chip tap** (people / orgs / bills / outlets mentioned in the article) — opens `ModalBottomSheet` with the entity preview card (politician's top industries / bill status / org's lean / outlet ratings). "Open full dossier" → Custom Tabs.
 - **Sticky CTA** — `BottomAppBar` or floating button. Stays at safe-area-respecting bottom. Tap → Custom Tabs with reader-mode hint (`CustomTabsIntent.Builder.setReadOnly(true)`).
 
 ### Open design questions
@@ -532,9 +577,10 @@ Composables to extract as reusable primitives during Phase 2 (each gets its own 
 
 - [x] `ArticleCard` — already exists in `ui/feed/`
 - [ ] `OutletBadge` — compact + full variants
-- [ ] `EntityChip` — Suggestion chip + tap-to-bottom-sheet pattern
-- [ ] `TermChip` — same shape as EntityChip, distinct color
-- [ ] `PrimerPanel` — expandable card with background + terms
+- [ ] `EntityChip` — `SuggestionChip` + tap-to-bottom-sheet pattern (for "Mentioned in this story" row)
+- [ ] `OverflowTermChip` — same shape as EntityChip, distinct color, used only for primer overflow terms (3rd+)
+- [ ] `PrimerPanel` — expandable card with background paragraph + 1–2 `PrimerDefinition` items + optional overflow chip row
+- [ ] `PrimerDefinition` — inline term + plain-English definition + optional `→ dossier` link
 - [ ] `CrossSpectrumPanel` — expandable card with L/C/R columns
 - [ ] `BottomSheetWithDossierCTA` — modal sheet with term/entity preview + "Open full dossier"
 - [ ] `SiftAppBar` — branded top app bar variant
