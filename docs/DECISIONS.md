@@ -1,7 +1,7 @@
 # Sift — Architecture Decision Register
 
 **Last updated:** May 20, 2026
-**Status:** D1–D30 settled (v1 production live); D31–D34 added for v1.5 / v2 direction (May 2026)
+**Status:** D1–D30 settled (v1 production live); D31–D35 added for v1.5 / v2 direction (May 2026)
 
 ---
 
@@ -40,6 +40,7 @@
 | D32 | iOS plan v1 status | Under review — parity-shaped scope, premature canonical API, missing KPIs | $0 | OPEN (May 2026) |
 | D33 | Canonical /v1/* mobile API in sift-api | Deferred — reuse Next.js routes for now, collapse later | $0 | DEFERRED (May 2026) |
 | D34 | github-projects MCP server | Installed via .mcp.json + .claude/settings.json (Projects v2 tools for future sessions) | $0 | SETTLED (May 2026) |
+| D35 | sift-android annotation processor | KSP1 (KSP2 disabled until Hilt's Gradle plugin transform supports it) | $0 | SETTLED (May 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -622,6 +623,22 @@ The next four decisions are added after the v1 production launch. They steer v1.
 **Cost:** $0 — uses GitHub Copilot API quota (free for personal accounts within reasonable limits).
 
 **Naming:** server named `github-projects` (not `github`) to coexist with the existing harness server without name collision.
+
+---
+
+### D35. `sift-android` annotation processor — KSP1 (KSP2 disabled)
+**Decision:** Set `ksp.useKSP2=false` in `sift-android/gradle.properties`. Stay on KSP1 (the default) until Hilt's Gradle plugin transform is wired to run before KSP2.
+
+**Why:**
+- The initial scaffold (`sift-android@d9eeffd`) opted into KSP2. First clean build failed with `[ksp] [Hilt] Expected @AndroidEntryPoint to have a value. Did you forget to apply the Gradle Plugin?` for every `@HiltAndroidApp` / `@AndroidEntryPoint` site.
+- Root cause is task ordering: Hilt's Gradle plugin bytecode transform auto-fills the parent class into those annotations. With KSP1, the transform runs first and KSP sees the populated annotation. With KSP2 (Hilt 2.52), KSP reads the annotation *before* the transform, sees an empty value, and bails.
+- KSP1 is the supported default. Pinning to it costs nothing measurable (KSP2's incremental compilation gains are marginal at the current ~10-file codebase) and unblocks every downstream Hilt-touching commit.
+
+**Reconsider when:** Hilt ships a release that documents KSP2 compatibility, OR an upstream Hilt issue is closed confirming the transform ordering fix. Track via `dagger`'s GitHub releases. At that point, flip back to `ksp.useKSP2=true` and verify `./gradlew assembleDebug` stays green.
+
+**Cost (avoided):** Would have been ~hours of debugging a confusing build error for every new contributor cloning the repo. The KSP1 path "just works" with the rest of the stack (Room compiler also KSP1).
+
+**See also:** `sift-android` PR #1 (build-error fix that includes this pin), `sift-android/STATUS.md` Recent decisions entry from 2026-05-20.
 
 ---
 
