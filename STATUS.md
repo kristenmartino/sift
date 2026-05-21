@@ -1,43 +1,46 @@
 # Sift — STATUS
 
 **Updated:** 2026-05-20
-**Tier:** v1.5 (civic-literacy pivot, in flight)
+**Tier:** v1.5 (civic-literacy pivot + agentic surfaces in Android v1)
 **Velocity:** High (10+ PRs / week)
 
 ## Active focus
 
-Civic-literacy pivot rollout (web). Recently shipped: 170 new dossier entries seeded (via `sift-api`); entity linker fix gated A/B-able in production; `docs/PRODUCT_STORY.md` refreshed; portfolio-v2 case study deployed. Sift-mcp v0.1 shipped (separate repo) with Loom + DM to Harish.
+Civic-literacy pivot rollout (web). Android v1 build entering Phase 0 (per [`docs/ANDROID_APP_v1.md`](./docs/ANDROID_APP_v1.md) — decisions locked, scaffold pending). Sift-mcp merge into sift-api in flight (tracked at [`sift-api#62`](https://github.com/kristenmartino/sift-api/issues/62)). Ask Sift + Refined Compare agentic surfaces approved for Android v1 scope (tracked at [`sift-api#63`](https://github.com/kristenmartino/sift-api/issues/63)). Recently shipped: 170 new dossier entries seeded (via `sift-api`); entity linker fix gated A/B-able in production; `docs/PRODUCT_STORY.md` refreshed; portfolio-v2 case study deployed.
 
 ## Open strategic question
 
-**Native platform first: iOS vs Android?**
+**Geographic scope of civic content + monetization timeline.**
 
-Apple Developer Program enrollment is requested but may take weeks (24–72h personal, 4–8 weeks for new entities). Android: $25 one-time, ~instant approval, lenient Play Store review.
-
-**Working recommendation: start Android while iOS enrollment is pending.** Converts the enrollment-delay window from zero opportunity cost into a shipped Android v1; Android validates which native features actually matter before iOS gold-plates them; the backend infra (endpoints, push registration schema, share-extension handoff) is built once and reused. See [`docs/IOS_VS_ANDROID.md`](./docs/IOS_VS_ANDROID.md).
-
-Final call open.
+Native platform direction resolved 2026-05-20 as **Android-first** (Path A from [`docs/IOS_VS_ANDROID.md`](./docs/IOS_VS_ANDROID.md)). What remains open: v1 content scope (U.S.-only vs global from launch) and monetization timeline (free indefinitely vs subscription exploration in 2027). Both shape whether Android-first holds longer-term or eventually pairs with iOS-as-second-platform. See [`docs/IOS_VS_ANDROID.md`](./docs/IOS_VS_ANDROID.md) §Decision queue.
 
 ## Next 3
 
-1. **[committed]** [#56 — SSR / streaming for `/news` first-paint](https://github.com/kristenmartino/sift/issues/56) — architectural fix to break the 5.5s mobile LCP floor. LCP element after PR #55 is hydrated text inside `NewsAggregator`, not image — `priority`/`preload` is exhausted. Tier `v1.5` · `effort-week`.
-2. **[committed]** Civic-literacy pivot — final-mile checklist (umbrella issue, see Issues tab) — entity-linker promotion to default-on, dossier coverage parity per category, primer-expand instrumentation rollout. Tier `v1.5` · `effort-weeks`.
-3. **[sketch]** Resolve native platform direction — Android-first vs iOS-first vs PWA-only. Blocks iOS-plan revision and any mobile build. Decision-only; no issue. Tier `v2` · `effort-day`.
+1. **[committed]** [#56 — SSR / streaming for `/news` first-paint](https://github.com/kristenmartino/sift/issues/56) — architectural fix to break the 5.5s mobile LCP floor. LCP element after PR #55 is hydrated text inside `NewsAggregator`, not image. Tier `v1.5` · `effort-week`.
+2. **[committed]** [#98 — Civic-literacy pivot final-mile checklist](https://github.com/kristenmartino/sift/issues/98) — entity-linker promotion to default-on, dossier coverage parity per category, primer-expand instrumentation rollout. Depends on `sift-api` #53 + #54. Tier `v1.5` · `effort-weeks`.
+3. **[committed]** Android v1 build (per [`docs/ANDROID_APP_v1.md`](./docs/ANDROID_APP_v1.md)) — Phase 0 (decisions locked, scaffold pending). **Scope now includes Ask Sift chat + Compare button (deterministic + Refined).** Pre-week-1 design sprint → ~12 weeks to production. New repo `kristenmartino/sift-android` to be created. Tier `v1.5` · `effort-weeks`.
+
+Web-side in flight alongside the Android build:
+- **Web `/ask` chat UI** for Ask Sift (Phase 4 of `sift-api` [#63](https://github.com/kristenmartino/sift-api/issues/63)). Ships parallel to Android weeks 6-8. Tier `v1.5` · `effort-week`.
+- **Web Compare button gains "Focus on…" input** for Refined Compare (Phase 5 of `sift-api` [#63](https://github.com/kristenmartino/sift-api/issues/63)).
 
 ## Blocked-on
 
-- Apple Developer Program enrollment (iOS work waits)
-- Harish demo response (sift-mcp v0.5 hardening waits, separate repo)
-- Resolution of the Open strategic question above (mobile work waits)
+- Apple Developer Program enrollment (deferred — iOS work waits behind Android v1)
+- Triage of `sift-api` #62 (merge) and #63 (Ask Sift + Refined Compare) into the sequenced roadmap
 
 ## Recent decisions
 
-- **2026-05-20** — iOS plan v1 marked **under review**. Cross-functional assessment surfaced parity-shaped scope, premature canonical-API, and missing KPIs. See [`docs/IOS_APP_ASSESSMENT.md`](./docs/IOS_APP_ASSESSMENT.md). Plan retained as reference, not active direction.
-- **2026-05-20** — Canonical `/v1/*` API in sift-api **deferred**. For pre-PMF, reuse Next.js routes (+ Edge caching if needed); collapse later when web→mobile migration is scheduled.
-- **2026-05-20** — **Android-first leaning** (Path A) for native. Civic-literacy mission aligns with reach, not premium audience. Final decision open.
+- **2026-05-20** — **Android v1 scope expanded to include Ask Sift + Compare button.** Previously: reader + share extension only. Now: reader + share extension + Ask Sift agentic chat + Compare button (deterministic + Refined). Reasoning: without Ask Sift, native mobile is a polished reader competing with Apple News / Artifact. WITH Ask Sift, it's a civic-literacy agent on the phone. That's the wedge that justifies native. Timeline impact: ~10 weeks → ~12 weeks.
+- **2026-05-20** — **Refined Compare added to v1 scope.** Lens-driven agentic comparison via `lens` parameter on `/api/compare`. Same endpoint as the deterministic compare; backend routes based on lens presence. Plan in `sift-api/docs/REFINED_COMPARE_PLAN.md`.
+- **2026-05-20** — **Mobile is REST-only.** Even the agentic surfaces (Ask Sift, Refined Compare) call REST/SSE — the agent loop runs server-side; MCP is internal plumbing. `sift-mcp` #4 (hosted HTTP/SSE) deferred indefinitely. Rationale in `sift-api/docs/MOBILE_PROTOCOL_DECISION.md`.
+- **2026-05-20** — **`sift-mcp` merges into `sift-api`.** Architecture spec at `sift-api/docs/MERGE_MCP_INTO_API.md`. Tracked at `sift-api` [#62](https://github.com/kristenmartino/sift-api/issues/62) with 4 phases. Driver: duplication between web's compare path (`app/api/compare/route.ts:55` → `sift-api` `/analyze/compare`) and `sift-mcp` `compare_outlets` is already real. Merge consolidates handlers and unblocks the agentic surfaces.
+- **2026-05-20** — iOS plan v1 marked **under review**. Cross-functional assessment surfaced parity-shaped scope, premature canonical-API, and missing KPIs. See [`docs/IOS_APP_ASSESSMENT.md`](./docs/IOS_APP_ASSESSMENT.md). Plan retained as reference; **Android-first** active direction.
+- **2026-05-20** — Canonical `/v1/*` API for mobile **deferred**. Android uses Next.js routes + 4 net-new endpoints in sift-api (`/v1/share/sift-this`, `/v1/devices/register`, `/api/ask`, `/api/compare` with `lens`).
+- **2026-05-20** — **Android-first leaning** (Path A) for native. Civic-literacy mission aligns with reach, not premium audience. Active.
 - **2026-05-20** — DMCA audit: Sift's Railway footprint is **low-risk** under Railway's fair-use clause; real exposure is publisher-direct cease-and-desists, not host-mediated. Methodology page update queued in sift-api side.
 - *(sift-mcp side, separately committed in that repo: hybrid index+web architecture; 26-outlet pool with smart DB-exclusion selection; `load_dotenv(override=True)`; `compare_outlets` unified-claims-array return shape.)*
 
 ---
 
-*See also: [`docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md), [`docs/DECISIONS.md`](./docs/DECISIONS.md), [`docs/PRODUCT_STORY.md`](./docs/PRODUCT_STORY.md), [`CLAUDE.md`](./CLAUDE.md). Sibling repos: `sift-api` (backend), `sift-mcp` (MCP server, separate cadence).*
+*See also: [`docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md), [`docs/DECISIONS.md`](./docs/DECISIONS.md), [`docs/PRODUCT_STORY.md`](./docs/PRODUCT_STORY.md), [`docs/ANDROID_APP_v1.md`](./docs/ANDROID_APP_v1.md), [`CLAUDE.md`](./CLAUDE.md). Sibling repos: `sift-api` (backend), `sift-mcp` (MCP server — merging into sift-api per #62).*
