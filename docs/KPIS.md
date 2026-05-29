@@ -42,7 +42,7 @@ The "Read at source" band has a top end on purpose — too many click-throughs m
 |---|---|---|---|
 | `/api/news` p95 latency (server) | ~150ms per `feed-perf` CI | ≤ 200ms | Healthy |
 | `/news` mobile LCP (end-to-end) | 5.5s after PR #55 wins | ≤ 2.5s | Blocked on [sift#56](https://github.com/kristenmartino/sift/issues/56) (SSR + streaming) |
-| Pipeline run duration (10-min cron) | ~90s avg | ≤ 5 min | Healthy; ample margin |
+| Pipeline run duration (30-min scheduler) | ~90s avg | ≤ 5 min | Healthy; ample margin |
 | Pipeline failure rate (Sentry) | < 1% | < 1% | Healthy |
 | Monthly cost | ~$9 (current) | < $100 through v1.5 | On track. Projected $30–50/mo at growth. |
 

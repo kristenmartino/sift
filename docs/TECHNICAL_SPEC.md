@@ -14,7 +14,7 @@ Two services + one database:
 | Service | Platform | Language | Purpose |
 |---------|----------|----------|---------|
 | sift-web | Vercel (Hobby) | TypeScript (Next.js 15) | Frontend, API routes (DB reads), Clerk auth, SSE streaming |
-| sift-api | Railway | Python (FastAPI + LangGraph) | Background pipeline (10-min scheduler), multi-source comparison |
+| sift-api | Railway | Python (FastAPI + LangGraph) | Background pipeline (30-min scheduler), multi-source comparison |
 | sift-db | Neon (free tier) | PostgreSQL 17 + pgvector | Shared database, single source of truth |
 
 ---
@@ -535,4 +535,4 @@ httpx>=0.28.0
 
 ### Background refresh
 
-Pipeline refresh runs via Railway's asyncio background scheduler (every 10 minutes in production). A Vercel cron route (`/api/cron/refresh`) exists as a manual fallback but is not actively scheduled (avoids Vercel Pro requirement). `vercel.json` is empty (`{}`).
+Pipeline refresh runs via Railway's asyncio background scheduler (every 30 minutes in production). A Vercel cron route (`/api/cron/refresh`) exists as a manual fallback but is not actively scheduled (avoids Vercel Pro requirement). `vercel.json` is empty (`{}`).

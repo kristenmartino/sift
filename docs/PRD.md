@@ -62,7 +62,7 @@ Two services, one database:
 - **Python FastAPI + LangGraph on Railway** — background pipeline: primer generation, entity extraction, entity linking to dossiers, summarization, story synthesis, story clustering, civic context generation, batched API client, cross-source comparison workflow, usage tracking.
 - **Neon Postgres + pgvector** — single source of truth for articles, embeddings, entity dossiers, bookmarks.
 
-Pipeline runs every 10 minutes via asyncio scheduler on Railway. User requests never touch Claude — they read from Postgres in <50ms.
+Pipeline runs every 30 minutes via asyncio scheduler on Railway. User requests never touch Claude — they read from Postgres in <50ms.
 
 Full technical details: `ARCHITECTURE.md` and `TECHNICAL_SPEC.md`.
 
@@ -105,7 +105,7 @@ Full technical details: `ARCHITECTURE.md` and `TECHNICAL_SPEC.md`.
 - Not a chatbot interface. Browse, don't interrogate.
 - Not a trust-judgment layer. Sift surfaces AllSides + MBFC ratings verbatim; it does not compute its own.
 - Not a propaganda decoder. (Different product, different corpus, different audience.)
-- Not a real-time ticker. Refreshes every 10–15 minutes.
+- Not a real-time ticker. Refreshes every 30 minutes.
 - Not a full-text reader. Links to original sources.
 - Not a social platform. No comments, no voting.
 

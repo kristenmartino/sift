@@ -29,7 +29,7 @@ Whiteboard cue: 3 boxes + 1 database.
 Walk through:
 
 1. **Vercel hosts Next.js 15** (App Router, TypeScript). Owns user reads + UI. Server Components fetch from Postgres directly — **no client-side fetch in the browse path.**
-2. **Railway hosts FastAPI + LangGraph.** Long-running process — LangGraph workflows need this; Vercel functions cold-start poorly for multi-step orchestration. asyncio scheduler runs pipeline every 10 min. On-demand compare workflow.
+2. **Railway hosts FastAPI + LangGraph.** Long-running process — LangGraph workflows need this; Vercel functions cold-start poorly for multi-step orchestration. asyncio scheduler runs pipeline every 30 min. On-demand compare workflow.
 3. **Neon Postgres + pgvector** is the single source of truth. Articles + embeddings + dossiers + bookmarks in one DB. pgvector handles both structured queries and vector cosine in the same `WHERE`.
 
 Plus external services: **Claude Haiku 4.5** for summaries + compare. **Voyage AI** for embeddings (free 50M tokens/mo). **Clerk** for auth.
@@ -63,7 +63,7 @@ Followed by **story threading** (cross-source clustering) — a 4-node workflow 
 
 **Anticipate:**
 
-- *"What if RSS lags breaking news?"* — Tradeoff acknowledged. ~10-minute lag for most outlets. Topic search has Claude `web_search` fallback for niche/breaking queries the indexed pool hasn't seen.
+- *"What if RSS lags breaking news?"* — Tradeoff acknowledged. ~30-minute lag for most outlets. Topic search has Claude `web_search` fallback for niche/breaking queries the indexed pool hasn't seen.
 - *"Cost?"* — ~$4/mo Claude. Batched. Per-article cost ~$0.001. Voyage free tier covers all embeddings. Total infra: ~$9/mo current.
 - *"Why LLM-as-judge for clustering instead of embedding cosine?"* — Embedding catches same-topic (~90% accuracy). LLM judges distinguish same-event from same-topic (~97%). At Sift's article volume per category (max 50 in a 48h window), a single LLM call handles it. Embedding-prefilter + LLM-refine was rejected — added complexity, no benefit at this scale.
 

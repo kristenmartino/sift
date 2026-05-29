@@ -11,7 +11,7 @@
 ```
 Browser --> Vercel (Next.js) --reads--> Neon Postgres (pgvector)
                 |
-                +----- cron /10min ----> Railway (FastAPI + LangGraph) --writes--> Neon Postgres
+                +----- refresh /30min --> Railway (FastAPI + LangGraph) --writes--> Neon Postgres
                 +----- /api/compare ---> Railway
 ```
 

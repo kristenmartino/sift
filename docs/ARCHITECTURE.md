@@ -94,7 +94,7 @@ User types "AI policy in European healthcare"
 
 ---
 
-## Data flow: background pipeline (every 10 min)
+## Data flow: background pipeline (every 30 min)
 
 ```
 Railway asyncio scheduler fires (or Vercel cron fallback)
