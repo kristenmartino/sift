@@ -24,6 +24,13 @@ import type { Article, CategoryId } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import { logUsage } from "@/lib/usage-tracker";
 
+// Temporary safety fix while the topic-search AI fallback still lives in this
+// Next.js route (grandfathered — see docs/DECISIONS.md D35; migrating to
+// sift-api in #79). The Claude web_search fallback runs ~10–15s, well past
+// Vercel's ~10s default function timeout, so without this the route can be
+// platform-killed mid-stream. Hobby max is 60s.
+export const maxDuration = 60; // seconds — Vercel Hobby maximum
+
 const BAD_SUMMARIES = ["unable to provide summary"];
 
 function cleanSummary(raw: string | null): string {
