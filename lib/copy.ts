@@ -349,8 +349,11 @@ export const COPY = {
     compareSubtitle: "One story, three angles. Sift shows what each outlet chose to emphasize \u2014 described, not labeled \u201cbiased\u201d or \u201cobjective.\u201d You read; the product does the legwork.",
     compareCta: "Compare any topic",
     // Source colophon.
-    colophonHeading: "Read from",
-    colophonSummary: "~50 vetted outlets \u00b7 across the political spectrum \u00b7 refreshed every 30 minutes",
+    colophonHeading: "Curated outlets",
+    colophonDescription:
+      "Sift maintains structured outlet profiles for its curated source set, including ownership, funding model, bias-rating references, and factual-reporting references where available.",
+    colophonSummary:
+      "Outlet profiles are curated from public source metadata and updated as the source set evolves.",
     // Footer colophon link.
     colophonLink: "Colophon",
   },

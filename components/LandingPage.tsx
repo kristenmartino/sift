@@ -6,15 +6,17 @@ import SiftLogo from "./SiftLogo";
 import LandingMasthead from "./landing/LandingMasthead";
 import LeadStory from "./landing/LeadStory";
 import ComparisonDemo from "./landing/ComparisonDemo";
-import SourceColophon from "./landing/SourceColophon";
+import SourceColophon, { type SourceColophonOutlet } from "./landing/SourceColophon";
 import type { Article } from "@/lib/types";
 
 interface LandingPageProps {
   /** Server-fetched lead story (ISR @ 600s in app/page.tsx). Null = DB miss. */
   leadStory: Article | null;
+  /** Curated outlets from `outlet_profiles` (ISR @ 600s). Empty = DB miss/empty. */
+  outlets: SourceColophonOutlet[];
 }
 
-export default function LandingPage({ leadStory }: LandingPageProps) {
+export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       {/* Drop-cap rule, scoped to landing only — Sift's globals.css doesn't
@@ -40,7 +42,7 @@ export default function LandingPage({ leadStory }: LandingPageProps) {
       <main id="main-content">
         <LeadStory article={leadStory} />
         <ComparisonDemo />
-        <SourceColophon />
+        <SourceColophon outlets={outlets} />
       </main>
 
       {/* ── Colophon Footer ──────────────────────────── */}
