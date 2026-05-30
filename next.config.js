@@ -1,3 +1,4 @@
+const { withSentryConfig } = require("@sentry/nextjs");
 const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 });
@@ -21,8 +22,9 @@ const nextConfig = {
       "font-src 'self' https://fonts.gstatic.com data:",
       // img-src: self + any HTTPS (news article images from 100+ sources)
       "img-src 'self' https: data:",
-      // connect-src: API calls to self, Clerk, and server-side proxied services
-      "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai",
+      // connect-src: API calls to self, Clerk, server-side proxied services,
+      // and the Sentry ingest endpoint (only used when NEXT_PUBLIC_SENTRY_DSN is set)
+      "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai https://*.sentry.io",
       // Clerk auth iframes
       "frame-src https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
@@ -57,4 +59,12 @@ const nextConfig = {
   },
 };
 
-module.exports = withBundleAnalyzer(nextConfig);
+// Wrap with Sentry. Source-map upload is gated on SENTRY_AUTH_TOKEN, so CI and
+// any unconfigured build skip upload and never fail for a missing token.
+module.exports = withSentryConfig(withBundleAnalyzer(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  silent: true,
+});
