@@ -495,7 +495,9 @@ export function useCustomTopics(userId?: string | null) {
 
 // ─── useCompare ─────────────────────────────────────────
 
-const COMPARE_TIMEOUT_MS = 65_000; // Multi-source search can take 20-30s
+// ≥ the /api/compare proxy's maxDuration (60s); the proxy returns a clean 504
+// by ~55s. Compare runs ~20–30s, up to ~55s before the proxy gives up.
+const COMPARE_TIMEOUT_MS = 65_000;
 const COMPARE_SLOW_MS = 8_000;
 
 interface CompareState {
