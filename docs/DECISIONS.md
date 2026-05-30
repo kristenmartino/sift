@@ -24,7 +24,7 @@
 | D13 | Streaming | Build as part of initial launch (SSE article delivery) | $0 | SETTLED |
 | D14 | Embedding provider | Voyage AI (free 50M tokens/mo) | $0 | SETTLED |
 | D15 | Image handling | RSS feed images only — no OG scraping, no proxy | $0 | SETTLED |
-| D16 | Background refresh | Railway asyncio scheduler (every 10 min) + Vercel cron fallback | $0 | SETTLED |
+| D16 | Background refresh | Railway asyncio scheduler (every 30 min) + Vercel cron fallback | $0 | SETTLED |
 | D17 | Model selection | Haiku 4.5 (upgrade to Sonnet is one-line change) | ~$4/mo | SETTLED |
 | D22 | Compare source picker | Collapsed-by-default chip selector, 12 curated outlets | $0 | SETTLED |
 | D23 | Compare source list | Curated outlets, not freeform input | $0 | SETTLED |
@@ -325,7 +325,7 @@ RSS feeds include image URLs via `enclosure`, `media:content`, or `media:thumbna
 **Decision:** Railway asyncio scheduler (primary) + Vercel cron route (fallback)
 **Changed from:** Vercel Cron (requires Pro plan)
 
-Railway's FastAPI service runs an asyncio background task that refreshes every 10 minutes in production. A Vercel cron route also exists as a manual fallback. This avoids the $20/mo Vercel Pro requirement.
+Railway's FastAPI service runs an asyncio background task that refreshes every 30 minutes in production. A Vercel cron route also exists as a manual fallback. This avoids the $20/mo Vercel Pro requirement.
 
 ---
 

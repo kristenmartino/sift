@@ -22,7 +22,7 @@ flowchart LR
   end
 
   subgraph Railway[Railway - FastAPI + LangGraph]
-    Sched["asyncio scheduler<br/>every 10 min"]
+    Sched["asyncio scheduler<br/>every 30 min"]
     PipeWF[Pipeline workflow]
     CmpWF[Compare workflow]
   end

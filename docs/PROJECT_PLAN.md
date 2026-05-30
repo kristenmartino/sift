@@ -34,7 +34,7 @@
 | RSS feeds | 100+ feeds across 10 categories | **Live** |
 | Claude Haiku 4.5 | Batch summaries + comparison analysis + web search | **Live** |
 | Voyage AI embeddings | voyage-3-lite, 1024-dim | **Live** |
-| Background refresh | asyncio scheduler, every 10 minutes | **Live** |
+| Background refresh | asyncio scheduler, every 30 minutes | **Live** |
 | CI/CD | GitHub Actions (ruff + pytest) + Railway auto-deploy | **Live** |
 
 ### Database — Neon Postgres (free tier)
