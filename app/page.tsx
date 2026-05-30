@@ -12,9 +12,10 @@ export const metadata: Metadata = {
     "Sift reads from ~50 vetted outlets across the political spectrum and adds the civic context, cross-spectrum framing, and money trail the news assumes you already know. Every claim links to a public record.",
 };
 
-// ISR: re-render at most once every 10 minutes — same heartbeat as the
-// pipeline cron. The lead story above the fold stays at-most-one-cycle stale
-// without paying a DB round-trip on every visit.
+// ISR: re-render at most once every 10 minutes. This bounds staleness of the
+// server-fetched lead story + outlet list only — the masthead carries no
+// date/issue stamp (see LandingMasthead), so nothing time-sensitive freezes
+// into the ISR cache. The background pipeline refreshes content every ~30 min.
 export const revalidate = 600;
 
 export default async function Home() {
