@@ -15,7 +15,7 @@ Browser --> Vercel (Next.js) --reads--> Neon Postgres (pgvector)
                 +----- /api/compare ---> Railway
 ```
 
-- **sift** (this repo): Next.js 15 frontend on Vercel — reads from Postgres, serves UI
+- **sift** (this repo): Next.js 15 frontend on Vercel — reads from Postgres, serves UI. *(One grandfathered exception being migrated out: the topic-search AI fallback still runs AI + writes here — see [`docs/DECISIONS.md`](docs/DECISIONS.md) D35.)*
 - **sift-api**: Python FastAPI + LangGraph on Railway — background pipeline + comparison workflow
 - **Database**: Neon Postgres (pgvector) — shared source of truth
 
