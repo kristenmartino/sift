@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import LandingPage from "@/components/LandingPage";
-import { getTopStoryForLanding } from "@/lib/db";
+import { getAllOutletProfiles, getTopStoryForLanding } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
 import type { Article, CategoryId } from "@/lib/types";
 
@@ -18,7 +18,18 @@ export const metadata: Metadata = {
 export const revalidate = 600;
 
 export default async function Home() {
-  const lead = await getTopStoryForLanding();
+  const [lead, outletProfiles] = await Promise.all([
+    getTopStoryForLanding(),
+    // Curated outlet list for the source colophon. Guarded so an outlet-data
+    // miss degrades to an empty list rather than breaking the landing (same
+    // posture as getTopStoryForLanding returning null).
+    getAllOutletProfiles().catch(() => []),
+  ]);
+  const outlets = outletProfiles.map((o) => ({
+    slug: o.slug,
+    name: o.name,
+    allSidesRating: o.allSidesRating,
+  }));
   const primer = lead ? parseContextPrimer(lead.context_primer) : null;
   const leadStory: Article | null = lead
     ? {
@@ -37,5 +48,5 @@ export default async function Home() {
       }
     : null;
 
-  return <LandingPage leadStory={leadStory} />;
+  return <LandingPage leadStory={leadStory} outlets={outlets} />;
 }
