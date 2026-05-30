@@ -40,6 +40,7 @@
 | D32 | iOS plan v1 status | Under review — parity-shaped scope, premature canonical API, missing KPIs | $0 | OPEN (May 2026) |
 | D33 | Canonical /v1/* mobile API in sift-api | Deferred — reuse Next.js routes for now, collapse later | $0 | DEFERRED (May 2026) |
 | D34 | github-projects MCP server | Installed via .mcp.json + .claude/settings.json (Projects v2 tools for future sessions) | $0 | SETTLED (May 2026) |
+| D35 | Topic-search AI ownership | Move AI calls + DB writes to `sift-api`, phased; current Next.js route grandfathered | $0 | SETTLED (May 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -622,6 +623,28 @@ The next four decisions are added after the v1 production launch. They steer v1.
 **Cost:** $0 — uses GitHub Copilot API quota (free for personal accounts within reasonable limits).
 
 **Naming:** server named `github-projects` (not `github`) to coexist with the existing harness server without name collision.
+
+---
+
+### D35. Topic-search AI ownership — AI + writes move to `sift-api` (phased)
+**Decision (status: SETTLED, May 2026):** Topic-search AI (Claude web-search fallback, Voyage embedding/classification) and the DB writes it performs move into `sift-api`, **phased**. `sift` keeps presentation/SSE streaming and the Postgres *read* (vector search) until the full search API exists. The current `sift/app/api/news/topic/route.ts` is **grandfathered, not the target architecture** — no new AI / search / write work goes in the frontend.
+
+**Why:**
+- The route violates the documented split (D2, D7, D30): the Next.js frontend holds both AI keys (`ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`), calls Claude + Voyage on the request path, and **writes articles to Postgres** (`insertArticle`) — the write path `sift-api` owns.
+- **Android v1 + Ask Sift** (sift-api#63, approved v1.5) ship native; a native client can't run Next.js route handlers, so AI-in-the-frontend forces Android to couple to the web deployment or duplicate the logic. A `sift-api` search API serves web *and* Android.
+- **Cost ceiling** (sift-api#70) instruments one place instead of the backend pipeline plus two frontend AI routes.
+- Moving AI off Vercel shrinks the secret surface and removes the latent Vercel `maxDuration` trap from the AI path.
+
+**Phasing:**
+- **Slice 1 — sift-api#79:** `POST /v1/search/fallback` — Claude fallback + embed/classify + article writes move to `sift-api`; the frontend route relays. Removes `ANTHROPIC_API_KEY` + all DB writes from `sift`. Fixes the `published_date: new Date()` freshness bug as part of the move.
+- **Slice 2 — sift-api#80:** full `POST /v1/search` (query embedding + vector search) when Android / Ask Sift needs a clean API; frontend becomes a thin SSE relay. Removes `VOYAGE_API_KEY` from `sift`. Gated; likely post-Sprint-2.
+- **Not the migration:** the `/api/news/topic` `maxDuration` Vercel-timeout fix (sift#124) is an immediate, independent frontend bug — ship it now.
+
+**Related:** `sift/app/api/topics/generate/route.ts` is a second frontend-AI route (custom-topic generation via Claude) — revisit under this same principle when its slice comes up. `sift-api`'s own README/CLAUDE split wording reconciles when the code moves (Slice 1).
+
+**Reconsider when:** never for "keep AI in the frontend"; the only open variable is the *timing* of Slice 2, gated on native-client work.
+
+**Cost:** $0 to decide. Slices ~1 effort-week each.
 
 ---
 
