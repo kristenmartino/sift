@@ -260,7 +260,7 @@ If `matchQuality` is `"weak"` (< 3 results above similarity threshold), the endp
 
 ### POST /api/compare
 
-Proxies to the Python service's `/analyze/compare` endpoint.
+Proxies to the Python service's `/v1/analyze/compare` endpoint. Accepts up to 5 sources (matching the backend).
 
 **Request/Response:** Same as Python service contract above.
 

@@ -12,11 +12,17 @@ try {
   throw new Error(`Invalid SIFT_API_URL: ${SIFT_API_URL}`);
 }
 const SIFT_API_KEY = process.env.SIFT_API_KEY || "";
-const COMPARE_TIMEOUT_MS = 60_000;
+// The compare workflow runs ~20–30s (up to ~90s on the backend), far past
+// Vercel's ~10s default function timeout — without this the proxy is killed by
+// the platform before a real comparison returns. Raise it to the Hobby max so
+// the proxy can actually wait, and abort the upstream fetch a few seconds under
+// that cap so the client gets a clean 504 instead of a platform timeout.
+export const maxDuration = 60; // seconds — Vercel Hobby maximum
+const COMPARE_TIMEOUT_MS = 55_000; // abort upstream just under maxDuration
 
 const compareSchema = z.object({
   topic: z.string().min(3).max(500),
-  sources: z.array(z.string().max(200)).max(10).optional(),
+  sources: z.array(z.string().max(200)).max(5).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -52,7 +58,7 @@ export async function POST(request: NextRequest) {
     const timeout = setTimeout(() => controller.abort(), COMPARE_TIMEOUT_MS);
 
     try {
-      const res = await fetch(`${SIFT_API_URL}/analyze/compare`, {
+      const res = await fetch(`${SIFT_API_URL}/v1/analyze/compare`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
