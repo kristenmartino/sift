@@ -11,6 +11,24 @@ jobs:
     name: Type Check & Test
     runs-on: ubuntu-latest
 
+    # Throwaway Postgres used ONLY by the production-build prerender step below.
+    # Schema comes from ci/build-db-schema.sql (empty tables) — no production
+    # data and no secrets. See that file for why the build needs a DB at all.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sift_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +45,21 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
+
+      # Give `next build` an empty, throwaway DB so the three DB-backed ISR
+      # pages (/, /methodology, /civic) can prerender in CI without a live
+      # database. Queries return zero rows; runtime behavior is unchanged.
+      - name: Initialize CI build database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+          psql -h localhost -U postgres -d sift_ci -v ON_ERROR_STOP=1 -f ci/build-db-schema.sql
+
+      - name: Production build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sift_ci
+        run: npm run build
 
       - name: Test
         run: npm test -- --ci --coverage
