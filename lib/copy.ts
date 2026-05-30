@@ -11,6 +11,11 @@ import type { StoryFraming } from "./types";
 export const COPY = {
   header: {
     tagline: "The news, with footnotes",
+    // Non-time-sensitive masthead dateline. Deliberately carries no date or
+    // issue number — those were computed from new Date() and froze stale into
+    // the ISR-prerendered HTML (see LandingMasthead). Real freshness belongs
+    // with the feed, not the marketing masthead.
+    dateline: "Curated civic context for the day's news",
   },
   footer: {
     main: "Sift reads from ~50 vetted outlets across the political spectrum, surfaces the civic context the news assumes you already know, and shows you who's behind every story. Every link goes to the original.",
