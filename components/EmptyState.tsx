@@ -18,7 +18,7 @@ export default function EmptyState({ title, body, action }: EmptyStateProps) {
       <p className="font-heading text-lg font-bold text-(--text-secondary) mb-2">
         {title}
       </p>
-      <p className="text-sm text-(--text-muted) max-w-[360px] mx-auto leading-relaxed mb-5">
+      <p className="text-sm text-(--text-tertiary) max-w-[360px] mx-auto leading-relaxed mb-5">
         {body}
       </p>
       {action && (

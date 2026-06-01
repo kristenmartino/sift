@@ -127,16 +127,16 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
       <div
         ref={dialogRef}
         className="w-full max-w-[460px] rounded-2xl border border-(--border) overflow-hidden animate-fade-slide-in"
-        style={{ background: "var(--card-bg)" }}
+        style={{ background: "var(--surface-raised)" }}
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-          <h2 id="topic-modal-title" className="font-heading text-lg font-bold text-(--text)">
+          <h2 id="topic-modal-title" className="font-heading text-lg font-bold text-(--text-primary)">
             {step === "preview" ? COPY.topics.previewTitle : COPY.topics.modalTitle}
           </h2>
           <button
             onClick={onClose}
-            className="bg-transparent border-none text-(--text-muted) text-xl cursor-pointer p-1 transition-colors duration-200"
+            className="bg-transparent border-none text-(--text-tertiary) text-xl cursor-pointer p-1 transition-colors duration-200"
             aria-label="Close"
           >
             &times;
@@ -160,9 +160,9 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
                 disabled={step === "generating"}
                 className="w-full px-4 py-3 rounded-xl text-sm font-body transition-all duration-200 outline-hidden"
                 style={{
-                  background: "var(--bg)",
+                  background: "var(--surface-base)",
                   border: "1px solid var(--border)",
-                  color: "var(--text)",
+                  color: "var(--text-primary)",
                   opacity: step === "generating" ? 0.6 : 1,
                 }}
               />
@@ -174,7 +174,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
                   <span className="animate-sift-refresh inline-block text-sm" style={{ color: color.hex }}>
                     &#x25C6;
                   </span>
-                  <span className="text-xs text-(--text-muted)">
+                  <span className="text-xs text-(--text-tertiary)">
                     {COPY.topics.generating}
                   </span>
                 </div>
@@ -186,7 +186,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
                   className="mt-3 w-full py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200 border-none"
                   style={{
                     background: inputValue.trim().length >= 2 ? color.hex : "var(--border)",
-                    color: inputValue.trim().length >= 2 ? "#fff" : "var(--text-muted)",
+                    color: inputValue.trim().length >= 2 ? "#fff" : "var(--text-tertiary)",
                     cursor: inputValue.trim().length >= 2 ? "pointer" : "not-allowed",
                   }}
                 >
@@ -208,14 +208,14 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
                   {preview.icon}
                 </span>
                 <div>
-                  <p className="font-bold text-(--text)">{preview.shortLabel}</p>
-                  <p className="text-xs text-(--text-muted)">{preview.description}</p>
+                  <p className="font-bold text-(--text-primary)">{preview.shortLabel}</p>
+                  <p className="text-xs text-(--text-tertiary)">{preview.description}</p>
                 </div>
               </div>
 
               {/* Search queries */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-(--text-muted) mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-(--text-tertiary) mb-2">
                   {COPY.topics.previewQueries}
                 </p>
                 <div className="flex flex-wrap gap-1.5">

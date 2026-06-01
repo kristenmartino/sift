@@ -52,7 +52,7 @@ export default function CrossSpectrumCompare({
   return (
     <div className="mt-1">
       <div className="flex items-center gap-3 mb-3">
-        <p className="text-kicker font-bold uppercase text-(--text-muted) shrink-0">
+        <p className="text-kicker font-bold uppercase text-(--text-tertiary) shrink-0">
           {COPY.stories.crossSpectrumHeader}
         </p>
         <span
@@ -86,7 +86,7 @@ function CrossSpectrumColumn({ bucket, framings }: CrossSpectrumColumnProps) {
           Same register as the outer "Across the spectrum" eyebrow but
           tighter, so the column hierarchy reads at a glance. */}
       <div className="flex items-center gap-2 mb-2.5">
-        <span className="text-outlet font-semibold uppercase text-(--text) shrink-0">
+        <span className="text-outlet font-semibold uppercase text-(--text-primary) shrink-0">
           {label}
         </span>
         <span

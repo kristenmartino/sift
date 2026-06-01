@@ -54,7 +54,7 @@ export default function OutletBadge({
     if (isRail) {
       return (
         <span
-          className={`text-outlet font-semibold uppercase text-(--text) ${className ?? ""}`}
+          className={`text-outlet font-semibold uppercase text-(--text-primary) ${className ?? ""}`}
         >
           {fallback}
         </span>
@@ -79,7 +79,7 @@ export default function OutletBadge({
           href={`/outlet/${outlet.slug}`}
           onClick={(e) => e.stopPropagation()}
           aria-label={`Outlet dossier for ${outlet.name}`}
-          className="text-outlet font-semibold uppercase text-(--text) no-underline hover:underline relative z-2"
+          className="text-outlet font-semibold uppercase text-(--text-primary) no-underline hover:underline relative z-2"
         >
           {outlet.name}
         </a>
@@ -98,7 +98,7 @@ export default function OutletBadge({
         href={`/outlet/${outlet.slug}`}
         onClick={(e) => e.stopPropagation()}
         aria-label={`Outlet dossier for ${outlet.name}`}
-        className="font-bold text-(--text-secondary) no-underline hover:underline hover:text-(--text) relative z-2"
+        className="font-bold text-(--text-secondary) no-underline hover:underline hover:text-(--text-primary) relative z-2"
       >
         {outlet.name}
       </a>
@@ -109,7 +109,7 @@ export default function OutletBadge({
           rel={outlet.allSidesUrl ? "noopener noreferrer" : undefined}
           onClick={(e) => e.stopPropagation()}
           aria-label={`AllSides bias rating: ${allSides}${outlet.allSidesUrl ? " (opens AllSides in a new tab)" : ""}`}
-          className="font-mono text-[10px] uppercase tracking-wider text-(--text-muted) no-underline hover:text-(--text-secondary) hover:underline relative z-2 whitespace-nowrap"
+          className="font-mono text-[10px] uppercase tracking-wider text-(--text-tertiary) no-underline hover:text-(--text-secondary) hover:underline relative z-2 whitespace-nowrap"
         >
           {allSides}
         </a>

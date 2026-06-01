@@ -43,7 +43,7 @@ export default function CardImage({ src, alt, featured, category }: CardImagePro
 
       {/* Shimmer placeholder while loading */}
       {status === "loading" && (
-        <div className="absolute inset-0 bg-(--skeleton) animate-shimmer" />
+        <div className="absolute inset-0 bg-(--surface-sunken) animate-shimmer" />
       )}
 
       {/* Vignette overlay */}

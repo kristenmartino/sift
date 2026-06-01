@@ -34,9 +34,9 @@ export default function EntityChipTooltip({ context }: EntityChipTooltipProps) {
       role="tooltip"
       // The presentational layer. Hidden by default, revealed when the
       // wrapping <li class="group"> is hovered or contains focus.
-      className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity duration-150 pointer-events-none absolute bottom-[calc(100%+6px)] left-0 z-20 w-[300px] max-w-[calc(100vw-2rem)] bg-(--card-bg) border border-(--border) rounded-md shadow-lg p-3 text-left"
+      className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity duration-150 pointer-events-none absolute bottom-[calc(100%+6px)] left-0 z-20 w-[300px] max-w-[calc(100vw-2rem)] bg-(--surface-raised) border border-(--border) rounded-md shadow-lg p-3 text-left"
     >
-      <p className="text-kicker font-bold uppercase text-(--text-muted) mb-2 leading-tight">
+      <p className="text-kicker font-bold uppercase text-(--text-tertiary) mb-2 leading-tight">
         {COPY.glossary.tooltip.politicianTopIndustries}
       </p>
       {topIndustries.length === 0 ? (
@@ -54,7 +54,7 @@ export default function EntityChipTooltip({ context }: EntityChipTooltipProps) {
                 {entry.industry}
               </span>
               {entry.amount_usd != null && (
-                <span className="font-mono text-[11px] tabular-nums text-(--text-muted)">
+                <span className="font-mono text-[11px] tabular-nums text-(--text-tertiary)">
                   {formatUsdCompact(entry.amount_usd)}
                 </span>
               )}
@@ -62,7 +62,7 @@ export default function EntityChipTooltip({ context }: EntityChipTooltipProps) {
           ))}
         </ul>
       )}
-      <p className="text-outlet uppercase tracking-wider text-(--text-muted) mt-2 pt-2 border-t border-(--border-subtle)">
+      <p className="text-outlet uppercase tracking-wider text-(--text-tertiary) mt-2 pt-2 border-t border-(--border-subtle)">
         {COPY.glossary.tooltip.openDossierHint}
       </p>
     </span>

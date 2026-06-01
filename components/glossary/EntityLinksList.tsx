@@ -41,7 +41,7 @@ export default function EntityLinksList({ links }: EntityLinksListProps) {
     >
       <p
         id="entity-list-eyebrow"
-        className="text-kicker font-bold uppercase text-(--text-muted)"
+        className="text-kicker font-bold uppercase text-(--text-tertiary)"
       >
         {COPY.glossary.eyebrow}
       </p>
@@ -67,12 +67,12 @@ export default function EntityLinksList({ links }: EntityLinksListProps) {
                 // 22-24px the chip had originally. Side padding bumped from
                 // px-2 to px-2.5 for the same reason. Visual weight stays
                 // small enough to read as a "chip" not a "button."
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-0.5 rounded-full text-[12px] leading-none no-underline transition-colors duration-200 relative z-2 border border-(--border) text-(--text-secondary) bg-(--card-bg) hover:border-(--accent) hover:text-(--accent)"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-0.5 rounded-full text-[12px] leading-none no-underline transition-colors duration-200 relative z-2 border border-(--border) text-(--text-secondary) bg-(--surface-raised) hover:border-(--accent) hover:text-(--accent)"
               >
                 {glyph && (
                   <span
                     aria-hidden
-                    className="font-mono text-[10px] text-(--text-muted)"
+                    className="font-mono text-[10px] text-(--text-tertiary)"
                   >
                     {glyph}
                   </span>

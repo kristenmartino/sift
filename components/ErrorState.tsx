@@ -5,7 +5,7 @@ import type { ErrorStateProps } from "@/lib/types";
 
 export default function ErrorState({ message, onRetry }: ErrorStateProps) {
   return (
-    <div className="text-center py-16 px-5 text-(--text-muted)">
+    <div className="text-center py-16 px-5 text-(--text-tertiary)">
       <div className="text-5xl mb-4 opacity-30">⚠</div>
       <p className="text-base font-semibold text-(--text-secondary) mb-2">
         {COPY.error.title}
