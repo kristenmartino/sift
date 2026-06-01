@@ -88,11 +88,11 @@ export default function BackgroundPrimer({
           type="button"
           onClick={handleExpand}
           aria-expanded={false}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-[0.04em] uppercase border border-(--border) bg-transparent text-(--text-secondary) hover:text-(--text) hover:border-(--text-muted) transition-colors duration-200 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-[0.04em] uppercase border border-(--border) bg-transparent text-(--text-secondary) hover:text-(--text-primary) hover:border-(--text-tertiary) transition-colors duration-200 cursor-pointer"
         >
           <span aria-hidden>◆</span>
           <span>{COPY.primer.eyebrow}</span>
-          <span aria-hidden className="text-(--text-muted)">▾</span>
+          <span aria-hidden className="text-(--text-tertiary)">▾</span>
         </button>
       )}
 
@@ -108,7 +108,7 @@ export default function BackgroundPrimer({
         >
           {/* Eyebrow + collapse */}
           <div className="flex items-center justify-between gap-3 mb-2.5">
-            <p className="text-kicker font-bold uppercase text-(--text-muted)">
+            <p className="text-kicker font-bold uppercase text-(--text-tertiary)">
               <span aria-hidden className="mr-1.5">◆</span>
               {COPY.primer.eyebrow}
             </p>
@@ -119,7 +119,7 @@ export default function BackgroundPrimer({
                 setExpanded(false);
               }}
               aria-expanded={true}
-              className="text-meta uppercase tracking-wider text-(--text-secondary) hover:text-(--text) cursor-pointer transition-colors duration-200 bg-transparent border-none p-0"
+              className="text-meta uppercase tracking-wider text-(--text-secondary) hover:text-(--text-primary) cursor-pointer transition-colors duration-200 bg-transparent border-none p-0"
             >
               {COPY.primer.hide} <span aria-hidden>▴</span>
             </button>
@@ -171,7 +171,7 @@ export default function BackgroundPrimer({
 function PrimerTermLabel({ term }: { term: ContextPrimerTerm }) {
   if (!term.link) {
     return (
-      <dt className="inline font-semibold text-(--text)">{term.term}</dt>
+      <dt className="inline font-semibold text-(--text-primary)">{term.term}</dt>
     );
   }
   // Reuse the shared dossier-routing helper so primer-term links + chip
@@ -187,7 +187,7 @@ function PrimerTermLabel({ term }: { term: ContextPrimerTerm }) {
         href={href}
         onClick={(e) => e.stopPropagation()}
         aria-label={`Open dossier for ${term.term}`}
-        className="font-semibold text-(--text) no-underline border-b border-dotted border-(--accent) hover:text-(--accent) hover:border-solid transition-colors"
+        className="font-semibold text-(--text-primary) no-underline border-b border-dotted border-(--accent) hover:text-(--accent) hover:border-solid transition-colors"
       >
         {term.term}
       </Link>

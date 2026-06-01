@@ -6,7 +6,7 @@ import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
 import BackgroundPrimer from "./primer/BackgroundPrimer";
-import OutletBadge from "./outlet/OutletBadge";
+import { OutletChip } from "./primitives";
 import EntityLinksList from "./glossary/EntityLinksList";
 import type { ArticleCardProps } from "@/lib/types";
 
@@ -54,7 +54,7 @@ export default function ArticleCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`
-        bg-(--card-bg) rounded-[14px] overflow-hidden
+        bg-(--surface-raised) rounded-[14px] overflow-hidden
         border border-(--border) ${index === 0 ? "animate-fade-slide-in" : ""}
         ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
       `}
@@ -119,7 +119,7 @@ export default function ArticleCard({
               bookmarkAnimating ? "animate-bookmark-pop" : "transition-all duration-200"
             }`}
             style={{
-              color: isBookmarked ? "#f59e0b" : "var(--text-muted)",
+              color: isBookmarked ? "#f59e0b" : "var(--text-tertiary)",
               transform: !bookmarkAnimating && isBookmarked ? "scale(1.15)" : !bookmarkAnimating ? "scale(1)" : undefined,
             }}
           >
@@ -153,7 +153,7 @@ export default function ArticleCard({
               href={article.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-(--text) no-underline hover:underline"
+              className="text-(--text-primary) no-underline hover:underline"
               style={{
                 // Stretch link to cover entire card
                 position: "static",
@@ -169,7 +169,7 @@ export default function ArticleCard({
               {article.title}
             </a>
           ) : (
-            <span className="text-(--text)">{article.title}</span>
+            <span className="text-(--text-primary)">{article.title}</span>
           )}
         </h3>
 
@@ -219,8 +219,8 @@ export default function ArticleCard({
         <EntityLinksList links={article.entityLinks} />
 
         {/* Meta */}
-        <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-(--text-muted) font-medium flex-wrap">
-          <OutletBadge outlet={article.outlet} fallback={article.sourceName} />
+        <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-(--text-tertiary) font-medium flex-wrap">
+          <OutletChip outlet={article.outlet} fallback={article.sourceName} />
           <span className="opacity-30">&middot;</span>
           <span>{timeAgo(article.publishedDate)}</span>
           <span className="opacity-30">&middot;</span>

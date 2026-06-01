@@ -57,9 +57,9 @@ export default function TopicSearch({
             maxLength={200}
             className="w-full px-4 py-2 pr-12 rounded-full text-sm font-body transition-all duration-200 outline-hidden"
             style={{
-              background: "var(--card-bg)",
+              background: "var(--surface-raised)",
               border: "1px solid var(--border)",
-              color: "var(--text)",
+              color: "var(--text-primary)",
             }}
           />
           <button
@@ -71,7 +71,7 @@ export default function TopicSearch({
               background:
                 inputValue.trim().length >= 2 ? "var(--accent)" : "transparent",
               color:
-                inputValue.trim().length >= 2 ? "#fff" : "var(--text-muted)",
+                inputValue.trim().length >= 2 ? "#fff" : "var(--text-tertiary)",
               opacity: loading ? 0.5 : 1,
               cursor: loading ? "wait" : "pointer",
             }}
@@ -86,7 +86,7 @@ export default function TopicSearch({
       </form>
 
       {matchQuality && (
-        <div className="flex items-center gap-3 mt-2 ml-11 text-xs text-(--text-muted) animate-fade-slide-in">
+        <div className="flex items-center gap-3 mt-2 ml-11 text-xs text-(--text-tertiary) animate-fade-slide-in">
           {resultCount > 0 ? (
             <span
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide"
@@ -107,12 +107,12 @@ export default function TopicSearch({
               {matchQuality === "strong" ? "●" : "○"} {matchQuality} match
             </span>
           ) : (
-            <span className="text-(--text-muted)">
+            <span className="text-(--text-tertiary)">
               {COPY.search.noResults}
             </span>
           )}
           {fallbackUsed && (
-            <span className="text-(--text-muted) italic">
+            <span className="text-(--text-tertiary) italic">
               {resultCount === 0
                 ? COPY.search.fallbackSearching
                 : COPY.search.fallbackUsed}
