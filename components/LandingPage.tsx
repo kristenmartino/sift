@@ -1,12 +1,19 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { COPY } from "@/lib/copy";
-import SiftLogo from "./SiftLogo";
-import LandingMasthead from "./landing/LandingMasthead";
+import LandingHeader from "./landing/LandingHeader";
 import LeadStory from "./landing/LeadStory";
+import PrincipleStrip from "./landing/PrincipleStrip";
+import Manifesto from "./landing/Manifesto";
+import WhatSiftAdds from "./landing/WhatSiftAdds";
 import ComparisonDemo from "./landing/ComparisonDemo";
-import SourceColophon, { type SourceColophonOutlet } from "./landing/SourceColophon";
+import SourceColophon, {
+  type SourceColophonOutlet,
+} from "./landing/SourceColophon";
+import CtaBand from "./landing/CtaBand";
+import LandingFooter from "./landing/LandingFooter";
 import type { Article } from "@/lib/types";
 
 interface LandingPageProps {
@@ -16,83 +23,105 @@ interface LandingPageProps {
   outlets: SourceColophonOutlet[];
 }
 
+const HERO = COPY.landingReskin.hero;
+
 export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
-  return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
-      {/* Drop-cap rule, scoped to landing only — Sift's globals.css doesn't
-          have an equivalent yet, so we inline it here rather than touching
-          the system-wide stylesheet during a Phase A pass. */}
-      <style jsx global>{`
-        @media (min-width: 768px) {
-          [data-dropcap]::first-letter {
-            font-family: var(--font-heading), Georgia, serif;
-            font-weight: 800;
-            font-size: 4em;
-            line-height: 0.85;
-            float: left;
-            padding: 0.08em 0.12em 0 0;
-            margin-top: 0.05em;
-            color: var(--text);
+  const rootRef = useRef<HTMLDivElement>(null);
+  // `sl-anim` gates the reveal/stagger starting states. It's added only after
+  // mount, and only when motion is allowed — so SSR / no-JS / reduced-motion
+  // all render every section fully visible from first paint.
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const reveals = root.querySelectorAll<HTMLElement>("[data-reveal]");
+
+    if (reduceMotion || !("IntersectionObserver" in window)) {
+      reveals.forEach((el) => el.classList.add("in"));
+      return;
+    }
+
+    setAnimate(true);
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            io.unobserve(entry.target);
           }
-        }
-      `}</style>
+        });
+      },
+      { threshold: 0.15 },
+    );
+    reveals.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
 
-      <LandingMasthead />
+  return (
+    <div ref={rootRef} className={`sift-landing${animate ? " sl-anim" : ""}`}>
+      <LandingHeader />
 
-      <main id="main-content">
-        <LeadStory article={leadStory} />
+      <main id="top">
+        <section className="sl-hero">
+          <div className="sl-wrap sl-hero-grid">
+            <div className="sl-hero-copy">
+              <span className="sl-eyebrow">{HERO.eyebrow}</span>
+              <h1>
+                {HERO.headingLead}
+                <span className="sl-ul">
+                  {HERO.headingAccent}
+                  <svg
+                    viewBox="0 0 200 14"
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M2 9 C 50 2, 150 2, 198 8"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                .
+              </h1>
+              <p className="sl-lede">{HERO.lede}</p>
+              <div className="sl-hero-actions">
+                <Link href="/news" className="sl-btn sl-btn-solid">
+                  {HERO.ctaPrimary}{" "}
+                  <span className="sl-arrow" aria-hidden>
+                    →
+                  </span>
+                </Link>
+                <a href="#adds" className="sl-btn sl-btn-ghost">
+                  {HERO.ctaSecondary}
+                </a>
+              </div>
+              <div className="sl-hero-foot">
+                <span className="sl-pip" aria-hidden />
+                {HERO.foot}
+              </div>
+            </div>
+
+            <LeadStory article={leadStory} />
+          </div>
+        </section>
+
+        <PrincipleStrip />
+        <Manifesto />
+        <WhatSiftAdds />
         <ComparisonDemo />
         <SourceColophon outlets={outlets} />
+        <CtaBand />
       </main>
 
-      {/* ── Colophon Footer ──────────────────────────── */}
-      <footer className="border-t border-[var(--border)] mt-8">
-        <div className="max-w-[1200px] mx-auto px-6 py-9 grid grid-cols-1 md:grid-cols-3 gap-y-6 md:gap-y-3">
-          <div className="md:order-1 flex flex-col gap-3 md:items-start items-center text-center md:text-left">
-            <SiftLogo variant="full" size={20} />
-            <p className="font-body text-[13px] text-[var(--text-muted)] max-w-[320px] leading-relaxed">
-              {COPY.footer.main}
-            </p>
-          </div>
-
-          <div className="md:order-2 flex flex-col gap-2 md:items-center items-center text-center font-body text-outlet uppercase tracking-wider">
-            <Link
-              href="/news"
-              className="text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline"
-            >
-              News
-            </Link>
-            <Link
-              href="/colophon"
-              className="text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline"
-            >
-              {COPY.landing.colophonLink}
-            </Link>
-            <Link
-              href="/methodology"
-              className="text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline"
-            >
-              Methodology
-            </Link>
-            <Link
-              href="/privacy"
-              className="text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline"
-            >
-              Privacy
-            </Link>
-            <Link
-              href="/terms"
-              className="text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline"
-            >
-              Terms
-            </Link>
-          </div>
-
-          <p className="md:order-3 md:text-right text-center font-body text-outlet uppercase tracking-wider text-[var(--text-muted)]">
-            © {new Date().getFullYear()} Sift · Every story links to the original.
-          </p>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }

@@ -1,25 +1,40 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Playfair_Display, Source_Sans_3 } from "next/font/google";
+import { Fraunces, Hanken_Grotesk, DM_Mono } from "next/font/google";
 import "./globals.css";
 
 // Self-hosted via next/font: Next downloads the woff2s at build time, serves
 // them from /_next/static/media (same-origin, cacheable, no CSP changes), and
 // auto-injects <link rel="preload"> for the primary weights. CSS variables
-// are wired into Tailwind (font-heading, font-body) and globals.css.
-const fontHeading = Playfair_Display({
+// are wired into Tailwind (font-heading, font-body, font-mono) and globals.css.
+//
+// Fraunces is a variable font — we omit `weight` to keep the full wght range
+// and opt into the optical-size axis so large display headings get the high-
+// contrast cut while body-sized headings stay readable. Italics are pulled in
+// for the editorial accent spans (e.g. the vermillion emphasis in headings).
+const fontHeading = Fraunces({
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800", "900"],
+  axes: ["opsz"],
+  style: ["normal", "italic"],
   display: "swap",
   variable: "--font-heading",
 });
 
-const fontBody = Source_Sans_3({
+const fontBody = Hanken_Grotesk({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
   variable: "--font-body",
+});
+
+// DM Mono is not variable — request the two cuts we use for eyebrows, labels,
+// captions, and footnote markers.
+const fontMono = DM_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -47,13 +62,12 @@ export const metadata: Metadata = {
 };
 
 // Browser chrome (iOS Safari address bar, Android task switcher) follows the OS
-// color-scheme preference, not the user's in-app theme toggle. Late Edition
-// background for dark; Newsprint background for light. Matches the CSS
-// variables in app/globals.css.
+// color-scheme preference, not the user's in-app theme toggle. Warm paper for
+// light; deep ink for dark. Matches the --paper token in app/globals.css.
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f2ed" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c0a09" },
+    { media: "(prefers-color-scheme: light)", color: "#FBF8F1" },
+    { media: "(prefers-color-scheme: dark)", color: "#15120C" },
   ],
   colorScheme: "dark light",
 };
@@ -71,7 +85,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="dark"
-      className={`${fontHeading.variable} ${fontBody.variable}`}
+      className={`${fontHeading.variable} ${fontBody.variable} ${fontMono.variable}`}
       suppressHydrationWarning
     >
       <head>
