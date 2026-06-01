@@ -11,7 +11,7 @@ export default function NotFound() {
     <main
       id="main-content"
       className="min-h-screen flex items-center justify-center px-5"
-      style={{ background: "var(--bg)", color: "var(--text)" }}
+      style={{ background: "var(--surface-base)", color: "var(--text-primary)" }}
     >
       <div className="text-center max-w-[400px]">
         <div
@@ -23,7 +23,7 @@ export default function NotFound() {
         <p className="font-heading text-xl font-bold text-(--text-secondary) mb-2">
           {COPY.notFound.title}
         </p>
-        <p className="text-sm text-(--text-muted) leading-relaxed mb-6">
+        <p className="text-sm text-(--text-tertiary) leading-relaxed mb-6">
           {COPY.notFound.body}
         </p>
         <Link

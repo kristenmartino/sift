@@ -29,17 +29,17 @@ const ARCHITECTURE = [
 
 export default function ColophonPage() {
   return (
-    <div className="min-h-screen bg-(--bg) text-(--text)">
+    <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
       <LandingMasthead />
 
       <main id="main-content" className="max-w-[800px] mx-auto px-6 pt-12 pb-24">
         {/* Section eyebrow + title */}
         <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-3 flex items-center">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3 flex items-center">
             <span aria-hidden className="inline-block w-7 h-px bg-(--border) mr-3" />
             Behind the masthead
           </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text)">
+          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text-primary)">
             Colophon
           </h1>
           <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
@@ -51,10 +51,10 @@ export default function ColophonPage() {
 
         {/* Masthead-style credit */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             Masthead
           </p>
-          <p className="font-heading text-[20px] leading-relaxed text-(--text) max-w-[60ch]">
+          <p className="font-heading text-[20px] leading-relaxed text-(--text-primary) max-w-[60ch]">
             Edited by <span className="italic">Claude</span>. Built by{" "}
             <a
               href="https://github.com/kristenmartino"
@@ -70,13 +70,13 @@ export default function ColophonPage() {
 
         {/* Stack */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             Set in
           </p>
           <p className="font-body text-[16px] text-(--text-secondary) leading-[1.7] max-w-[60ch] mb-7">
-            Sift is set in <strong className="text-(--text) font-semibold">Fraunces</strong>{" "}
-            and <strong className="text-(--text) font-semibold">Hanken Grotesk</strong>, with{" "}
-            <strong className="text-(--text) font-semibold">DM Mono</strong> for labels and
+            Sift is set in <strong className="text-(--text-primary) font-semibold">Fraunces</strong>{" "}
+            and <strong className="text-(--text-primary) font-semibold">Hanken Grotesk</strong>, with{" "}
+            <strong className="text-(--text-primary) font-semibold">DM Mono</strong> for labels and
             captions, served from same-origin via{" "}
             <code className="font-body text-[14px]">next/font</code>. The cover star{" "}
             <SiftLogo variant="mark" size={16} className="inline-block align-[-3px]" />{" "}
@@ -88,7 +88,7 @@ export default function ColophonPage() {
                 key={s.name}
                 className="grid grid-cols-[180px_1fr] gap-x-6 items-baseline border-b border-(--border-subtle) pb-3"
               >
-                <span className="font-body text-outlet uppercase tracking-wider text-(--text) font-semibold">
+                <span className="font-body text-outlet uppercase tracking-wider text-(--text-primary) font-semibold">
                   {s.name}
                 </span>
                 <span className="font-body text-[14px] text-(--text-secondary)">
@@ -101,10 +101,10 @@ export default function ColophonPage() {
 
         {/* Architecture diagram */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             Architecture
           </p>
-          <pre className="font-body text-[12px] leading-relaxed text-(--text-secondary) bg-(--card-bg) border border-(--border) rounded-md p-5 overflow-x-auto whitespace-pre">
+          <pre className="font-body text-[12px] leading-relaxed text-(--text-secondary) bg-(--surface-raised) border border-(--border) rounded-md p-5 overflow-x-auto whitespace-pre">
 {`Browser  →  Vercel (Next.js)  →  Neon Postgres (pgvector)
                   ↑
                   +— /api/compare ————→  Railway (FastAPI + LangGraph)
@@ -115,7 +115,7 @@ export default function ColophonPage() {
 
         {/* Principles */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             Principles
           </p>
           <ul className="space-y-4 max-w-[60ch]">
