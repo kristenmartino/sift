@@ -26,8 +26,8 @@ interface EntityLinksListProps {
  * matches, simply omit this section).
  *
  * z-index note: ArticleCard wraps its title in a stretched `<a>`
- * overlay (`<span class="absolute inset-0 z-[1]">`). Anchors here use
- * `relative z-[2]` + `e.stopPropagation()` to opt out of that overlay,
+ * overlay (`<span class="absolute inset-0 z-1">`). Anchors here use
+ * `relative z-2` + `e.stopPropagation()` to opt out of that overlay,
  * mirroring how the bookmark, primer toggle, and OutletBadge already
  * escape the card-link.
  */
@@ -41,7 +41,7 @@ export default function EntityLinksList({ links }: EntityLinksListProps) {
     >
       <p
         id="entity-list-eyebrow"
-        className="text-kicker font-bold uppercase text-[var(--text-muted)]"
+        className="text-kicker font-bold uppercase text-(--text-muted)"
       >
         {COPY.glossary.eyebrow}
       </p>
@@ -67,12 +67,12 @@ export default function EntityLinksList({ links }: EntityLinksListProps) {
                 // 22-24px the chip had originally. Side padding bumped from
                 // px-2 to px-2.5 for the same reason. Visual weight stays
                 // small enough to read as a "chip" not a "button."
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-0.5 rounded-full text-[12px] leading-none no-underline transition-colors duration-200 relative z-[2] border border-[var(--border)] text-[var(--text-secondary)] bg-[var(--card-bg)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-0.5 rounded-full text-[12px] leading-none no-underline transition-colors duration-200 relative z-2 border border-(--border) text-(--text-secondary) bg-(--card-bg) hover:border-(--accent) hover:text-(--accent)"
               >
                 {glyph && (
                   <span
                     aria-hidden
-                    className="font-mono text-[10px] text-[var(--text-muted)]"
+                    className="font-mono text-[10px] text-(--text-muted)"
                   >
                     {glyph}
                   </span>

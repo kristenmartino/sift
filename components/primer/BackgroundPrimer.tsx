@@ -44,7 +44,7 @@ interface BackgroundPrimerProps {
  * <a><span absolute inset-0 z-[1]> overlay. Anything inside the card that
  * needs its own click target (bookmark button, primer toggle) must be
  * relatively-positioned with z-[2]+ to sit above that overlay. The wrapping
- * `relative z-[2]` on the outer div here makes the entire primer surface
+ * `relative z-2` on the outer div here makes the entire primer surface
  * (collapsed pill + expanded panel) opt out of the card-link click handler.
  */
 export default function BackgroundPrimer({
@@ -82,23 +82,23 @@ export default function BackgroundPrimer({
   };
 
   return (
-    <div className="my-1 relative z-[2]">
+    <div className="my-1 relative z-2">
       {!expanded && (
         <button
           type="button"
           onClick={handleExpand}
           aria-expanded={false}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-[0.04em] uppercase border border-[var(--border)] bg-transparent text-[var(--text-secondary)] hover:text-[var(--text)] hover:border-[var(--text-muted)] transition-colors duration-200 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-[0.04em] uppercase border border-(--border) bg-transparent text-(--text-secondary) hover:text-(--text) hover:border-(--text-muted) transition-colors duration-200 cursor-pointer"
         >
           <span aria-hidden>◆</span>
           <span>{COPY.primer.eyebrow}</span>
-          <span aria-hidden className="text-[var(--text-muted)]">▾</span>
+          <span aria-hidden className="text-(--text-muted)">▾</span>
         </button>
       )}
 
       {expanded && (
         <div
-          className="rounded-[10px] border border-[var(--border-subtle)] p-3.5"
+          className="rounded-[10px] border border-(--border-subtle) p-3.5"
           style={{
             background: "var(--well-bg)",
           }}
@@ -108,7 +108,7 @@ export default function BackgroundPrimer({
         >
           {/* Eyebrow + collapse */}
           <div className="flex items-center justify-between gap-3 mb-2.5">
-            <p className="text-kicker font-bold uppercase text-[var(--text-muted)]">
+            <p className="text-kicker font-bold uppercase text-(--text-muted)">
               <span aria-hidden className="mr-1.5">◆</span>
               {COPY.primer.eyebrow}
             </p>
@@ -119,7 +119,7 @@ export default function BackgroundPrimer({
                 setExpanded(false);
               }}
               aria-expanded={true}
-              className="text-meta uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--text)] cursor-pointer transition-colors duration-200 bg-transparent border-none p-0"
+              className="text-meta uppercase tracking-wider text-(--text-secondary) hover:text-(--text) cursor-pointer transition-colors duration-200 bg-transparent border-none p-0"
             >
               {COPY.primer.hide} <span aria-hidden>▴</span>
             </button>
@@ -127,7 +127,7 @@ export default function BackgroundPrimer({
 
           {/* Background paragraph */}
           {background && (
-            <p className="text-body text-[var(--text-secondary)] leading-relaxed mb-3">
+            <p className="text-body text-(--text-secondary) leading-relaxed mb-3">
               {background}
             </p>
           )}
@@ -144,7 +144,7 @@ export default function BackgroundPrimer({
               {terms.map((t) => (
                 <div key={t.term} className="text-body leading-snug">
                   <PrimerTermLabel term={t} />
-                  <dd className="inline text-[var(--text-secondary)]">
+                  <dd className="inline text-(--text-secondary)">
                     {" — "}
                     {t.definition}
                   </dd>
@@ -171,7 +171,7 @@ export default function BackgroundPrimer({
 function PrimerTermLabel({ term }: { term: ContextPrimerTerm }) {
   if (!term.link) {
     return (
-      <dt className="inline font-semibold text-[var(--text)]">{term.term}</dt>
+      <dt className="inline font-semibold text-(--text)">{term.term}</dt>
     );
   }
   // Reuse the shared dossier-routing helper so primer-term links + chip
@@ -187,7 +187,7 @@ function PrimerTermLabel({ term }: { term: ContextPrimerTerm }) {
         href={href}
         onClick={(e) => e.stopPropagation()}
         aria-label={`Open dossier for ${term.term}`}
-        className="font-semibold text-[var(--text)] no-underline border-b border-dotted border-[var(--accent)] hover:text-[var(--accent)] hover:border-solid transition-colors"
+        className="font-semibold text-(--text) no-underline border-b border-dotted border-(--accent) hover:text-(--accent) hover:border-solid transition-colors"
       >
         {term.term}
       </Link>

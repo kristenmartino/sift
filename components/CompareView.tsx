@@ -101,10 +101,10 @@ export default function CompareView({
               {COPY.compare.emptyTitle}
             </span>
           </div>
-          <h2 className="font-heading text-[22px] font-bold text-[var(--text)] tracking-tight">
+          <h2 className="font-heading text-[22px] font-bold text-(--text) tracking-tight">
             {topic}
           </h2>
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-[var(--text-muted)]">
+          <div className="flex items-center gap-3 mt-1.5 text-xs text-(--text-muted)">
             <span>{sourcesChecked.length} sources checked</span>
             <span className="opacity-30">&middot;</span>
             <span>{(durationMs / 1000).toFixed(1)}s</span>
@@ -115,7 +115,7 @@ export default function CompareView({
         <button
           onClick={onClose}
           aria-label="Close comparison"
-          className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-[var(--text-secondary)] text-base cursor-pointer transition-all duration-200 shrink-0 mt-1"
+          className="flex items-center justify-center w-9 h-9 rounded-full border border-(--border) bg-transparent text-(--text-secondary) text-base cursor-pointer transition-all duration-200 shrink-0 mt-1"
         >
           &times;
         </button>
@@ -146,17 +146,17 @@ export default function CompareView({
           border: "1px solid var(--border)",
         }}
       >
-        <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-(--text-muted) mb-3">
           Summary
         </h3>
-        <p className="text-[15px] leading-relaxed text-[var(--text-secondary)]">
+        <p className="text-[15px] leading-relaxed text-(--text-secondary)">
           {comparison}
         </p>
       </div>
 
       {/* Claims */}
       <div className="space-y-3 mb-8">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-(--text-muted) mb-1">
           Key Claims
         </h3>
         {claims.map((claim, i) => {
@@ -188,12 +188,12 @@ export default function CompareView({
                 >
                   {style.dot} {style.label}
                 </span>
-                <p className="text-sm text-[var(--text)] leading-relaxed flex-1">
+                <p className="text-sm text-(--text) leading-relaxed flex-1">
                   {claim.claim}
                 </p>
                 {hasDetails && (
                   <span
-                    className="text-xs text-[var(--text-muted)] shrink-0 mt-0.5 transition-transform duration-200"
+                    className="text-xs text-(--text-muted) shrink-0 mt-0.5 transition-transform duration-200"
                     style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
                   >
                     ▸
@@ -204,7 +204,7 @@ export default function CompareView({
               {/* Disputed details */}
               {isExpanded && isDisputed && (
                 <div
-                  className="mt-3 pt-3 border-t border-[var(--border)] text-xs space-y-1.5"
+                  className="mt-3 pt-3 border-t border-(--border) text-xs space-y-1.5"
                   style={{
                     animation: "story-expand 0.3s ease-out both",
                     overflow: "hidden",
@@ -213,7 +213,7 @@ export default function CompareView({
                   {claim.sources_for && claim.sources_for.length > 0 && (
                     <div className="flex items-start gap-2">
                       <span className="font-semibold" style={{ color: "#059669" }}>For:</span>
-                      <span className="text-[var(--text-secondary)]">
+                      <span className="text-(--text-secondary)">
                         {claim.sources_for.join(", ")}
                       </span>
                     </div>
@@ -221,7 +221,7 @@ export default function CompareView({
                   {claim.sources_against && claim.sources_against.length > 0 && (
                     <div className="flex items-start gap-2">
                       <span className="font-semibold" style={{ color: "#dc2626" }}>Against:</span>
-                      <span className="text-[var(--text-secondary)]">
+                      <span className="text-(--text-secondary)">
                         {claim.sources_against.join(", ")}
                       </span>
                     </div>
@@ -231,7 +231,7 @@ export default function CompareView({
 
               {/* Non-disputed source list */}
               {!isDisputed && claim.sources && claim.sources.length > 0 && (
-                <div className="mt-2 ml-[calc(theme(spacing.2)+theme(spacing.0.5)+1px)] text-[11px] text-[var(--text-muted)]">
+                <div className="mt-2 ml-[calc(--spacing(2)+(--spacing(0))+1px)] text-[11px] text-(--text-muted)">
                   {claim.sources.join(", ")}
                 </div>
               )}
@@ -248,7 +248,7 @@ export default function CompareView({
           border: "1px solid var(--border)",
         }}
       >
-        <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-(--text-muted) mb-3">
           {COPY.compare.another}
         </h3>
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
@@ -259,7 +259,7 @@ export default function CompareView({
             onChange={(e) => setInputValue(e.target.value)}
             placeholder={COPY.compare.anotherPlaceholder}
             maxLength={200}
-            className="flex-1 px-4 py-2 rounded-full text-sm font-body transition-all duration-200 outline-none"
+            className="flex-1 px-4 py-2 rounded-full text-sm font-body transition-all duration-200 outline-hidden"
             style={{
               background: "var(--bg)",
               border: "1px solid var(--border)",
@@ -286,7 +286,7 @@ export default function CompareView({
           <button
             type="button"
             onClick={() => setSourcesExpanded(!sourcesExpanded)}
-            className="text-xs text-[var(--text-muted)] cursor-pointer bg-transparent border-none p-0 transition-colors duration-200"
+            className="text-xs text-(--text-muted) cursor-pointer bg-transparent border-none p-0 transition-colors duration-200"
             style={{ color: sourcesExpanded ? "var(--accent)" : undefined }}
           >
             Comparing: {selectedLabels} {sourcesExpanded ? "▴" : "▾"}
@@ -317,7 +317,7 @@ export default function CompareView({
                   </button>
                 );
               })}
-              <span className="text-[10px] text-[var(--text-muted)] self-center ml-1">
+              <span className="text-[10px] text-(--text-muted) self-center ml-1">
                 {selectedSources.length}/{MAX_SOURCES} selected
               </span>
             </div>

@@ -20,7 +20,7 @@ function NewsLoading() {
       style={{ background: "var(--bg)", color: "var(--text)" }}
     >
       <header
-        className="sticky top-0 z-50 border-b border-[var(--border)]"
+        className="sticky top-0 z-50 border-b border-(--border)"
         style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
       >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-3.5 h-14" />
@@ -30,13 +30,13 @@ function NewsLoading() {
           {[0, 1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className={`bg-[var(--card-bg)] rounded-[14px] overflow-hidden border border-[var(--border)] ${i === 0 ? "col-span-full" : ""}`}
+              className={`bg-(--card-bg) rounded-[14px] overflow-hidden border border-(--border) ${i === 0 ? "col-span-full" : ""}`}
             >
-              <div className={`bg-[var(--skeleton)] animate-shimmer ${i === 0 ? "h-[200px]" : "h-[140px]"}`} />
+              <div className={`bg-(--skeleton) animate-shimmer ${i === 0 ? "h-[200px]" : "h-[140px]"}`} />
               <div className="p-5 space-y-3">
-                <div className="h-3 w-[30%] bg-[var(--skeleton)] rounded-md animate-shimmer" />
-                <div className="h-4 w-[90%] bg-[var(--skeleton)] rounded-md animate-shimmer" />
-                <div className="h-4 w-[70%] bg-[var(--skeleton)] rounded-md animate-shimmer" />
+                <div className="h-3 w-[30%] bg-(--skeleton) rounded-md animate-shimmer" />
+                <div className="h-4 w-[90%] bg-(--skeleton) rounded-md animate-shimmer" />
+                <div className="h-4 w-[70%] bg-(--skeleton) rounded-md animate-shimmer" />
               </div>
             </div>
           ))}

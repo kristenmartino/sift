@@ -11,7 +11,7 @@ export default function LandingMasthead() {
   const { dark: darkMode, toggle: toggleDark, mounted } = useTheme();
 
   return (
-    <header className="border-b border-[var(--border)] bg-[var(--nav-bg)]">
+    <header className="border-b border-(--border) bg-(--nav-bg)">
       {/* Dateline strip — intentionally NOT time-stamped. The issue number and
           date here were computed from `new Date()`, which froze stale into the
           ISR-prerendered HTML: a cold visitor saw the date from the last
@@ -19,11 +19,11 @@ export default function LandingMasthead() {
           it. The masthead now carries no freshness claim; real "last updated"
           state belongs with the feed (pipeline_state), not the marketing
           masthead. See sift#111. */}
-      <div className="border-b border-[var(--border-subtle)]">
+      <div className="border-b border-(--border-subtle)">
         <div className="max-w-[1200px] mx-auto px-6 h-9 flex items-center justify-between gap-4">
-          <p className="font-body text-outlet uppercase text-[var(--text-secondary)] truncate">
+          <p className="font-body text-outlet uppercase text-(--text-secondary) truncate">
             <span>{COPY.header.tagline}</span>
-            <span className="mx-2 text-[var(--text-muted)] hidden sm:inline">·</span>
+            <span className="mx-2 text-(--text-muted) hidden sm:inline">·</span>
             <span className="hidden sm:inline">{COPY.header.dateline}</span>
           </p>
 
@@ -32,22 +32,22 @@ export default function LandingMasthead() {
               <button
                 onClick={toggleDark}
                 aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-                className="font-body text-outlet uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors"
+                className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors"
               >
                 {darkMode ? "Newsprint" : "Late Edition"}
               </button>
             )}
-            <span className="text-[var(--text-muted)] hidden sm:inline">·</span>
+            <span className="text-(--text-muted) hidden sm:inline">·</span>
             <Link
               href="/civic"
-              className="font-body text-outlet uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline hidden sm:inline"
+              className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline hidden sm:inline"
             >
               Civic ↗
             </Link>
-            <span className="text-[var(--text-muted)]">·</span>
+            <span className="text-(--text-muted)">·</span>
             <Link
               href="/news"
-              className="font-body text-outlet uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline"
+              className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline"
             >
               Open Sift →
             </Link>
@@ -63,11 +63,11 @@ export default function LandingMasthead() {
       </div>
 
       {/* Category nav */}
-      <nav aria-label="Sections" className="border-t border-[var(--border-subtle)]">
+      <nav aria-label="Sections" className="border-t border-(--border-subtle)">
         <div className="max-w-[1200px] mx-auto px-6 h-11 flex items-center gap-x-6 overflow-x-auto whitespace-nowrap scrollbar-none">
           <Link
             href="/news"
-            className="font-body text-outlet uppercase tracking-wider text-[var(--text)] hover:text-[var(--accent)] transition-colors no-underline shrink-0"
+            className="font-body text-outlet uppercase tracking-wider text-(--text) hover:text-(--accent) transition-colors no-underline shrink-0"
           >
             Today
           </Link>
@@ -77,7 +77,7 @@ export default function LandingMasthead() {
               <Link
                 key={cat.id}
                 href={`/news?category=${cat.id}`}
-                className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text)] transition-colors no-underline inline-flex items-center gap-2 shrink-0"
+                className="font-body text-outlet uppercase tracking-wider text-(--text-muted) hover:text-(--text) transition-colors no-underline inline-flex items-center gap-2 shrink-0"
               >
                 <span
                   aria-hidden

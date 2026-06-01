@@ -52,12 +52,12 @@ export default function CrossSpectrumCompare({
   return (
     <div className="mt-1">
       <div className="flex items-center gap-3 mb-3">
-        <p className="text-kicker font-bold uppercase text-[var(--text-muted)] shrink-0">
+        <p className="text-kicker font-bold uppercase text-(--text-muted) shrink-0">
           {COPY.stories.crossSpectrumHeader}
         </p>
         <span
           aria-hidden
-          className="flex-1 h-px bg-gradient-to-r from-[var(--border)] to-transparent"
+          className="flex-1 h-px bg-linear-to-r from-(--border) to-transparent"
         />
       </div>
       <div className={`grid grid-cols-1 ${desktopCols} gap-x-5 gap-y-4`}>
@@ -86,19 +86,19 @@ function CrossSpectrumColumn({ bucket, framings }: CrossSpectrumColumnProps) {
           Same register as the outer "Across the spectrum" eyebrow but
           tighter, so the column hierarchy reads at a glance. */}
       <div className="flex items-center gap-2 mb-2.5">
-        <span className="text-outlet font-semibold uppercase text-[var(--text)] shrink-0">
+        <span className="text-outlet font-semibold uppercase text-(--text) shrink-0">
           {label}
         </span>
         <span
           aria-hidden
-          className="flex-1 h-px bg-[var(--border-subtle)]"
+          className="flex-1 h-px bg-(--border-subtle)"
         />
       </div>
       <div className="flex flex-col">
         {framings.map((f) => (
           <div
             key={f.sourceName}
-            className="story-row flex flex-col gap-1.5 py-2.5 border-b border-[color:var(--border-subtle)] last:border-b-0"
+            className="story-row flex flex-col gap-1.5 py-2.5 border-b border-(--border-subtle) last:border-b-0"
           >
             <span aria-hidden className="story-row__rail" />
             <OutletBadge
@@ -107,7 +107,7 @@ function CrossSpectrumColumn({ bucket, framings }: CrossSpectrumColumnProps) {
               variant="rail"
               className="story-row__source shrink-0"
             />
-            <span className="text-body text-[var(--text-secondary)] leading-snug">
+            <span className="text-body text-(--text-secondary) leading-snug">
               {f.framing}
             </span>
           </div>

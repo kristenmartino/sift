@@ -67,7 +67,7 @@ export default function PoliticianDossier({
   const showNotYetEnriched = industriesEmpty && ratingsEmpty;
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <div className="min-h-screen bg-(--bg) text-(--text)">
       <LandingMasthead />
 
       <main
@@ -76,36 +76,36 @@ export default function PoliticianDossier({
       >
         {/* Eyebrow + headline */}
         <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3 flex items-center">
+          <p className="font-body text-kicker uppercase text-(--text-muted) mb-3 flex items-center">
             <span
               aria-hidden
-              className="inline-block w-7 h-px bg-[var(--border)] mr-3"
+              className="inline-block w-7 h-px bg-(--border) mr-3"
             />
             {c.eyebrow}
           </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-[var(--text)]">
+          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text)">
             {politician.name}
           </h1>
           {lede && (
-            <p className="font-body text-[16px] text-[var(--text-secondary)] mt-3 max-w-[60ch] leading-relaxed">
+            <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
               {lede}
             </p>
           )}
         </header>
 
-        <hr className="border-0 border-t border-[var(--border)] my-10" />
+        <hr className="border-0 border-t border-(--border) my-10" />
 
         {/* Committees */}
         {politician.committees.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.committees}
             </p>
             <ul className="space-y-1.5">
               {politician.committees.map((committee) => (
                 <li
                   key={committee}
-                  className="font-body text-[15px] text-[var(--text-secondary)] leading-relaxed"
+                  className="font-body text-[15px] text-(--text-secondary) leading-relaxed"
                 >
                   {committee}
                 </li>
@@ -117,20 +117,20 @@ export default function PoliticianDossier({
         {/* Top industries by PAC contributions (2022 cycle, from OpenSecrets bulk) */}
         {!industriesEmpty && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.topIndustries}
             </p>
             <ul className="space-y-2">
               {politician.topIndustriesCurrentCycle.map((entry) => (
                 <li
                   key={entry.industry}
-                  className="grid grid-cols-[1fr_auto] gap-x-6 items-baseline border-b border-[var(--border-subtle)] pb-2"
+                  className="grid grid-cols-[1fr_auto] gap-x-6 items-baseline border-b border-(--border-subtle) pb-2"
                 >
-                  <span className="font-body text-[15px] text-[var(--text-secondary)]">
+                  <span className="font-body text-[15px] text-(--text-secondary)">
                     {entry.industry}
                   </span>
                   {entry.amount_usd != null && (
-                    <span className="font-mono text-[13px] tabular-nums text-[var(--text-muted)]">
+                    <span className="font-mono text-[13px] tabular-nums text-(--text-muted)">
                       {formatUsdCompact(entry.amount_usd)}
                     </span>
                   )}
@@ -143,19 +143,19 @@ export default function PoliticianDossier({
         {/* Interest-group ratings */}
         {!ratingsEmpty && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.interestGroupRatings}
             </p>
             <ul className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5">
               {ratingsEntries.map(([group, rating]) => (
                 <li
                   key={group}
-                  className="grid grid-cols-[1fr_auto] gap-x-3 items-baseline border-b border-[var(--border-subtle)] pb-1.5"
+                  className="grid grid-cols-[1fr_auto] gap-x-3 items-baseline border-b border-(--border-subtle) pb-1.5"
                 >
-                  <span className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)]">
+                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-muted)">
                     {group}
                   </span>
-                  <span className="font-mono text-[13px] tabular-nums text-[var(--text-secondary)]">
+                  <span className="font-mono text-[13px] tabular-nums text-(--text-secondary)">
                     {typeof rating === "number" ? `${rating}%` : rating}
                   </span>
                 </li>
@@ -168,7 +168,7 @@ export default function PoliticianDossier({
             absent — common case before sift-api Phase 3.E refresh runs. */}
         {showNotYetEnriched && (
           <section className="mb-10">
-            <p className="font-body text-[14px] text-[var(--text-muted)] italic max-w-[60ch] leading-relaxed">
+            <p className="font-body text-[14px] text-(--text-muted) italic max-w-[60ch] leading-relaxed">
               {c.notYetEnriched}
             </p>
           </section>
@@ -177,7 +177,7 @@ export default function PoliticianDossier({
         {/* External links — public-record citations */}
         {externalLinkEntries.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.links}
             </p>
             <ul className="space-y-2.5">
@@ -187,16 +187,16 @@ export default function PoliticianDossier({
                 // narrow value column at 375px.
                 <li
                   key={key}
-                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[160px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-[var(--border-subtle)] pb-2.5"
+                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[160px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
                 >
-                  <span className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)]">
+                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-muted)">
                     {label}
                   </span>
                   <a
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-body text-[14px] text-[var(--text-secondary)] no-underline hover:underline hover:text-[var(--accent)] truncate"
+                    className="font-body text-[14px] text-(--text-secondary) no-underline hover:underline hover:text-(--accent) truncate"
                   >
                     {url} <span aria-hidden>↗</span>
                   </a>
@@ -209,28 +209,28 @@ export default function PoliticianDossier({
         {/* Free-form notes (curator commentary) */}
         {politician.notes && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.notes}
             </p>
-            <p className="font-body text-[15px] text-[var(--text-secondary)] leading-relaxed max-w-[60ch] italic">
+            <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] italic">
               {politician.notes}
             </p>
           </section>
         )}
 
-        <hr className="border-0 border-t border-[var(--border)] my-10" />
+        <hr className="border-0 border-t border-(--border) my-10" />
 
         {/* Footer: methodology hint placeholder + back link */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <Link
             href="/"
-            className="font-body text-outlet uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline inline-flex items-center gap-1.5"
+            className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline inline-flex items-center gap-1.5"
           >
             <span aria-hidden>←</span> Back to Sift
           </Link>
           {/* Methodology link goes live with Phase 2.D (PR #79). Until that
               merges, render the hint as plain text rather than a 404 link. */}
-          <span className="font-body text-meta text-[var(--text-muted)] italic">
+          <span className="font-body text-meta text-(--text-muted) italic">
             {c.methodologyHint}
           </span>
         </div>

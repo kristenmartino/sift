@@ -1,6 +1,167 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Replaces the v3 tailwind.config.ts theme.
+
+  The font faces (Fraunces / Hanken Grotesk / DM Mono) are intentionally NOT
+  theme tokens: next/font sets --font-heading / --font-body / --font-mono on
+  <html>, and a theme token of the SAME name self-references
+  (`--font-heading: var(--font-heading)`), which Tailwind emits into :root and
+  can silently break the fonts depending on cascade order. Instead, font-heading
+  / font-body / font-mono are defined as explicit @utility rules (below the
+  theme block) that point straight at the next/font variables.
+*/
+@theme {
+  /* `--font-mono` is a Tailwind v4 reserved default (ui-monospace…). Reset it
+     so v4 doesn't emit a `:root { --font-mono }` that could shadow next/font's
+     DM Mono on <html>; the `font-mono` @utility below owns the utility. (heading
+     and body aren't v4 defaults, so they don't need this.) */
+  --font-mono: initial;
+
+  --text-kicker: 11px;
+  --text-kicker--line-height: 1.2;
+  --text-kicker--letter-spacing: 0.12em;
+  --text-meta: 11px;
+  --text-meta--line-height: 1.3;
+  --text-meta--letter-spacing: 0.02em;
+  --text-outlet: 11px;
+  --text-outlet--line-height: 1.2;
+  --text-outlet--letter-spacing: 0.08em;
+  --text-body: 13.5px;
+  --text-body--line-height: 1.5;
+  --text-body--letter-spacing: 0;
+  --text-body-lg: 15px;
+  --text-body-lg--line-height: 1.55;
+  --text-body-lg--letter-spacing: -0.005em;
+  --text-headline: 19px;
+  --text-headline--line-height: 1.25;
+  --text-headline--letter-spacing: -0.015em;
+  --text-headline-lg: 24px;
+  --text-headline-lg--line-height: 1.2;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-display: 32px;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.025em;
+
+  --color-sift-bg: var(--bg);
+  --color-sift-card: var(--card-bg);
+  --color-sift-border: var(--border);
+  --color-sift-accent: var(--accent);
+  --color-sift-skeleton: var(--skeleton);
+
+  --color-category-top: #dc2626;
+  --color-category-technology: #2563eb;
+  --color-category-business: #059669;
+  --color-category-science: #7c3aed;
+  --color-category-energy: #0d9488;
+  --color-category-world: #d97706;
+  --color-category-health: #db2777;
+  --color-category-politics: #6366f1;
+  --color-category-sports: #0891b2;
+  --color-category-entertainment: #e11d48;
+
+  --animate-shimmer: shimmer 1.8s ease-in-out infinite;
+  --animate-fade-slide-in: fade-slide-in 0.5s ease-out both;
+  --animate-spin-slow: spin 1s linear infinite;
+  --animate-bookmark-pop: bookmark-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-sift-refresh: sift-refresh 1.2s ease-in-out infinite;
+  --animate-category-fade-in: category-fade-in 0.3s ease-out both;
+
+  @keyframes shimmer {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+  @keyframes fade-slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes bookmark-pop {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.35);
+    }
+    60% {
+      transform: scale(0.95);
+    }
+    100% {
+      transform: scale(1.15);
+    }
+  }
+  @keyframes sift-refresh {
+    0% {
+      transform: rotate(0deg) scale(1);
+      opacity: 0.5;
+    }
+    50% {
+      transform: rotate(180deg) scale(1.1);
+      opacity: 1;
+    }
+    100% {
+      transform: rotate(360deg) scale(1);
+      opacity: 0.5;
+    }
+  }
+  @keyframes category-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* next/font-bound font utilities — replace the v3 fontFamily.heading/body/mono
+   tokens without a :root name collision (see the note in @theme above). */
+@utility font-heading {
+  font-family: var(--font-heading), Georgia, "Times New Roman", serif;
+}
+@utility font-body {
+  font-family: var(--font-body), "Segoe UI", sans-serif;
+}
+@utility font-mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /* ─── Theme Variables ─────────────────────────────────── */
 /*

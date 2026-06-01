@@ -117,7 +117,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="topic-modal-title"
@@ -126,17 +126,17 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
     >
       <div
         ref={dialogRef}
-        className="w-full max-w-[460px] rounded-2xl border border-[var(--border)] overflow-hidden animate-fade-slide-in"
+        className="w-full max-w-[460px] rounded-2xl border border-(--border) overflow-hidden animate-fade-slide-in"
         style={{ background: "var(--card-bg)" }}
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-          <h2 id="topic-modal-title" className="font-heading text-lg font-bold text-[var(--text)]">
+          <h2 id="topic-modal-title" className="font-heading text-lg font-bold text-(--text)">
             {step === "preview" ? COPY.topics.previewTitle : COPY.topics.modalTitle}
           </h2>
           <button
             onClick={onClose}
-            className="bg-transparent border-none text-[var(--text-muted)] text-xl cursor-pointer p-1 transition-colors duration-200"
+            className="bg-transparent border-none text-(--text-muted) text-xl cursor-pointer p-1 transition-colors duration-200"
             aria-label="Close"
           >
             &times;
@@ -158,7 +158,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
                 placeholder={COPY.topics.modalPlaceholder}
                 maxLength={200}
                 disabled={step === "generating"}
-                className="w-full px-4 py-3 rounded-xl text-sm font-body transition-all duration-200 outline-none"
+                className="w-full px-4 py-3 rounded-xl text-sm font-body transition-all duration-200 outline-hidden"
                 style={{
                   background: "var(--bg)",
                   border: "1px solid var(--border)",
@@ -174,7 +174,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
                   <span className="animate-sift-refresh inline-block text-sm" style={{ color: color.hex }}>
                     &#x25C6;
                   </span>
-                  <span className="text-xs text-[var(--text-muted)]">
+                  <span className="text-xs text-(--text-muted)">
                     {COPY.topics.generating}
                   </span>
                 </div>
@@ -208,14 +208,14 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
                   {preview.icon}
                 </span>
                 <div>
-                  <p className="font-bold text-[var(--text)]">{preview.shortLabel}</p>
-                  <p className="text-xs text-[var(--text-muted)]">{preview.description}</p>
+                  <p className="font-bold text-(--text)">{preview.shortLabel}</p>
+                  <p className="text-xs text-(--text-muted)">{preview.description}</p>
                 </div>
               </div>
 
               {/* Search queries */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-(--text-muted) mb-2">
                   {COPY.topics.previewQueries}
                 </p>
                 <div className="flex flex-wrap gap-1.5">

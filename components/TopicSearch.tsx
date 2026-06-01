@@ -42,7 +42,7 @@ export default function TopicSearch({
           type="button"
           onClick={onClose}
           aria-label="Exit search"
-          className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-[var(--text-secondary)] text-base cursor-pointer transition-all duration-200 shrink-0"
+          className="flex items-center justify-center w-9 h-9 rounded-full border border-(--border) bg-transparent text-(--text-secondary) text-base cursor-pointer transition-all duration-200 shrink-0"
         >
           ←
         </button>
@@ -55,7 +55,7 @@ export default function TopicSearch({
             onChange={(e) => setInputValue(e.target.value)}
             placeholder={COPY.search.placeholder}
             maxLength={200}
-            className="w-full px-4 py-2 pr-12 rounded-full text-sm font-body transition-all duration-200 outline-none"
+            className="w-full px-4 py-2 pr-12 rounded-full text-sm font-body transition-all duration-200 outline-hidden"
             style={{
               background: "var(--card-bg)",
               border: "1px solid var(--border)",
@@ -86,7 +86,7 @@ export default function TopicSearch({
       </form>
 
       {matchQuality && (
-        <div className="flex items-center gap-3 mt-2 ml-11 text-xs text-[var(--text-muted)] animate-fade-slide-in">
+        <div className="flex items-center gap-3 mt-2 ml-11 text-xs text-(--text-muted) animate-fade-slide-in">
           {resultCount > 0 ? (
             <span
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide"
@@ -107,12 +107,12 @@ export default function TopicSearch({
               {matchQuality === "strong" ? "●" : "○"} {matchQuality} match
             </span>
           ) : (
-            <span className="text-[var(--text-muted)]">
+            <span className="text-(--text-muted)">
               {COPY.search.noResults}
             </span>
           )}
           {fallbackUsed && (
-            <span className="text-[var(--text-muted)] italic">
+            <span className="text-(--text-muted) italic">
               {resultCount === 0
                 ? COPY.search.fallbackSearching
                 : COPY.search.fallbackUsed}

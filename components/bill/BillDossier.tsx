@@ -59,7 +59,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <div className="min-h-screen bg-(--bg) text-(--text)">
       <LandingMasthead />
 
       <main
@@ -68,35 +68,35 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
       >
         {/* Eyebrow + headline */}
         <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3 flex items-center">
+          <p className="font-body text-kicker uppercase text-(--text-muted) mb-3 flex items-center">
             <span
               aria-hidden
-              className="inline-block w-7 h-px bg-[var(--border)] mr-3"
+              className="inline-block w-7 h-px bg-(--border) mr-3"
             />
             {c.eyebrow}
           </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-[var(--text)]">
+          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text)">
             {bill.shortTitle ?? displayId}
           </h1>
-          <p className="font-body text-[16px] text-[var(--text-secondary)] mt-3 max-w-[60ch] leading-relaxed">
+          <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
             {bill.shortTitle ? `${displayId} · ` : ""}
             {bill.title}
           </p>
         </header>
 
-        <hr className="border-0 border-t border-[var(--border)] my-10" />
+        <hr className="border-0 border-t border-(--border) my-10" />
 
         {/* Status — Fraunces 26 display */}
         {statusLabel && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.status}
             </p>
-            <p className="font-heading text-[26px] font-semibold text-[var(--text)] leading-tight">
+            <p className="font-heading text-[26px] font-semibold text-(--text) leading-tight">
               {statusLabel}
             </p>
             {bill.introducedDate && (
-              <p className="font-body text-meta text-[var(--text-muted)] mt-1.5">
+              <p className="font-body text-meta text-(--text-muted) mt-1.5">
                 {c.sections.introducedDate}: {bill.introducedDate}
               </p>
             )}
@@ -106,14 +106,14 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
         {/* Sponsor — linked to politician dossier when bioguide is curated */}
         {(sponsor || bill.sponsorBioguide) && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.sponsor}
             </p>
-            <p className="font-body text-[15px] text-[var(--text-secondary)] leading-relaxed">
+            <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed">
               {sponsor ? (
                 <Link
                   href={`/politician/${sponsor.bioguideId}`}
-                  className="text-[var(--text)] no-underline hover:underline hover:text-[var(--accent)] font-semibold"
+                  className="text-(--text) no-underline hover:underline hover:text-(--accent) font-semibold"
                 >
                   {sponsor.name}
                   {sponsor.party && sponsor.state
@@ -121,7 +121,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
                     : ""}
                 </Link>
               ) : (
-                <span className="text-[var(--text)] font-mono text-[14px]">
+                <span className="text-(--text) font-mono text-[14px]">
                   {bill.sponsorBioguide}
                 </span>
               )}
@@ -132,10 +132,10 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
         {/* Cosponsors — count only; full list lives at GovTrack */}
         {bill.cosponsors.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.cosponsors}
             </p>
-            <p className="font-body text-[15px] text-[var(--text-secondary)] leading-relaxed">
+            <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed">
               {c.cosponsorCount(bill.cosponsors.length)}
               {bill.externalLinks.govtrack && (
                 <>
@@ -144,7 +144,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
                     href={bill.externalLinks.govtrack}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[var(--text-muted)] no-underline hover:underline hover:text-[var(--accent)]"
+                    className="text-(--text-muted) no-underline hover:underline hover:text-(--accent)"
                   >
                     full list on GovTrack <span aria-hidden>↗</span>
                   </a>
@@ -159,38 +159,38 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
             behind which side of the bill. */}
         {hasLobbying && (
           <section className="mb-12">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.lobbying}
             </p>
             <div className="grid gap-6 md:grid-cols-2">
               {lobbyingForLabel && (
                 <div>
-                  <p className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)] mb-1.5">
+                  <p className="font-body text-outlet uppercase tracking-wider text-(--text-muted) mb-1.5">
                     {c.lobbyingFor}
                   </p>
-                  <p className="font-heading text-[26px] font-semibold text-[var(--text)] tabular-nums leading-tight">
+                  <p className="font-heading text-[26px] font-semibold text-(--text) tabular-nums leading-tight">
                     {lobbyingForLabel}
                   </p>
                 </div>
               )}
               {lobbyingAgainstLabel && (
                 <div>
-                  <p className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)] mb-1.5">
+                  <p className="font-body text-outlet uppercase tracking-wider text-(--text-muted) mb-1.5">
                     {c.lobbyingAgainst}
                   </p>
-                  <p className="font-heading text-[26px] font-semibold text-[var(--text)] tabular-nums leading-tight">
+                  <p className="font-heading text-[26px] font-semibold text-(--text) tabular-nums leading-tight">
                     {lobbyingAgainstLabel}
                   </p>
                 </div>
               )}
             </div>
             {bill.externalLinks.opensecrets && (
-              <p className="font-body text-meta text-[var(--text-muted)] mt-3">
+              <p className="font-body text-meta text-(--text-muted) mt-3">
                 <a
                   href={bill.externalLinks.opensecrets}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[var(--text-muted)] no-underline hover:underline hover:text-[var(--accent)]"
+                  className="text-(--text-muted) no-underline hover:underline hover:text-(--accent)"
                 >
                   Source: OpenSecrets <span aria-hidden>↗</span>
                 </a>
@@ -202,7 +202,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
         {/* External links */}
         {externalLinkEntries.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.links}
             </p>
             <ul className="space-y-2.5">
@@ -214,16 +214,16 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
                 // and put the small-caps label on its own line above.
                 <li
                   key={key}
-                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[200px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-[var(--border-subtle)] pb-2.5"
+                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[200px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
                 >
-                  <span className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)]">
+                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-muted)">
                     {label}
                   </span>
                   <a
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-body text-[14px] text-[var(--text-secondary)] no-underline hover:underline hover:text-[var(--accent)] truncate"
+                    className="font-body text-[14px] text-(--text-secondary) no-underline hover:underline hover:text-(--accent) truncate"
                   >
                     {url} <span aria-hidden>↗</span>
                   </a>
@@ -236,28 +236,28 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
         {/* Free-form notes */}
         {bill.notes && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {c.sections.notes}
             </p>
-            <p className="font-body text-[15px] text-[var(--text-secondary)] leading-relaxed max-w-[60ch] italic">
+            <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] italic">
               {bill.notes}
             </p>
           </section>
         )}
 
-        <hr className="border-0 border-t border-[var(--border)] my-10" />
+        <hr className="border-0 border-t border-(--border) my-10" />
 
         {/* Footer: methodology link + back to Sift */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <Link
             href="/"
-            className="font-body text-outlet uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline inline-flex items-center gap-1.5"
+            className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline inline-flex items-center gap-1.5"
           >
             <span aria-hidden>←</span> Back to Sift
           </Link>
           <Link
             href="/methodology"
-            className="font-body text-meta text-[var(--text-muted)] italic no-underline hover:text-[var(--accent)] hover:not-italic transition-colors"
+            className="font-body text-meta text-(--text-muted) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
           >
             {c.methodologyHint}
           </Link>
