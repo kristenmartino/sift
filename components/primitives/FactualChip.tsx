@@ -24,6 +24,12 @@ interface FactualChipProps {
   rating: OutletMbfcRating | null | undefined;
   url?: string | null;
   lastChecked?: string | null;
+  /**
+   * Render ONLY the neutral fill-level meter — no "MBFC: …" text and no cited
+   * link — for surfaces that already supply their own label + citation (the
+   * outlet dossier). Default false → full label + cited link (reader/OutletChip).
+   */
+  meterOnly?: boolean;
   className?: string;
 }
 
@@ -31,27 +37,46 @@ export default function FactualChip({
   rating,
   url,
   lastChecked,
+  meterOnly = false,
   className = "",
 }: FactualChipProps) {
   const label = formatMbfcLabel(rating);
   if (!rating || !label) return null;
   const level = LEVEL[rating];
 
+  const meter = (
+    <span aria-hidden className="inline-flex items-center gap-[2px] align-middle">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <span
+          key={i}
+          className="inline-block w-[3px] h-[9px] rounded-[1px]"
+          style={{
+            background:
+              i <= level ? "var(--text-secondary)" : "var(--border-strong)",
+          }}
+        />
+      ))}
+    </span>
+  );
+
+  // Meter-only: the neutral ticks with an accessible label, no text, no link.
+  // The host surface (e.g. the dossier) supplies the visible label + citation.
+  if (meterOnly) {
+    return (
+      <span
+        className={`inline-flex items-center align-middle ${className}`}
+        role="img"
+        aria-label={`MBFC factual reporting: ${label}`}
+      >
+        {meter}
+      </span>
+    );
+  }
+
   const body = (
     <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">
       MBFC: {label}
-      <span aria-hidden className="inline-flex items-center gap-[2px] align-middle">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <span
-            key={i}
-            className="inline-block w-[3px] h-[9px] rounded-[1px]"
-            style={{
-              background:
-                i <= level ? "var(--text-secondary)" : "var(--border-strong)",
-            }}
-          />
-        ))}
-      </span>
+      {meter}
     </span>
   );
 

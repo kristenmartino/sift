@@ -54,7 +54,7 @@ export default function CivicIndex({
   const orgTypeGroups = groupByType(orgs);
 
   return (
-    <div className="min-h-screen bg-(--bg) text-(--text)">
+    <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
       <LandingMasthead />
 
       <main
@@ -63,14 +63,14 @@ export default function CivicIndex({
       >
         {/* Eyebrow + headline */}
         <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-3 flex items-center">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3 flex items-center">
             <span
               aria-hidden
               className="inline-block w-7 h-px bg-(--border) mr-3"
             />
             {c.eyebrow}
           </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text)">
+          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text-primary)">
             {c.headline}
           </h1>
           <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
@@ -85,11 +85,11 @@ export default function CivicIndex({
           <header className="mb-6">
             <p
               id="politicians-heading"
-              className="font-body text-kicker uppercase text-(--text-muted) mb-2"
+              className="font-body text-kicker uppercase text-(--text-tertiary) mb-2"
             >
               {c.politiciansEyebrow(politicians.length)}
             </p>
-            <h2 className="font-heading text-[26px] md:text-[28px] font-semibold leading-[1.15] tracking-tight text-(--text)">
+            <h2 className="font-heading text-[26px] md:text-[28px] font-semibold leading-[1.15] tracking-tight text-(--text-primary)">
               {c.politiciansHeading}
             </h2>
           </header>
@@ -114,7 +114,7 @@ export default function CivicIndex({
               href="/civic?chamber=house"
               active={chamberFilter === "house"}
             />
-            <span className="font-body text-[13px] tracking-normal text-(--text-muted) ml-auto normal-case">
+            <span className="font-body text-[13px] tracking-normal text-(--text-tertiary) ml-auto normal-case">
               {filteredPoliticians.length === politicians.length
                 ? c.showingAll(filteredPoliticians.length)
                 : c.showingFiltered(filteredPoliticians.length, politicians.length)}
@@ -123,14 +123,14 @@ export default function CivicIndex({
 
           {/* State-grouped list */}
           {stateGroups.length === 0 ? (
-            <p className="font-body text-[14px] text-(--text-muted) italic max-w-[60ch] leading-relaxed">
+            <p className="font-body text-[14px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed">
               {c.emptyPoliticians}
             </p>
           ) : (
             <ul className="space-y-6">
               {stateGroups.map(([code, members]) => (
                 <li key={code}>
-                  <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-(--text-muted) mb-1.5">
+                  <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-(--text-tertiary) mb-1.5">
                     {stateName(code)}
                   </p>
                   <ul className="font-body text-[15px] text-(--text-secondary) leading-relaxed">
@@ -138,12 +138,12 @@ export default function CivicIndex({
                       <li key={p.bioguideId} className="inline">
                         <Link
                           href={`/politician/${p.bioguideId}`}
-                          className="text-(--text) no-underline hover:underline hover:text-(--accent)"
+                          className="text-(--text-primary) no-underline hover:underline hover:text-(--accent)"
                         >
                           {p.name}
                         </Link>
                         {p.party && (
-                          <span className="text-(--text-muted)">
+                          <span className="text-(--text-tertiary)">
                             {" "}
                             ({p.party}
                             {p.chamber === "senate"
@@ -155,7 +155,7 @@ export default function CivicIndex({
                           </span>
                         )}
                         {idx < members.length - 1 && (
-                          <span className="text-(--text-muted) mx-1.5">
+                          <span className="text-(--text-tertiary) mx-1.5">
                             ·
                           </span>
                         )}
@@ -175,24 +175,24 @@ export default function CivicIndex({
           <header className="mb-6">
             <p
               id="orgs-heading"
-              className="font-body text-kicker uppercase text-(--text-muted) mb-2"
+              className="font-body text-kicker uppercase text-(--text-tertiary) mb-2"
             >
               {c.orgsEyebrow(orgs.length)}
             </p>
-            <h2 className="font-heading text-[26px] md:text-[28px] font-semibold leading-[1.15] tracking-tight text-(--text)">
+            <h2 className="font-heading text-[26px] md:text-[28px] font-semibold leading-[1.15] tracking-tight text-(--text-primary)">
               {c.orgsHeading}
             </h2>
           </header>
 
           {orgTypeGroups.length === 0 ? (
-            <p className="font-body text-[14px] text-(--text-muted) italic max-w-[60ch] leading-relaxed">
+            <p className="font-body text-[14px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed">
               {c.emptyOrgs}
             </p>
           ) : (
             <ul className="space-y-6">
               {orgTypeGroups.map(([type, items]) => (
                 <li key={type}>
-                  <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-(--text-muted) mb-1.5">
+                  <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-(--text-tertiary) mb-1.5">
                     {orgTypeLabel(type === "other" ? null : type)}
                   </p>
                   <ul className="space-y-1.5">
@@ -203,12 +203,12 @@ export default function CivicIndex({
                       >
                         <Link
                           href={`/org/${o.slug}`}
-                          className="text-(--text) no-underline hover:underline hover:text-(--accent)"
+                          className="text-(--text-primary) no-underline hover:underline hover:text-(--accent)"
                         >
                           {o.name}
                         </Link>
                         {o.politicalLean && (
-                          <span className="text-(--text-muted)">
+                          <span className="text-(--text-tertiary)">
                             {" "}
                             ({orgLeanLabel(o.politicalLean)})
                           </span>
@@ -229,17 +229,17 @@ export default function CivicIndex({
           <header className="mb-6">
             <p
               id="bills-heading"
-              className="font-body text-kicker uppercase text-(--text-muted) mb-2"
+              className="font-body text-kicker uppercase text-(--text-tertiary) mb-2"
             >
               {c.billsEyebrow(bills.length)}
             </p>
-            <h2 className="font-heading text-[26px] md:text-[28px] font-semibold leading-[1.15] tracking-tight text-(--text)">
+            <h2 className="font-heading text-[26px] md:text-[28px] font-semibold leading-[1.15] tracking-tight text-(--text-primary)">
               {c.billsHeading}
             </h2>
           </header>
 
           {bills.length === 0 ? (
-            <p className="font-body text-[14px] text-(--text-muted) italic max-w-[60ch] leading-relaxed">
+            <p className="font-body text-[14px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed">
               {c.emptyBills}
             </p>
           ) : (
@@ -251,16 +251,16 @@ export default function CivicIndex({
                 >
                   <Link
                     href={`/bill/${b.billId}`}
-                    className="text-(--text) no-underline hover:underline hover:text-(--accent) font-semibold"
+                    className="text-(--text-primary) no-underline hover:underline hover:text-(--accent) font-semibold"
                   >
                     {b.shortTitle ?? b.billId}
                   </Link>
-                  <span className="text-(--text-muted)">
+                  <span className="text-(--text-tertiary)">
                     {" "}
                     · {b.congress}th Congress
                   </span>
                   {b.status && (
-                    <span className="text-(--text-muted)">
+                    <span className="text-(--text-tertiary)">
                       {" "}
                       · {b.status}
                     </span>
@@ -271,7 +271,7 @@ export default function CivicIndex({
           )}
 
           {bills.length > 0 && bills.length < 5 && (
-            <p className="font-body text-[14px] text-(--text-muted) italic max-w-[60ch] leading-relaxed mt-6">
+            <p className="font-body text-[14px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed mt-6">
               {c.billsMoreSoon}
             </p>
           )}
@@ -287,7 +287,7 @@ export default function CivicIndex({
           >
             ← {c.backLink}
           </Link>
-          <p className="font-body text-[12px] text-(--text-muted) italic">
+          <p className="font-body text-[12px] text-(--text-tertiary) italic">
             {c.methodologyHint}
           </p>
         </div>
@@ -309,7 +309,7 @@ function ChamberFilterLink({ label, href, active }: ChamberFilterLinkProps) {
       className={
         active
           ? "text-(--accent) no-underline border-b border-(--accent) pb-0.5"
-          : "text-(--text-muted) no-underline hover:text-(--text)"
+          : "text-(--text-tertiary) no-underline hover:text-(--text-primary)"
       }
       aria-current={active ? "page" : undefined}
     >

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import LandingMasthead from "@/components/landing/LandingMasthead";
+import { PartyTag } from "@/components/primitives";
 import {
   formatBillIdDisplay,
   formatBillStatusLabel,
@@ -59,7 +60,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
   }
 
   return (
-    <div className="min-h-screen bg-(--bg) text-(--text)">
+    <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
       <LandingMasthead />
 
       <main
@@ -68,14 +69,14 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
       >
         {/* Eyebrow + headline */}
         <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-3 flex items-center">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3 flex items-center">
             <span
               aria-hidden
               className="inline-block w-7 h-px bg-(--border) mr-3"
             />
             {c.eyebrow}
           </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text)">
+          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text-primary)">
             {bill.shortTitle ?? displayId}
           </h1>
           <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
@@ -89,14 +90,14 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
         {/* Status — Fraunces 26 display */}
         {statusLabel && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.status}
             </p>
-            <p className="font-heading text-[26px] font-semibold text-(--text) leading-tight">
+            <p className="font-heading text-[26px] font-semibold text-(--text-primary) leading-tight">
               {statusLabel}
             </p>
             {bill.introducedDate && (
-              <p className="font-body text-meta text-(--text-muted) mt-1.5">
+              <p className="font-body text-meta text-(--text-tertiary) mt-1.5">
                 {c.sections.introducedDate}: {bill.introducedDate}
               </p>
             )}
@@ -106,22 +107,27 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
         {/* Sponsor — linked to politician dossier when bioguide is curated */}
         {(sponsor || bill.sponsorBioguide) && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.sponsor}
             </p>
             <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed">
               {sponsor ? (
-                <Link
-                  href={`/politician/${sponsor.bioguideId}`}
-                  className="text-(--text) no-underline hover:underline hover:text-(--accent) font-semibold"
-                >
-                  {sponsor.name}
-                  {sponsor.party && sponsor.state
-                    ? ` (${sponsor.party}-${sponsor.state})`
-                    : ""}
-                </Link>
+                <span className="inline-flex items-center gap-x-2 flex-wrap">
+                  <Link
+                    href={`/politician/${sponsor.bioguideId}`}
+                    className="text-(--text-primary) no-underline hover:underline hover:text-(--accent) font-semibold"
+                  >
+                    {sponsor.name}
+                  </Link>
+                  {sponsor.party && <PartyTag party={sponsor.party} />}
+                  {sponsor.state && (
+                    <span className="text-(--text-tertiary)">
+                      {sponsor.state}
+                    </span>
+                  )}
+                </span>
               ) : (
-                <span className="text-(--text) font-mono text-[14px]">
+                <span className="text-(--text-primary) font-mono text-[14px]">
                   {bill.sponsorBioguide}
                 </span>
               )}
@@ -132,7 +138,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
         {/* Cosponsors — count only; full list lives at GovTrack */}
         {bill.cosponsors.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.cosponsors}
             </p>
             <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed">
@@ -144,7 +150,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
                     href={bill.externalLinks.govtrack}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-(--text-muted) no-underline hover:underline hover:text-(--accent)"
+                    className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
                   >
                     full list on GovTrack <span aria-hidden>↗</span>
                   </a>
@@ -159,38 +165,38 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
             behind which side of the bill. */}
         {hasLobbying && (
           <section className="mb-12">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.lobbying}
             </p>
             <div className="grid gap-6 md:grid-cols-2">
               {lobbyingForLabel && (
                 <div>
-                  <p className="font-body text-outlet uppercase tracking-wider text-(--text-muted) mb-1.5">
+                  <p className="font-body text-outlet uppercase tracking-wider text-(--text-tertiary) mb-1.5">
                     {c.lobbyingFor}
                   </p>
-                  <p className="font-heading text-[26px] font-semibold text-(--text) tabular-nums leading-tight">
+                  <p className="font-heading text-[26px] font-semibold text-(--text-primary) tabular-nums leading-tight">
                     {lobbyingForLabel}
                   </p>
                 </div>
               )}
               {lobbyingAgainstLabel && (
                 <div>
-                  <p className="font-body text-outlet uppercase tracking-wider text-(--text-muted) mb-1.5">
+                  <p className="font-body text-outlet uppercase tracking-wider text-(--text-tertiary) mb-1.5">
                     {c.lobbyingAgainst}
                   </p>
-                  <p className="font-heading text-[26px] font-semibold text-(--text) tabular-nums leading-tight">
+                  <p className="font-heading text-[26px] font-semibold text-(--text-primary) tabular-nums leading-tight">
                     {lobbyingAgainstLabel}
                   </p>
                 </div>
               )}
             </div>
             {bill.externalLinks.opensecrets && (
-              <p className="font-body text-meta text-(--text-muted) mt-3">
+              <p className="font-body text-meta text-(--text-tertiary) mt-3">
                 <a
                   href={bill.externalLinks.opensecrets}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-(--text-muted) no-underline hover:underline hover:text-(--accent)"
+                  className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
                 >
                   Source: OpenSecrets <span aria-hidden>↗</span>
                 </a>
@@ -202,7 +208,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
         {/* External links */}
         {externalLinkEntries.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.links}
             </p>
             <ul className="space-y-2.5">
@@ -216,7 +222,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
                   key={key}
                   className="flex flex-col gap-y-1 md:grid md:grid-cols-[200px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
                 >
-                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-muted)">
+                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-tertiary)">
                     {label}
                   </span>
                   <a
@@ -236,7 +242,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
         {/* Free-form notes */}
         {bill.notes && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.notes}
             </p>
             <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] italic">
@@ -257,7 +263,7 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
           </Link>
           <Link
             href="/methodology"
-            className="font-body text-meta text-(--text-muted) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
+            className="font-body text-meta text-(--text-tertiary) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
           >
             {c.methodologyHint}
           </Link>
