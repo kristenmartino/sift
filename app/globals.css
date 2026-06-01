@@ -289,10 +289,30 @@ html {
 }
 
 /* ─── Base Reset ───────────────────────────────────────── */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Tailwind v4 compatibility — this universal reset MUST stay inside @layer base.
+   v4 emits utilities into native `@layer utilities`, and UNLAYERED declarations
+   win over ANY layered declaration regardless of specificity. So an unlayered
+   `* { margin:0; padding:0 }` silently overrode every `p-*` / `m-*` / `mt-auto`
+   / `space-y-*` utility once #142 migrated v3→v4 — which is exactly what broke
+   /news spacing (the homepage was unaffected because it's hand-written .sl-*
+   CSS, not Tailwind spacing utilities). Inside @layer base it still zeroes UA
+   defaults but correctly LOSES to spacing utilities, restoring v3 behavior. */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* v4 sets <button> cursor to `default` (matching the browser) instead of
+     `pointer`. Every interactive control in-app already carries an explicit
+     `cursor-pointer` utility, but third-party buttons (e.g. Clerk) do not — this
+     restores the pointer affordance for them while still losing to any explicit
+     `cursor-*` utility. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 body {
