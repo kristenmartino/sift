@@ -362,6 +362,167 @@ export const COPY = {
     // Footer colophon link.
     colophonLink: "Colophon",
   },
+  // ─── Homepage reskin ("The news, with footnotes") ──────
+  // Copy for the reskinned `/` sections. Kept separate from `landing` (still
+  // used by the lead-story explainer + colophon) so neither clobbers the other.
+  landingReskin: {
+    nav: {
+      links: [
+        { label: "What Sift adds", href: "#adds" },
+        { label: "Compare", href: "#compare" },
+        { label: "Sources", href: "#sources" },
+      ],
+      cta: "Open Sift",
+      menuOpen: "Close",
+      menuClosed: "Menu",
+    },
+    hero: {
+      eyebrow: "Curated civic context for the news",
+      headingLead: "The news, with ",
+      headingAccent: "footnotes",
+      lede: "Sift reads ~50 vetted outlets across the political spectrum and adds the context the news assumes you already know — the background, the people and organizations involved, and how to read each source. Every link goes to the original.",
+      ctaPrimary: "Open Sift",
+      ctaSecondary: "See what Sift adds",
+      foot: "~50 vetted outlets · Left → Center → Right",
+    },
+    card: {
+      barLabel: "Today · Top story",
+      badge: "civic context on",
+      primerLabel: "What you should know first",
+    },
+    strip: [
+      "~50 vetted outlets",
+      "Left → Center → Right",
+      "Ratings cited, never computed",
+      "Every link goes to the original",
+    ],
+    manifesto: {
+      eyebrow: "Why Sift",
+      headingLead: "The news is written for people who ",
+      headingEm: "already have the context.",
+      body: "Most reporting assumes you know the players, the precedent, and where the source is coming from. Sift adds it back — so you can read across the spectrum and judge for yourself, with the footnotes in front of you.",
+      spectrum: [
+        { label: "Left", count: 22 },
+        { label: "Center", count: 24 },
+        { label: "Right", count: 11 },
+        { label: "Specialty", count: 20 },
+      ],
+      spectrumCaption:
+        "Hand-picked to balance the spectrum and clear a factual-reporting bar. Outlets without a political-lean rating are peer-reviewed journals or sector specialists.",
+    },
+    adds: {
+      eyebrow: "What Sift adds",
+      titleLead: "A footnote on ",
+      titleIt: "every story.",
+      subtitle:
+        "Not a summary that replaces the article — context that lets you actually read it. The methodology is the product as much as the feature.",
+      cards: [
+        {
+          icon: "i",
+          title: "What you should know first",
+          body: "A short primer on the background the story takes for granted — the precedent, the stakes, why it matters now.",
+        },
+        {
+          icon: "A·z",
+          title: "Terms you may not know",
+          body: "The jargon, acronyms, and procedure defined inline, so the paragraph actually makes sense the first time through.",
+        },
+        {
+          icon: "◈",
+          title: "Who's involved",
+          body: "Dossiers on the senators, agencies, and organizations named — who they are and where they sit, without leaving the story.",
+        },
+        {
+          icon: "⇄",
+          title: "The source & the spread",
+          body: "Each outlet's AllSides lean and MBFC factual tier — cited and linked, never our own rating — plus how other outlets framed the same story.",
+        },
+      ],
+    },
+    compare: {
+      eyebrow: "How outlets framed it",
+      titleLead: "One story, ",
+      titleIt: "three angles.",
+      subtitle:
+        "Sift shows what each outlet chose to emphasize — described, not labeled “biased” or “objective.” You read; the product does the legwork.",
+      topicLabel: "Topic",
+      topic: "The Federal Reserve's May rate decision",
+      frames: [
+        {
+          outlet: "Reuters",
+          lean: "AllSides: Center",
+          quote: "Powell signals patience as inflation stays sticky; Fed leaves rates unchanged.",
+        },
+        {
+          outlet: "Wall Street Journal",
+          lean: "AllSides: Center",
+          quote: "Markets read between the lines: rate cuts unlikely before the fall.",
+        },
+        {
+          outlet: "Bloomberg",
+          lean: "AllSides: Center",
+          quote: "Wall Street recalibrates as rate-cut bets fade and bond yields climb.",
+        },
+      ],
+      noteLine:
+        "Same event, three emphases. Sift puts them side by side and lets you draw the line.",
+    },
+    sources: {
+      eyebrow: "Curated & cited",
+      titleLead: "About ",
+      titleIt: "50 outlets.",
+      titleRest: " Every rating sourced.",
+      body: "Hand-picked across Left, Center, and Right, each with a dossier: ownership, funding model, AllSides lean, and MBFC factual tier — cited verbatim with a link, reviewed quarterly, and applied symmetrically to every outlet.",
+      methodologyCta: "Read the methodology",
+      exclusionsLabel: "What never enters the pipeline",
+      exclusions: [
+        { term: "Aggregators", desc: "no original reporting." },
+        { term: "AI-content farms", desc: "synthetic articles without bylines." },
+        { term: "Low-factual outlets", desc: "regardless of political lean." },
+        { term: "Sites without", desc: "mastheads, bylines, or corrections policies." },
+        { term: "Crypto & supplement sites", desc: "dressed up as news." },
+      ],
+      outletsLabel: "Outlets Sift reads",
+    },
+    cta: {
+      titleLead: "Read today's news — ",
+      titleEm: "with the footnotes.",
+      body: "~50 vetted outlets, the civic context the news assumes you already know, and a link to the original on every story.",
+      ctaPrimary: "Open Sift",
+      ctaSecondary: "How it works",
+    },
+    footer: {
+      blurb:
+        "Sift reads from ~50 vetted outlets across the political spectrum, surfaces the civic context the news assumes you already know, and shows you who's behind every story. Every link goes to the original.",
+      cols: [
+        {
+          heading: "Read",
+          links: [
+            { label: "Today", href: "/news" },
+            { label: "Civic", href: "/civic" },
+          ],
+        },
+        {
+          heading: "About",
+          links: [
+            { label: "Methodology", href: "/methodology" },
+            { label: "Colophon", href: "/colophon" },
+          ],
+        },
+        {
+          heading: "Legal",
+          links: [
+            { label: "Privacy", href: "/privacy" },
+            { label: "Terms", href: "/terms" },
+          ],
+        },
+      ],
+      bylinePre: "Designed & built by ",
+      bylineName: "Kristen Martino",
+      bylineHref: "https://kristenmartino.ai",
+      tagline: "Every story links to the original.",
+    },
+  },
   civicIndex: {
     eyebrow: "Civic dossiers",
     headline: "Civic dossiers",

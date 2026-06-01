@@ -1,123 +1,116 @@
-"use client";
-
 import Link from "next/link";
-import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
-import { timeAgo } from "@/lib/utils";
-import CardImage from "@/components/CardImage";
+import { formatAllSidesLabel, formatMbfcLabel } from "@/lib/outlet";
+import SlDiamond from "./SlDiamond";
 import type { Article } from "@/lib/types";
 
-interface LeadStoryProps {
-  article: Article | null;
-}
+const CARD = COPY.landingReskin.card;
 
-export default function LeadStory({ article }: LeadStoryProps) {
+/**
+ * The hero's footnoted story card, rendered from the LIVE lead story
+ * (app/page.tsx → getTopStoryForLanding, ISR). Civic context is shown only
+ * where the real data exists:
+ *   - primer.background  → the "what you should know first" block
+ *   - primer.terms[]     → the numbered footnotes
+ *   - outlet.allSides/mbfc → the AllSides / MBFC chips
+ * When a field is absent we omit that affordance — never fabricate a primer,
+ * a footnote, or a rating on the homepage. Falls back to LeadFallback on a
+ * DB miss so the page still renders (graceful degradation).
+ */
+export default function LeadStory({ article }: { article: Article | null }) {
+  if (!article) return <LeadFallback />;
+
+  const primer = article.contextPrimer ?? null;
+  const background = primer?.background?.trim() || "";
+  // Cap footnotes so the hero card stays a preview, not a wall of text.
+  const terms = (primer?.terms ?? []).slice(0, 2);
+  const allSides = formatAllSidesLabel(article.outlet?.allSidesRating);
+  const mbfc = formatMbfcLabel(article.outlet?.mbfcFactual);
+  const hasCivic = Boolean(background || terms.length);
+
   return (
-    <section className="max-w-[1200px] mx-auto px-6 pt-12 pb-10">
-      {article ? <LeadFromDb article={article} /> : <LeadFallback />}
+    <div className="sl-card">
+      {hasCivic && <span className="sl-float-note">…with footnotes</span>}
 
-      {/* Editorial explainer paragraph */}
-      <p className="mt-12 max-w-[60ch] mx-auto text-center font-body text-[16px] leading-[1.65] text-[var(--text-secondary)]">
-        {COPY.landing.explainer}
-      </p>
-    </section>
-  );
-}
-
-function LeadFromDb({ article }: { article: Article }) {
-  const cat = CATEGORIES.find((c) => c.id === article.category) || CATEGORIES[0];
-  const color = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.top;
-
-  return (
-    <a
-      href={article.sourceUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="grid grid-cols-1 md:grid-cols-[5fr_7fr] gap-x-10 gap-y-6 group cursor-pointer no-underline pb-10 border-b border-[var(--border)]"
-    >
-      {/* Image */}
-      <div>
-        <CardImage
-          src={article.imageUrl}
-          alt={article.title}
-          featured
-          category={article.category}
-        />
-        <p className="mt-2.5 pt-2 border-t border-[var(--border)] font-body text-outlet uppercase text-[var(--text-muted)] truncate">
-          Photograph · {article.sourceName}
-        </p>
+      <div className="sl-card-bar">
+        <SlDiamond />
+        {CARD.barLabel}
+        {hasCivic && <span className="sl-badge">{CARD.badge}</span>}
       </div>
 
-      {/* Body */}
-      <div className="flex flex-col">
-        <p className="font-body text-kicker uppercase text-[var(--text-secondary)] flex items-center mb-4">
-          <span
-            aria-hidden
-            className="inline-block w-1.5 h-1.5 rounded-full mr-2.5"
-            style={{ background: color.hex }}
-          />
-          <span className="text-[var(--accent)] font-semibold">
-            {COPY.landing.leadEyebrow}
-          </span>
-          <span className="mx-2 text-[var(--text-muted)]">·</span>
-          <span>{cat.label}</span>
-        </p>
+      <div className="sl-card-body">
+        <div className="sl-chip-row">
+          <span className="sl-chip sl-src">{article.sourceName}</span>
+          {allSides && (
+            <span className="sl-chip">
+              <span className="sl-dot" aria-hidden />
+              AllSides: {allSides}
+            </span>
+          )}
+          {mbfc && <span className="sl-chip">MBFC: {mbfc}</span>}
+        </div>
 
-        <h2
-          className="font-heading text-[28px] sm:text-[34px] md:text-[40px] font-bold leading-[1.08] tracking-tight text-[var(--text)] transition-colors duration-200 group-hover:text-[var(--accent)]"
+        <a
+          href={article.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="sl-lead-link"
         >
-          {article.title}
-        </h2>
+          <h3 className="sl-lead">{article.title}</h3>
+        </a>
 
-        <p className="font-body text-outlet uppercase text-[var(--text-muted)] mt-4 flex flex-wrap items-center gap-x-2">
-          <span className="text-[var(--text-secondary)] font-semibold normal-case tracking-normal text-[12px]">
-            {article.sourceName}
-          </span>
-          <span>·</span>
-          <span>{timeAgo(article.publishedDate)}</span>
-          <span>·</span>
-          <span>{article.readTime} min read</span>
-        </p>
+        {background ? (
+          <div className="sl-primer">
+            <div className="sl-label">{CARD.primerLabel}</div>
+            <p>{background}</p>
+          </div>
+        ) : (
+          // No civic primer for this story yet — show the real summary rather
+          // than invent context.
+          <p className="sl-card-summary">{article.summary}</p>
+        )}
 
-        <p
-          data-dropcap
-          className="font-body text-[16px] text-[var(--text-secondary)] mt-6 leading-[1.65] max-w-[60ch]"
-        >
-          {article.summary}
-        </p>
-
-        <p className="mt-6 font-body text-outlet uppercase text-[var(--text-muted)] inline-flex items-center gap-1.5 transition-colors group-hover:text-[var(--accent)]">
-          {COPY.landing.leadCta} <span aria-hidden>→</span>
-        </p>
+        {terms.length > 0 && (
+          <div className="sl-notes">
+            {terms.map((t, i) => (
+              <div className="sl-note" key={t.term}>
+                <span className="sl-m" aria-hidden>
+                  {i + 1}
+                </span>
+                <span>
+                  <b>{t.term}</b> — {t.definition}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    </a>
+    </div>
   );
 }
 
 function LeadFallback() {
   return (
-    <div className="max-w-[640px] mx-auto text-center pt-8 pb-12 border-b border-[var(--border)]">
-      <p className="font-body text-kicker uppercase text-[var(--accent)] mb-4">
-        {COPY.landing.leadEyebrow}
-      </p>
-      <h2 className="font-heading text-[clamp(28px,5vw,40px)] font-bold leading-[1.1] tracking-tight text-[var(--text)] mb-5">
-        {COPY.landing.leadFallbackTitle}
-      </h2>
-      <p className="font-body text-[16px] leading-relaxed text-[var(--text-secondary)] mb-7">
-        {COPY.landing.leadFallbackBody}
-      </p>
-      <Link
-        href="/news"
-        className="font-body text-outlet uppercase tracking-wider text-[var(--accent)] hover:opacity-80 transition-opacity no-underline inline-flex items-center gap-1.5"
-      >
-        {COPY.landing.feedCta} <span aria-hidden>→</span>
-      </Link>
+    <div className="sl-card">
+      <div className="sl-card-bar">
+        <SlDiamond />
+        {CARD.barLabel}
+      </div>
+      <div className="sl-card-body">
+        <div className="sl-chip-row">
+          <span className="sl-chip sl-src">Sift</span>
+        </div>
+        <h3 className="sl-lead">{COPY.landing.leadFallbackTitle}</h3>
+        <p className="sl-card-summary">{COPY.landing.leadFallbackBody}</p>
+        <div style={{ marginTop: 16 }}>
+          <Link href="/news" className="sl-btn sl-btn-ghost">
+            {COPY.landing.feedCta}{" "}
+            <span className="sl-arrow" aria-hidden>
+              →
+            </span>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
-
-/* ─── CSS for drop cap ──────────────────────────────────
-   We rely on globals.css [data-dropcap]::first-letter — but that lives
-   in the-digest's globals. Sift's globals.css doesn't have it yet.
-   We inline the rule via a <style jsx global> in LandingPage instead,
-   so it's scoped to landing and doesn't affect the rest of Sift. */

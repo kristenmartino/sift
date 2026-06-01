@@ -11,8 +11,10 @@ const config: Config = {
     extend: {
       fontFamily: {
         // CSS variables are injected by next/font in app/layout.tsx.
+        // heading = Fraunces (display), body = Hanken Grotesk, mono = DM Mono.
         heading: ["var(--font-heading)", "Georgia", "Times New Roman", "serif"],
         body: ["var(--font-body)", "Segoe UI", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       fontSize: {
         kicker:        ["11px",   { lineHeight: "1.2",  letterSpacing: "0.12em" }],

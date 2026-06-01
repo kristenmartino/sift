@@ -1,6 +1,6 @@
 # Sift — STATUS
 
-**Updated:** 2026-05-20
+**Updated:** 2026-05-31
 **Tier:** v1.5 (civic-literacy pivot + agentic surfaces in Android v1)
 **Velocity:** High (10+ PRs / week)
 
@@ -31,6 +31,7 @@ Web-side in flight alongside the Android build:
 
 ## Recent decisions
 
+- **2026-05-31** — **Homepage (`/`) reskinned to the editorial "news, with footnotes" identity.** Site-wide font swap → Fraunces (display) / Hanken Grotesk (body) / DM Mono. Homepage-scoped recolor (warm-paper light + dark, vermillion accent) scoped under `.sift-landing` so `/news` and other surfaces keep the stone/indigo palette and inherit fonts only. Preserved: live Postgres lead story + data path, the existing dark-mode toggle, and the shared `LandingMasthead` (untouched). Hero chips resolve real AllSides/MBFC via the canonical `getOutletProfilesMap`/`resolveOutletForSourceName` path; omitted when unresolved (never fabricated). The manifesto / CTA / footer accent bands are pinned dark in both themes (they don't invert — fixes a dark-mode CTA-button contrast bug). Open: "How outlets framed it" is static — `TODO(live-compare)`.
 - **2026-05-20** — **Android v1 scope expanded to include Ask Sift + Compare button.** Previously: reader + share extension only. Now: reader + share extension + Ask Sift agentic chat + Compare button (deterministic + Refined). Reasoning: without Ask Sift, native mobile is a polished reader competing with Apple News / Artifact. WITH Ask Sift, it's a civic-literacy agent on the phone. That's the wedge that justifies native. Timeline impact: ~10 weeks → ~12 weeks.
 - **2026-05-20** — **Refined Compare added to v1 scope.** Lens-driven agentic comparison via `lens` parameter on `/api/compare`. Same endpoint as the deterministic compare; backend routes based on lens presence. Plan in `sift-api/docs/REFINED_COMPARE_PLAN.md`.
 - **2026-05-20** — **Mobile is REST-only.** Even the agentic surfaces (Ask Sift, Refined Compare) call REST/SSE — the agent loop runs server-side; MCP is internal plumbing. `sift-mcp` #4 (hosted HTTP/SSE) deferred indefinitely. Rationale in `sift-api/docs/MOBILE_PROTOCOL_DECISION.md`.

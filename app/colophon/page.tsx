@@ -17,7 +17,7 @@ const STACK = [
   { name: "Voyage AI", role: "Embeddings for semantic topic search" },
   { name: "Clerk", role: "Auth & user management" },
   { name: "Tailwind CSS", role: "Design system & theming" },
-  { name: "next/font", role: "Self-hosted Playfair Display & Source Sans 3" },
+  { name: "next/font", role: "Self-hosted Fraunces, Hanken Grotesk & DM Mono" },
 ];
 
 const ARCHITECTURE = [
@@ -74,9 +74,11 @@ export default function ColophonPage() {
             Set in
           </p>
           <p className="font-body text-[16px] text-[var(--text-secondary)] leading-[1.7] max-w-[60ch] mb-7">
-            Sift is set in <strong className="text-[var(--text)] font-semibold">Playfair Display</strong>{" "}
-            and <strong className="text-[var(--text)] font-semibold">Source Sans 3</strong>, served from
-            same-origin via <code className="font-body text-[14px]">next/font</code>. The cover star{" "}
+            Sift is set in <strong className="text-[var(--text)] font-semibold">Fraunces</strong>{" "}
+            and <strong className="text-[var(--text)] font-semibold">Hanken Grotesk</strong>, with{" "}
+            <strong className="text-[var(--text)] font-semibold">DM Mono</strong> for labels and
+            captions, served from same-origin via{" "}
+            <code className="font-body text-[14px]">next/font</code>. The cover star{" "}
             <SiftLogo variant="mark" size={16} className="inline-block align-[-3px]" />{" "}
             is a vector diamond, sized to scale across PWA icons, OG cards, and tab favicons.
           </p>

@@ -1,54 +1,63 @@
-"use client";
-
+import Link from "next/link";
 import { COPY } from "@/lib/copy";
 
 export interface SourceColophonOutlet {
   slug: string;
   name: string;
-  /**
-   * AllSides lean if available — threaded through for an optional future
-   * Left / Center / Right grouping. Not rendered yet: this list is alphabetical.
-   */
+  /** AllSides lean if available — threaded for a possible future L/C/R group. */
   allSidesRating?: string | null;
 }
 
-interface SourceColophonProps {
-  /**
-   * Curated outlets from `outlet_profiles` (alphabetized, server-fetched in
-   * app/page.tsx). Driving this from the database — not a hardcoded array — is
-   * the point: the public list can no longer drift from the curated data. Empty
-   * on a DB miss/empty table, in which case we degrade to the prose (no grid) so
-   * the landing never breaks and never shows a stale source list.
-   */
-  outlets: SourceColophonOutlet[];
-}
+const S = COPY.landingReskin.sources;
 
-export default function SourceColophon({ outlets }: SourceColophonProps) {
+/**
+ * "Curated & cited" — the sources/methodology block. Left column carries the
+ * pitch, the methodology link, and the LIVE curated outlet list (server-fetched
+ * from outlet_profiles in app/page.tsx; degrades to no list on a DB miss).
+ * Right column is the static exclusions list.
+ */
+export default function SourceColophon({
+  outlets,
+}: {
+  outlets: SourceColophonOutlet[];
+}) {
   return (
-    <section className="max-w-[1100px] mx-auto px-6 pb-20">
-      <div className="border-t border-b border-[var(--border)] py-9">
-        <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-4 flex items-center">
-          <span aria-hidden className="inline-block w-7 h-px bg-[var(--border)] mr-3" />
-          {COPY.landing.colophonHeading}
-        </p>
-        <p className="font-body text-[13px] text-[var(--text-secondary)] leading-relaxed max-w-[680px] mb-6">
-          {COPY.landing.colophonDescription}
-        </p>
-        {outlets.length > 0 && (
-          <ul className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5 mb-6">
-            {outlets.map((outlet) => (
-              <li
-                key={outlet.slug}
-                className="font-body text-[13px] text-[var(--text-secondary)] tracking-tight"
-              >
-                {outlet.name}
+    <section className="sl-band sl-sources" id="sources">
+      <div className="sl-wrap sl-src-grid">
+        <div className="sl-sec-head" style={{ marginBottom: 0 }} data-reveal>
+          <span className="sl-eyebrow">{S.eyebrow}</span>
+          <h2>
+            {S.titleLead}
+            <span className="sl-it">{S.titleIt}</span>
+            {S.titleRest}
+          </h2>
+          <p>{S.body}</p>
+          <div className="sl-hero-actions" style={{ marginTop: 26 }}>
+            <Link href="/methodology" className="sl-btn sl-btn-ghost">
+              {S.methodologyCta}
+            </Link>
+          </div>
+          {outlets.length > 0 && (
+            <ul className="sl-outlets" aria-label={S.outletsLabel}>
+              {outlets.map((o) => (
+                <li key={o.slug}>{o.name}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div data-reveal>
+          <p className="sl-src-label">{S.exclusionsLabel}</p>
+          <ul className="sl-excl">
+            {S.exclusions.map((e) => (
+              <li key={e.term}>
+                <span>
+                  <b>{e.term}</b> — {e.desc}
+                </span>
               </li>
             ))}
           </ul>
-        )}
-        <p className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)] pt-5 border-t border-[var(--border-subtle)]">
-          {COPY.landing.colophonSummary}
-        </p>
+        </div>
       </div>
     </section>
   );

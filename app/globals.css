@@ -295,3 +295,1060 @@ html[data-theme="light"] .story-highlight {
     scroll-behavior: auto !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   HOMEPAGE RESKIN — "The news, with footnotes"
+   Warm-paper editorial identity, scoped to the homepage via `.sift-landing`
+   so the rest of the app keeps its Late Edition / Newsprint palette. Both the
+   light and dark token sets are driven by the EXISTING [data-theme] toggle
+   (lib/hooks.ts useTheme → data-theme on <html>). All component classes are
+   `sl-`-prefixed and live inside `.sift-landing`, so none of this leaks into
+   /news, /civic, etc. Ports the component styling from the design reference
+   (sift-landing-page.html); font literals are mapped to the next/font vars
+   (--font-heading=Fraunces, --font-body=Hanken Grotesk, --font-mono=DM Mono).
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Light tokens (default) */
+.sift-landing {
+  --paper: #fbf8f1;
+  --paper-2: #f3ecdd;
+  --paper-3: #ece3d0;
+  --surface: #fffdf8;
+  --surface-2: #f7f1e5;
+  --ink: #17130e;
+  --ink-soft: #4c4438;
+  --ink-faint: #8a8071;
+  --accent: #e0492a;
+  --accent-deep: #ae3417;
+  --line: rgba(23, 19, 14, 0.14);
+  --line-soft: rgba(23, 19, 14, 0.08);
+  --grain-op: 0.4;
+  --grain-blend: multiply;
+  --shadow: rgba(23, 19, 14, 0.9);
+}
+
+/* Dark tokens — same toggle, flipped palette */
+html[data-theme="dark"] .sift-landing {
+  --paper: #15120c;
+  --paper-2: #1c1813;
+  --paper-3: #241f18;
+  --surface: #1f1a12;
+  --surface-2: #262017;
+  --ink: #f2ecde;
+  --ink-soft: #b9b1a0;
+  --ink-faint: #867d6c;
+  --accent: #ec5b39;
+  --accent-deep: #f0805e;
+  --line: rgba(242, 236, 222, 0.15);
+  --line-soft: rgba(242, 236, 222, 0.07);
+  --grain-op: 0.06;
+  --grain-blend: normal;
+  --shadow: rgba(0, 0, 0, 0.6);
+}
+
+/* Smooth-scroll the anchor nav, but only on the homepage (scoped via :has so
+   /news etc. are unaffected). Reduced-motion override above resets this. */
+html:has(.sift-landing) {
+  scroll-behavior: smooth;
+}
+
+.sift-landing {
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  position: relative;
+  overflow-x: hidden;
+  transition: background 0.4s ease, color 0.2s ease;
+}
+.sift-landing a {
+  color: inherit;
+  text-decoration: none;
+}
+.sift-landing ::selection {
+  background: var(--accent);
+  color: var(--paper);
+}
+.sift-landing h1,
+.sift-landing h2,
+.sift-landing h3 {
+  font-family: var(--font-heading), Georgia, serif;
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+}
+
+/* Film-grain overlay — dials down in dark via --grain-op */
+.sift-landing::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: var(--grain-op);
+  mix-blend-mode: var(--grain-blend);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+.sift-landing .sl-wrap {
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-inline: 28px;
+}
+
+/* eyebrows */
+.sift-landing .sl-eyebrow {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.sift-landing .sl-eyebrow::before {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: var(--accent);
+  display: inline-block;
+}
+.sift-landing sup.sl-fn {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.56em;
+  color: var(--accent-deep);
+  font-weight: 500;
+  vertical-align: super;
+  padding-left: 1px;
+}
+
+/* buttons — offset hard-shadow on hover */
+.sift-landing .sl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 14px 24px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid var(--ink);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s,
+    color 0.25s, box-shadow 0.25s, border-color 0.25s;
+}
+.sift-landing .sl-btn .sl-arrow {
+  transition: transform 0.25s ease;
+}
+.sift-landing .sl-btn:hover .sl-arrow {
+  transform: translateX(4px);
+}
+.sift-landing .sl-btn-solid {
+  background: var(--ink);
+  color: var(--paper);
+}
+.sift-landing .sl-btn-solid:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+  transform: translateY(-2px);
+  box-shadow: 6px 8px 0 var(--shadow);
+}
+.sift-landing .sl-btn-ghost {
+  background: transparent;
+  color: var(--ink);
+}
+.sift-landing .sl-btn-ghost:hover {
+  background: var(--ink);
+  color: var(--paper);
+  transform: translateY(-2px);
+}
+
+/* header / nav */
+.sift-landing .sl-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  transition: background 0.4s;
+}
+.sift-landing .sl-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+}
+.sift-landing .sl-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-family: var(--font-heading), serif;
+  font-weight: 700;
+  font-size: 25px;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.sift-landing .sl-diamond {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+.sift-landing .sl-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.sift-landing .sl-nav-links a {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  position: relative;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+.sift-landing .sl-nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 1.5px;
+  background: var(--accent);
+  transition: width 0.28s ease;
+}
+.sift-landing .sl-nav-links a:hover {
+  color: var(--ink);
+}
+.sift-landing .sl-nav-links a:hover::after {
+  width: 100%;
+}
+.sift-landing .sl-nav-cta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sift-landing .sl-toggle {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  transition: border-color 0.2s, color 0.2s, transform 0.3s;
+}
+.sift-landing .sl-toggle:hover {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+  transform: rotate(18deg);
+}
+.sift-landing .sl-toggle svg {
+  width: 17px;
+  height: 17px;
+}
+.sift-landing .sl-menu-btn {
+  display: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* hero */
+.sift-landing .sl-hero {
+  position: relative;
+  padding: 80px 0 84px;
+}
+.sift-landing .sl-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent calc(8.333% - 1px),
+    var(--line-soft) calc(8.333% - 1px),
+    var(--line-soft) 8.333%
+  );
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+}
+.sift-landing .sl-hero-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1.04fr 0.96fr;
+  gap: 56px;
+  align-items: center;
+}
+.sift-landing .sl-hero-copy > * {
+  display: block;
+}
+.sift-landing .sl-hero .sl-eyebrow {
+  margin-bottom: 24px;
+}
+.sift-landing .sl-hero h1 {
+  font-size: clamp(3rem, 6.2vw, 5.4rem);
+  margin-bottom: 22px;
+  color: var(--ink);
+}
+.sift-landing .sl-hero h1 .sl-ul {
+  position: relative;
+  white-space: nowrap;
+  color: var(--accent);
+}
+.sift-landing .sl-hero h1 .sl-ul svg {
+  position: absolute;
+  left: 0;
+  bottom: -0.14em;
+  width: 100%;
+  height: 0.3em;
+  color: var(--accent);
+  overflow: visible;
+}
+.sift-landing .sl-lede {
+  font-size: clamp(1.05rem, 1.45vw, 1.24rem);
+  color: var(--ink-soft);
+  max-width: 34ch;
+  margin-bottom: 32px;
+  line-height: 1.55;
+}
+.sift-landing .sl-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  align-items: center;
+}
+.sift-landing .sl-hero-foot {
+  margin-top: 28px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sift-landing .sl-hero-foot .sl-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* footnoted story card (the live lead story) */
+.sift-landing .sl-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+  box-shadow: 14px 18px 0 var(--shadow);
+  overflow: hidden;
+}
+.sift-landing .sl-card-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.sift-landing .sl-card-bar .sl-diamond {
+  width: 13px;
+  height: 13px;
+}
+.sift-landing .sl-card-bar .sl-badge {
+  margin-left: auto;
+  color: var(--accent-deep);
+}
+.sift-landing .sl-card-body {
+  padding: 22px;
+}
+.sift-landing .sl-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.sift-landing .sl-chip {
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sift-landing .sl-chip .sl-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+.sift-landing .sl-chip.sl-src {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.sift-landing .sl-card h3.sl-lead {
+  font-size: 1.55rem;
+  line-height: 1.16;
+  margin-bottom: 14px;
+  color: var(--ink);
+  transition: color 0.2s;
+}
+.sift-landing a.sl-lead-link {
+  display: block;
+}
+.sift-landing a.sl-lead-link:hover h3.sl-lead {
+  color: var(--accent);
+}
+.sift-landing .sl-primer {
+  border-left: 2px solid var(--accent);
+  background: var(--surface-2);
+  padding: 13px 15px;
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 16px;
+}
+.sift-landing .sl-primer .sl-label {
+  font-family: var(--font-mono), monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  margin-bottom: 6px;
+}
+.sift-landing .sl-primer p {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.sift-landing .sl-notes {
+  border-top: 1px dashed var(--line);
+  padding-top: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.sift-landing .sl-note {
+  display: flex;
+  gap: 9px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+.sift-landing .sl-note .sl-m {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  color: var(--accent-deep);
+  flex: none;
+  padding-top: 1px;
+}
+.sift-landing .sl-note b {
+  color: var(--ink);
+  font-weight: 600;
+  font-family: var(--font-body), sans-serif;
+}
+.sift-landing .sl-card-summary {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+.sift-landing .sl-float-note {
+  position: absolute;
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--accent);
+  padding: 6px 11px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 3px 4px 0 var(--shadow);
+  transform: rotate(3deg);
+  z-index: 3;
+  right: -6px;
+  top: -14px;
+}
+
+/* principle strip */
+.sift-landing .sl-strip {
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--paper-2);
+}
+.sift-landing .sl-strip .sl-strip-inner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-block: 18px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+.sift-landing .sl-strip .sl-sep {
+  color: var(--ink-faint);
+}
+.sift-landing .sl-strip b {
+  color: var(--accent-deep);
+  font-weight: 500;
+}
+
+/* section scaffolding */
+.sift-landing .sl-band {
+  padding: 90px 0;
+}
+.sift-landing .sl-sec-head {
+  max-width: 680px;
+  margin-bottom: 50px;
+}
+.sift-landing .sl-sec-head h2 {
+  font-size: clamp(2.1rem, 4vw, 3.1rem);
+  margin-top: 18px;
+  color: var(--ink);
+}
+.sift-landing .sl-sec-head h2 .sl-it {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--accent);
+}
+.sift-landing .sl-sec-head p {
+  color: var(--ink-soft);
+  margin-top: 16px;
+  font-size: 1.06rem;
+  max-width: 56ch;
+}
+
+/* manifesto — pinned dark in BOTH themes (does NOT invert). Background + neutral
+   text use constant dark-palette values so light/dark render identically; only
+   the accent (--accent/--accent-deep) stays theme-driven — both vermillion
+   shades read fine on the dark band. */
+.sift-landing .sl-manifesto {
+  background: #15120c;
+  color: #f2ecde;
+  padding: 88px 0;
+}
+.sift-landing .sl-manifesto .sl-eyebrow {
+  color: var(--accent);
+}
+.sift-landing .sl-manifesto .sl-eyebrow::before {
+  background: var(--accent);
+}
+.sift-landing .sl-manifesto-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 56px;
+  align-items: center;
+}
+.sift-landing .sl-manifesto h2 {
+  font-size: clamp(2rem, 3.6vw, 3rem);
+  color: #f2ecde;
+  margin-top: 18px;
+}
+.sift-landing .sl-manifesto h2 em {
+  font-style: italic;
+  color: var(--accent);
+}
+.sift-landing .sl-manifesto p {
+  color: color-mix(in srgb, #f2ecde 78%, transparent);
+  font-size: 1.08rem;
+  margin-top: 18px;
+  max-width: 46ch;
+}
+
+/* spectrum bar */
+.sift-landing .sl-spectrum {
+  margin-top: 4px;
+}
+.sift-landing .sl-spectrum .sl-bar {
+  display: flex;
+  height: 46px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.sift-landing .sl-spectrum .sl-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: #f2ecde;
+  border-right: 1px solid rgba(0, 0, 0, 0.25);
+}
+.sift-landing .sl-spectrum .sl-seg:last-child {
+  border-right: 0;
+}
+.sift-landing .sl-spectrum .sl-leg {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #867d6c;
+}
+.sift-landing .sl-spectrum .sl-cap {
+  margin-top: 14px;
+  font-size: 13px;
+  color: color-mix(in srgb, #f2ecde 64%, transparent);
+  line-height: 1.5;
+}
+
+/* what sift adds */
+.sift-landing .sl-adds {
+  background: var(--paper-2);
+}
+.sift-landing .sl-add-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border: 1px solid var(--ink);
+}
+.sift-landing .sl-add {
+  padding: 32px 30px;
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper);
+  transition: background 0.3s, color 0.3s;
+}
+.sift-landing .sl-add:nth-child(2n) {
+  border-right: 0;
+}
+/* 2×2 grid: clear the bottom border from the bottom row (cards 3 & 4) so only
+   the container's outer border shows. (Reference used n+4, which left a stray
+   rule under card 3; n+3 is the intended clean grid.) */
+.sift-landing .sl-add:nth-child(n + 3) {
+  border-bottom: 0;
+}
+.sift-landing .sl-add:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.sift-landing .sl-add:hover p {
+  color: color-mix(in srgb, var(--paper) 78%, transparent);
+}
+.sift-landing .sl-add:hover .sl-ai {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+}
+.sift-landing .sl-add .sl-ai {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--ink);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  transition: all 0.3s;
+}
+.sift-landing .sl-add h3 {
+  font-size: 1.34rem;
+  margin-bottom: 9px;
+}
+.sift-landing .sl-add p {
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* compare frames */
+.sift-landing .sl-compare .sl-frames {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.sift-landing .sl-topic {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.sift-landing .sl-topic b {
+  color: var(--accent-deep);
+  font-weight: 500;
+}
+.sift-landing .sl-frame {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 20px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--line-soft);
+  align-items: start;
+}
+.sift-landing .sl-frame:last-child {
+  border-bottom: 0;
+}
+.sift-landing .sl-frame .sl-out {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.sift-landing .sl-frame .sl-out .sl-nm {
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+.sift-landing .sl-frame .sl-out .sl-ln {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sift-landing .sl-frame .sl-out .sl-ln .sl-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+.sift-landing .sl-frame q {
+  font-family: var(--font-heading), serif;
+  font-style: italic;
+  font-size: 1.12rem;
+  line-height: 1.4;
+  color: var(--ink);
+  quotes: none;
+}
+.sift-landing .sl-compare .sl-note-line {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* sources */
+.sift-landing .sl-sources {
+  background: var(--paper-2);
+}
+.sift-landing .sl-src-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 54px;
+  align-items: center;
+}
+.sift-landing .sl-src-label {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 16px;
+}
+.sift-landing .sl-excl {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sift-landing .sl-excl li {
+  display: flex;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+.sift-landing .sl-excl li::before {
+  content: "\25C6";
+  color: var(--accent);
+  font-size: 11px;
+  padding-top: 5px;
+}
+.sift-landing .sl-excl li b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sift-landing .sl-outlets {
+  margin-top: 22px;
+  columns: 2;
+  column-gap: 28px;
+  list-style: none;
+}
+.sift-landing .sl-outlets li {
+  break-inside: avoid;
+  padding: 2px 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* cta band — pinned constant vermillion + light text in BOTH themes (does NOT
+   invert). The primary button is a constant dark chip with white text in both
+   themes (previously var(--ink), which flipped to near-white in dark mode and
+   hid the white label). */
+.sift-landing .sl-cta {
+  background: #e0492a;
+  color: #fbf8f1;
+  padding: 88px 0;
+  position: relative;
+  overflow: hidden;
+}
+.sift-landing .sl-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n2)' opacity='0.45'/%3E%3C/svg%3E");
+}
+.sift-landing .sl-cta-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 740px;
+}
+.sift-landing .sl-cta h2 {
+  color: #fbf8f1;
+  font-size: clamp(2.2rem, 4.6vw, 3.6rem);
+  line-height: 1.02;
+}
+.sift-landing .sl-cta h2 em {
+  font-style: italic;
+}
+.sift-landing .sl-cta p {
+  margin: 18px 0 30px;
+  font-size: 1.12rem;
+  color: color-mix(in srgb, #fff 92%, #e0492a);
+  max-width: 50ch;
+}
+.sift-landing .sl-cta .sl-btn-solid {
+  border-color: #17130e;
+  background: #17130e;
+  color: #fff;
+}
+.sift-landing .sl-cta .sl-btn-solid:hover {
+  background: #fff;
+  color: #e0492a;
+  box-shadow: 6px 8px 0 rgba(0, 0, 0, 0.3);
+}
+.sift-landing .sl-cta .sl-btn-ghost {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+.sift-landing .sl-cta .sl-btn-ghost:hover {
+  background: #fff;
+  color: #e0492a;
+}
+
+/* footer — pinned dark in BOTH themes (does NOT invert). Background + neutral
+   text use constant dark-palette values; the accent headings stay theme-driven.
+   (Pinning also fixes the near-invisible footer divider in dark mode.) */
+.sift-landing .sl-foot {
+  background: #15120c;
+  color: #f2ecde;
+  padding: 62px 0 30px;
+}
+.sift-landing .sl-foot-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  flex-wrap: wrap;
+  padding-bottom: 38px;
+  border-bottom: 1px solid color-mix(in srgb, #f2ecde 16%, transparent);
+}
+.sift-landing .sl-foot-brand {
+  max-width: 340px;
+}
+.sift-landing .sl-foot-brand .sl-brand {
+  color: #f2ecde;
+  margin-bottom: 14px;
+}
+.sift-landing .sl-foot-brand p {
+  color: color-mix(in srgb, #f2ecde 60%, transparent);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.sift-landing .sl-foot-cols {
+  display: flex;
+  gap: 56px;
+  flex-wrap: wrap;
+}
+.sift-landing .sl-foot-col h5 {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+.sift-landing .sl-foot-col a {
+  display: block;
+  color: color-mix(in srgb, #f2ecde 80%, transparent);
+  font-size: 14.5px;
+  margin-bottom: 11px;
+  transition: color 0.2s;
+}
+.sift-landing .sl-foot-col a:hover {
+  color: #f2ecde;
+}
+.sift-landing .sl-foot-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-top: 26px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  color: #867d6c;
+}
+.sift-landing .sl-foot-bottom a {
+  color: color-mix(in srgb, #f2ecde 70%, transparent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sift-landing .sl-foot-bottom a:hover {
+  color: var(--accent);
+}
+
+/* reveal + hero-stagger animations — gated behind motion preference AND the
+   `sl-anim` class (added by JS after mount), so no-JS and reduced-motion both
+   render everything visible immediately. */
+@media (prefers-reduced-motion: no-preference) {
+  .sift-landing.sl-anim [data-reveal] {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+      transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .sift-landing.sl-anim [data-reveal].in {
+    opacity: 1;
+    transform: none;
+  }
+  .sift-landing.sl-anim .sl-hero-copy > * {
+    opacity: 0;
+    animation: sl-rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  }
+  .sift-landing.sl-anim .sl-hero-copy > *:nth-child(1) {
+    animation-delay: 0.05s;
+  }
+  .sift-landing.sl-anim .sl-hero-copy > *:nth-child(2) {
+    animation-delay: 0.16s;
+  }
+  .sift-landing.sl-anim .sl-hero-copy > *:nth-child(3) {
+    animation-delay: 0.27s;
+  }
+  .sift-landing.sl-anim .sl-hero-copy > *:nth-child(4) {
+    animation-delay: 0.38s;
+  }
+  .sift-landing.sl-anim .sl-hero-copy > *:nth-child(5) {
+    animation-delay: 0.49s;
+  }
+  .sift-landing.sl-anim .sl-card {
+    opacity: 0;
+    animation: sl-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.42s forwards;
+  }
+  @keyframes sl-rise {
+    from {
+      opacity: 0;
+      transform: translateY(26px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* responsive */
+@media (max-width: 920px) {
+  .sift-landing .sl-hero-grid,
+  .sift-landing .sl-manifesto-grid,
+  .sift-landing .sl-src-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .sift-landing .sl-float-note {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .sift-landing .sl-nav-links {
+    display: none;
+  }
+  .sift-landing .sl-nav-cta .sl-btn {
+    display: none;
+  }
+  .sift-landing .sl-menu-btn {
+    display: block;
+  }
+  .sift-landing .sl-nav-links.sl-open {
+    display: flex;
+    position: absolute;
+    top: 72px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--ink);
+    padding: 8px 28px 18px;
+  }
+  .sift-landing .sl-nav-links.sl-open a {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+    width: 100%;
+  }
+  .sift-landing .sl-add-grid {
+    grid-template-columns: 1fr;
+  }
+  .sift-landing .sl-add {
+    border-right: 0 !important;
+  }
+  .sift-landing .sl-add:nth-child(3) {
+    border-bottom: 1px solid var(--ink);
+  }
+  .sift-landing .sl-frame {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .sift-landing .sl-outlets {
+    columns: 1;
+  }
+  .sift-landing {
+    font-size: 16px;
+  }
+}
