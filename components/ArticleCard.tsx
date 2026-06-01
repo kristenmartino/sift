@@ -54,8 +54,8 @@ export default function ArticleCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`
-        bg-[var(--card-bg)] rounded-[14px] overflow-hidden
-        border border-[var(--border)] ${index === 0 ? "animate-fade-slide-in" : ""}
+        bg-(--card-bg) rounded-[14px] overflow-hidden
+        border border-(--border) ${index === 0 ? "animate-fade-slide-in" : ""}
         ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
       `}
       style={{
@@ -115,7 +115,7 @@ export default function ArticleCard({
               onBookmark(article.id);
             }}
             aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-            className={`bg-transparent border-none cursor-pointer text-lg p-1 relative z-[2] ${
+            className={`bg-transparent border-none cursor-pointer text-lg p-1 relative z-2 ${
               bookmarkAnimating ? "animate-bookmark-pop" : "transition-all duration-200"
             }`}
             style={{
@@ -153,7 +153,7 @@ export default function ArticleCard({
               href={article.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--text)] no-underline hover:underline"
+              className="text-(--text) no-underline hover:underline"
               style={{
                 // Stretch link to cover entire card
                 position: "static",
@@ -162,21 +162,21 @@ export default function ArticleCard({
             >
               {/* Pseudo-element stretches to cover the card */}
               <span
-                className="absolute inset-0 z-[1]"
+                className="absolute inset-0 z-1"
                 aria-hidden="true"
                 style={{ position: "absolute" }}
               />
               {article.title}
             </a>
           ) : (
-            <span className="text-[var(--text)]">{article.title}</span>
+            <span className="text-(--text)">{article.title}</span>
           )}
         </h3>
 
         {/* Summary — clamp to fixed line count so card heights converge across
             the auto-fill grid (StoryCard.tsx already does the same). */}
         <p
-          className="text-[var(--text-secondary)] leading-relaxed"
+          className="text-(--text-secondary) leading-relaxed"
           style={{
             fontSize: featured ? 15 : 13.5,
             flex: 1,
@@ -219,7 +219,7 @@ export default function ArticleCard({
         <EntityLinksList links={article.entityLinks} />
 
         {/* Meta */}
-        <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-[var(--text-muted)] font-medium flex-wrap">
+        <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-(--text-muted) font-medium flex-wrap">
           <OutletBadge outlet={article.outlet} fallback={article.sourceName} />
           <span className="opacity-30">&middot;</span>
           <span>{timeAgo(article.publishedDate)}</span>
@@ -233,7 +233,7 @@ export default function ArticleCard({
                   e.stopPropagation();
                   onCompare(article.title, article.sourceName);
                 }}
-                className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200 relative z-[2]"
+                className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200 relative z-2"
                 style={{ color: "var(--accent)" }}
               >
                 {COPY.compare.button}

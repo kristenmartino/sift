@@ -15,15 +15,15 @@ export default function PrivacyPage() {
       <div className="max-w-[640px] mx-auto">
         <Link
           href="/"
-          className="text-xs text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] transition-colors mb-8 inline-block"
+          className="text-xs text-(--text-muted) no-underline hover:text-(--text-secondary) transition-colors mb-8 inline-block"
         >
           &larr; Back to Sift
         </Link>
         <h1 className="font-heading text-3xl font-bold mb-6">Privacy Policy</h1>
 
-        <div className="space-y-6 text-sm leading-relaxed text-[var(--text-secondary)]">
+        <div className="space-y-6 text-sm leading-relaxed text-(--text-secondary)">
           <section>
-            <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">What we collect</h2>
+            <h2 className="font-heading text-lg font-bold text-(--text) mb-2">What we collect</h2>
             <p>
               If you sign in with Clerk, we store your user ID and bookmarks so they sync across devices.
               We don&apos;t sell, share, or monetize your data. If you don&apos;t sign in, bookmarks and
@@ -32,7 +32,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">Cookies and storage</h2>
+            <h2 className="font-heading text-lg font-bold text-(--text) mb-2">Cookies and storage</h2>
             <p>
               Sift uses local storage for theme preference, bookmarks, and custom topics.
               Clerk may use cookies for session management when you sign in. We don&apos;t use
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">Third-party services</h2>
+            <h2 className="font-heading text-lg font-bold text-(--text) mb-2">Third-party services</h2>
             <p>
               Sift uses Clerk for authentication and Anthropic&apos;s Claude for AI features. Article
               content is sourced from publicly available RSS feeds. Each article links to the
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">Search analytics</h2>
+            <h2 className="font-heading text-lg font-bold text-(--text) mb-2">Search analytics</h2>
             <p>
               When you use Sift&apos;s topic search, we log the query text along with anonymous
               technical metadata (per-stage latency, result counts, fallback usage, a coarse
@@ -64,7 +64,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">Primer-panel analytics</h2>
+            <h2 className="font-heading text-lg font-bold text-(--text) mb-2">Primer-panel analytics</h2>
             <p>
               When you open the &quot;What you should know first&quot; panel on an article card,
               we log a single anonymous event with the article id, a coarse user-agent class,
@@ -75,7 +75,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-heading text-lg font-bold text-[var(--text)] mb-2">Your rights</h2>
+            <h2 className="font-heading text-lg font-bold text-(--text) mb-2">Your rights</h2>
             <p>
               You can delete your account and all associated data by contacting us. Local storage
               data can be cleared through your browser settings at any time.
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
           </section>
         </div>
 
-        <p className="text-xs text-[var(--text-muted)] mt-10">
+        <p className="text-xs text-(--text-muted) mt-10">
           Last updated: May 2026
         </p>
       </div>

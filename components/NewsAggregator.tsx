@@ -309,7 +309,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     >
       {/* ── Header ──────────────────────────────────── */}
       <header
-        className="sticky top-0 z-50 border-b border-[var(--border)]"
+        className="sticky top-0 z-50 border-b border-(--border)"
         style={{
           background: "var(--nav-bg)",
           backdropFilter: "blur(20px) saturate(180%)",
@@ -323,7 +323,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
           >
             <SiftLogo variant="full" size={28} />
             {/* Tagline hides under sm — at 390px the right cluster needs the space. */}
-            <span className="hidden sm:inline text-[10px] font-bold tracking-widest uppercase text-[var(--accent)] opacity-80">
+            <span className="hidden sm:inline text-[10px] font-bold tracking-widest uppercase text-(--accent) opacity-80">
               {COPY.header.tagline}
             </span>
           </div>
@@ -387,7 +387,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
               onClick={handleRefresh}
               disabled={loading}
               aria-label="Refresh"
-              className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-base transition-all duration-200"
+              className="flex items-center justify-center w-9 h-9 rounded-full border border-(--border) bg-transparent text-base transition-all duration-200"
               style={{
                 cursor: loading ? "wait" : "pointer",
                 opacity: loading ? 0.5 : 1,
@@ -403,7 +403,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
               <button
                 onClick={toggleDark}
                 aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-                className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-[var(--text-secondary)] text-base cursor-pointer transition-all duration-200"
+                className="flex items-center justify-center w-9 h-9 rounded-full border border-(--border) bg-transparent text-(--text-secondary) text-base cursor-pointer transition-all duration-200"
               >
                 {darkMode ? "☀" : "☾"}
               </button>
@@ -419,8 +419,8 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
             {/* Scroll fade indicators for mobile. --nav-bg is rgba(...,0.92) so a
                 gradient from that color is barely visible over the pills. Use the
                 solid --bg color so the fade is unmistakable. */}
-            <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-r from-[var(--bg)] to-transparent md:hidden" />
-            <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-l from-[var(--bg)] to-transparent md:hidden" />
+            <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-linear-to-r from-(--bg) to-transparent md:hidden" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-linear-to-l from-(--bg) to-transparent md:hidden" />
           <div ref={pillContainerRef} className="px-4 sm:px-6 lg:px-10 pb-3 flex gap-1.5 overflow-x-auto relative scrollbar-none" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {CATEGORIES.map((cat) => {
               const active = activeCategory === cat.id && !activeCustomTopic;
@@ -550,7 +550,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 type="button"
                 onClick={exitCompareMode}
                 aria-label="Exit compare"
-                className="flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] bg-transparent text-[var(--text-secondary)] text-base cursor-pointer transition-all duration-200 shrink-0"
+                className="flex items-center justify-center w-9 h-9 rounded-full border border-(--border) bg-transparent text-(--text-secondary) text-base cursor-pointer transition-all duration-200 shrink-0"
               >
                 &larr;
               </button>
@@ -562,7 +562,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                   placeholder={COPY.compare.placeholder}
                   maxLength={200}
                   autoFocus
-                  className="w-full px-4 py-2 pr-12 rounded-full text-sm font-body transition-all duration-200 outline-none"
+                  className="w-full px-4 py-2 pr-12 rounded-full text-sm font-body transition-all duration-200 outline-hidden"
                   style={{
                     background: "var(--card-bg)",
                     border: "1px solid var(--border)",
@@ -587,7 +587,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
               <button
                 type="button"
                 onClick={() => setSourcesExpanded(!sourcesExpanded)}
-                className="text-xs text-[var(--text-muted)] cursor-pointer bg-transparent border-none p-0 transition-colors duration-200"
+                className="text-xs text-(--text-muted) cursor-pointer bg-transparent border-none p-0 transition-colors duration-200"
                 style={{ color: sourcesExpanded ? "var(--accent)" : undefined }}
               >
                 Comparing: {selectedLabels} {sourcesExpanded ? "▴" : "▾"}
@@ -618,7 +618,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                       </button>
                     );
                   })}
-                  <span className="text-[10px] text-[var(--text-muted)] self-center ml-1">
+                  <span className="text-[10px] text-(--text-muted) self-center ml-1">
                     {selectedSources.length}/5
                   </span>
                 </div>
@@ -647,12 +647,12 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
             {/* Compare loading */}
             {compareLoading && (
               <div className="text-center py-20 px-5 animate-fade-slide-in">
-                <div className="text-4xl mb-5 animate-sift-refresh inline-block text-[var(--accent)]">◆</div>
-                <p className="text-base font-semibold text-[var(--text-secondary)]">
+                <div className="text-4xl mb-5 animate-sift-refresh inline-block text-(--accent)">◆</div>
+                <p className="text-base font-semibold text-(--text-secondary)">
                   {COPY.compare.loading}
                 </p>
                 {compareSlow && (
-                  <p className="text-sm mt-3 text-[var(--text-muted)] animate-fade-slide-in">
+                  <p className="text-sm mt-3 text-(--text-muted) animate-fade-slide-in">
                     {COPY.compare.slow}
                   </p>
                 )}
@@ -702,7 +702,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
             {/* Section header */}
             <div className="flex justify-between items-baseline mb-7">
               <div>
-                <h2 className="font-heading text-[22px] font-bold text-[var(--text)] tracking-tight">
+                <h2 className="font-heading text-[22px] font-bold text-(--text) tracking-tight">
                   {searchMode
                     ? (topicQuery ? COPY.search.resultsFor(topicQuery) : COPY.articles.searchTopics)
                     : showBookmarks
@@ -712,7 +712,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                         : activeCatLabel}
                 </h2>
                 {activeCustomTopic && (
-                  <p className="text-xs mt-1 text-[var(--text-muted)]">
+                  <p className="text-xs mt-1 text-(--text-muted)">
                     {activeCustomTopic.description}
                   </p>
                 )}
@@ -723,7 +723,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 )}
               </div>
               {hasData && (
-                <span className="text-xs text-[var(--text-muted)] font-medium">
+                <span className="text-xs text-(--text-muted) font-medium">
                   {feedItems.length} item{feedItems.length !== 1 ? "s" : ""}
                 </span>
               )}
@@ -739,7 +739,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                   ))}
                 </div>
                 {((searchMode || customTopicMode) ? topicSlow : slow) && (
-                  <p className="text-center mt-6 text-sm text-[var(--text-muted)] animate-fade-slide-in">
+                  <p className="text-center mt-6 text-sm text-(--text-muted) animate-fade-slide-in">
                     {(searchMode || customTopicMode)
                       ? COPY.loading.slowTopic
                       : COPY.loading.slow}
@@ -834,15 +834,15 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
 
             {/* Loading toast for refresh */}
             {loading && hasData && (
-              <div role="status" className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-6 py-2.5 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2.5 shadow-lg z-50 animate-fade-slide-in">
-                <span className="animate-sift-refresh inline-block text-[var(--accent)]">◆</span>
+              <div role="status" className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-(--card-bg) border border-(--border) rounded-full px-6 py-2.5 text-sm font-semibold text-(--text-secondary) flex items-center gap-2.5 shadow-lg z-50 animate-fade-slide-in">
+                <span className="animate-sift-refresh inline-block text-(--accent)">◆</span>
                 {COPY.loading.refresh}
               </div>
             )}
 
             {/* Undo toast for topic removal */}
             {pendingRemoval && (
-              <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-6 py-2.5 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-3 shadow-lg z-50 animate-fade-slide-in">
+              <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-(--card-bg) border border-(--border) rounded-full px-6 py-2.5 text-sm font-semibold text-(--text-secondary) flex items-center gap-3 shadow-lg z-50 animate-fade-slide-in">
                 <span>Removed &ldquo;{pendingRemoval.topic.shortLabel}&rdquo;</span>
                 <button
                   onClick={() => {
@@ -876,13 +876,13 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
       )}
 
       {/* ── Footer ──────────────────────────────────── */}
-      <footer className="border-t border-[var(--border)] py-6 px-6 text-center text-xs text-[var(--text-muted)] max-w-[1200px] mx-auto">
+      <footer className="border-t border-(--border) py-6 px-6 text-center text-xs text-(--text-muted) max-w-[1200px] mx-auto">
         <SiftLogo variant="full" size={18} />
         <span className="mx-2">&mdash;</span>{COPY.footer.main}
         <div className="mt-2 flex items-center justify-center gap-3">
-          <a href="/privacy" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] transition-colors">Privacy</a>
+          <a href="/privacy" className="text-(--text-muted) no-underline hover:text-(--text-secondary) transition-colors">Privacy</a>
           <span className="opacity-30">&middot;</span>
-          <a href="/terms" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] transition-colors">Terms</a>
+          <a href="/terms" className="text-(--text-muted) no-underline hover:text-(--text-secondary) transition-colors">Terms</a>
         </div>
       </footer>
     </div>

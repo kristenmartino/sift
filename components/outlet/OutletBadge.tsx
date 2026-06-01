@@ -33,7 +33,7 @@ interface OutletBadgeProps {
  *   2. AllSides label → outlet's AllSides page  (citation, opens new tab)
  *
  * z-index note: ArticleCard wraps its title in a stretched `<a>` overlay
- * (`<span class="absolute inset-0 z-[1]">`). Anchors here use `relative z-[2]`
+ * (`<span class="absolute inset-0 z-1">`). Anchors here use `relative z-2`
  * + `e.stopPropagation()` to opt out of that overlay, mirroring how the
  * bookmark button and primer toggle escape the card-link.
  *
@@ -54,14 +54,14 @@ export default function OutletBadge({
     if (isRail) {
       return (
         <span
-          className={`text-outlet font-semibold uppercase text-[var(--text)] ${className ?? ""}`}
+          className={`text-outlet font-semibold uppercase text-(--text) ${className ?? ""}`}
         >
           {fallback}
         </span>
       );
     }
     return (
-      <span className={`font-bold text-[var(--text-secondary)] ${className ?? ""}`}>
+      <span className={`font-bold text-(--text-secondary) ${className ?? ""}`}>
         {fallback}
       </span>
     );
@@ -79,7 +79,7 @@ export default function OutletBadge({
           href={`/outlet/${outlet.slug}`}
           onClick={(e) => e.stopPropagation()}
           aria-label={`Outlet dossier for ${outlet.name}`}
-          className="text-outlet font-semibold uppercase text-[var(--text)] no-underline hover:underline relative z-[2]"
+          className="text-outlet font-semibold uppercase text-(--text) no-underline hover:underline relative z-2"
         >
           {outlet.name}
         </a>
@@ -98,7 +98,7 @@ export default function OutletBadge({
         href={`/outlet/${outlet.slug}`}
         onClick={(e) => e.stopPropagation()}
         aria-label={`Outlet dossier for ${outlet.name}`}
-        className="font-bold text-[var(--text-secondary)] no-underline hover:underline hover:text-[var(--text)] relative z-[2]"
+        className="font-bold text-(--text-secondary) no-underline hover:underline hover:text-(--text) relative z-2"
       >
         {outlet.name}
       </a>
@@ -109,7 +109,7 @@ export default function OutletBadge({
           rel={outlet.allSidesUrl ? "noopener noreferrer" : undefined}
           onClick={(e) => e.stopPropagation()}
           aria-label={`AllSides bias rating: ${allSides}${outlet.allSidesUrl ? " (opens AllSides in a new tab)" : ""}`}
-          className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)] hover:underline relative z-[2] whitespace-nowrap"
+          className="font-mono text-[10px] uppercase tracking-wider text-(--text-muted) no-underline hover:text-(--text-secondary) hover:underline relative z-2 whitespace-nowrap"
         >
           {allSides}
         </a>

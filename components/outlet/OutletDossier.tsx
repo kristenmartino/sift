@@ -64,7 +64,7 @@ export default function OutletDossier({
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <div className="min-h-screen bg-(--bg) text-(--text)">
       <LandingMasthead />
 
       <main
@@ -73,24 +73,24 @@ export default function OutletDossier({
       >
         {/* Eyebrow + headline */}
         <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3 flex items-center">
+          <p className="font-body text-kicker uppercase text-(--text-muted) mb-3 flex items-center">
             <span
               aria-hidden
-              className="inline-block w-7 h-px bg-[var(--border)] mr-3"
+              className="inline-block w-7 h-px bg-(--border) mr-3"
             />
             {COPY.dossier.eyebrow}
           </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-[var(--text)]">
+          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text)">
             {outlet.name}
           </h1>
           {ledeBits.length > 0 && (
-            <p className="font-body text-[16px] text-[var(--text-secondary)] mt-3 max-w-[60ch] leading-relaxed">
+            <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
               {ledeBits.join(" · ")}
             </p>
           )}
         </header>
 
-        <hr className="border-0 border-t border-[var(--border)] my-10" />
+        <hr className="border-0 border-t border-(--border) my-10" />
 
         {/* Ratings: AllSides + MBFC. Each rating cites its source with a date
             so the reader can verify and replicate; methodology page (Phase
@@ -99,19 +99,19 @@ export default function OutletDossier({
           <section className="mb-12 grid gap-8 md:grid-cols-2">
             {allSidesLabel && (
               <div>
-                <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+                <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
                   {COPY.dossier.bias}
                 </p>
-                <p className="font-heading text-[26px] font-semibold text-[var(--text)] leading-tight mb-2">
+                <p className="font-heading text-[26px] font-semibold text-(--text) leading-tight mb-2">
                   {allSidesLabel}
                 </p>
-                <p className="font-body text-[12px] text-[var(--text-muted)] leading-relaxed">
+                <p className="font-body text-[12px] text-(--text-muted) leading-relaxed">
                   {outlet.allSidesUrl ? (
                     <a
                       href={outlet.allSidesUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[var(--text-secondary)] no-underline hover:underline hover:text-[var(--accent)]"
+                      className="text-(--text-secondary) no-underline hover:underline hover:text-(--accent)"
                     >
                       {COPY.dossier.citation("AllSides", outlet.allSidesLastChecked)}{" "}
                       <span aria-hidden>↗</span>
@@ -124,19 +124,19 @@ export default function OutletDossier({
             )}
             {mbfcLabel && (
               <div>
-                <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+                <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
                   {COPY.dossier.factual}
                 </p>
-                <p className="font-heading text-[26px] font-semibold text-[var(--text)] leading-tight mb-2">
+                <p className="font-heading text-[26px] font-semibold text-(--text) leading-tight mb-2">
                   {mbfcLabel}
                 </p>
-                <p className="font-body text-[12px] text-[var(--text-muted)] leading-relaxed">
+                <p className="font-body text-[12px] text-(--text-muted) leading-relaxed">
                   {outlet.mbfcUrl ? (
                     <a
                       href={outlet.mbfcUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[var(--text-secondary)] no-underline hover:underline hover:text-[var(--accent)]"
+                      className="text-(--text-secondary) no-underline hover:underline hover:text-(--accent)"
                     >
                       {COPY.dossier.citation(
                         "Media Bias/Fact Check",
@@ -159,21 +159,21 @@ export default function OutletDossier({
         {/* Ownership */}
         {(outlet.parentCompany || outlet.parentCompanyUrl) && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {COPY.dossier.ownership}
             </p>
-            <p className="font-body text-[15px] text-[var(--text-secondary)] leading-relaxed max-w-[60ch]">
+            <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch]">
               {outlet.parentCompanyUrl && outlet.parentCompany ? (
                 <a
                   href={outlet.parentCompanyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[var(--text)] no-underline hover:underline hover:text-[var(--accent)] font-semibold"
+                  className="text-(--text) no-underline hover:underline hover:text-(--accent) font-semibold"
                 >
                   {outlet.parentCompany} <span aria-hidden>↗</span>
                 </a>
               ) : (
-                <span className="text-[var(--text)] font-semibold">
+                <span className="text-(--text) font-semibold">
                   {outlet.parentCompany}
                 </span>
               )}
@@ -184,14 +184,14 @@ export default function OutletDossier({
         {/* Major funders (foundation/donations-funded outlets) */}
         {outlet.majorFunders.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {COPY.dossier.majorFunders}
             </p>
             <ul className="space-y-1.5">
               {outlet.majorFunders.map((funder) => (
                 <li
                   key={funder}
-                  className="font-body text-[15px] text-[var(--text-secondary)] leading-relaxed"
+                  className="font-body text-[15px] text-(--text-secondary) leading-relaxed"
                 >
                   {funder}
                 </li>
@@ -203,7 +203,7 @@ export default function OutletDossier({
         {/* External links — Wikipedia, official site, ownership reference */}
         {externalLinkEntries.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {COPY.dossier.links}
             </p>
             <ul className="space-y-2.5">
@@ -212,16 +212,16 @@ export default function OutletDossier({
                 // narrow value column at 375px. Side-by-side on md+.
                 <li
                   key={key}
-                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[180px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-[var(--border-subtle)] pb-2.5"
+                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[180px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
                 >
-                  <span className="font-body text-outlet uppercase tracking-wider text-[var(--text-muted)]">
+                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-muted)">
                     {label}
                   </span>
                   <a
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-body text-[14px] text-[var(--text-secondary)] no-underline hover:underline hover:text-[var(--accent)] truncate"
+                    className="font-body text-[14px] text-(--text-secondary) no-underline hover:underline hover:text-(--accent) truncate"
                   >
                     {url} <span aria-hidden>↗</span>
                   </a>
@@ -234,24 +234,24 @@ export default function OutletDossier({
         {/* Free-form notes */}
         {outlet.notes && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
               {COPY.dossier.notes}
             </p>
-            <p className="font-body text-[15px] text-[var(--text-secondary)] leading-relaxed max-w-[60ch] italic">
+            <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] italic">
               {outlet.notes}
             </p>
           </section>
         )}
 
-        <hr className="border-0 border-t border-[var(--border)] my-10" />
+        <hr className="border-0 border-t border-(--border) my-10" />
 
         {/* Recent stories from this outlet on Sift */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-[var(--text-muted)] mb-5">
+          <p className="font-body text-kicker uppercase text-(--text-muted) mb-5">
             {COPY.dossier.recentStories}
           </p>
           {recentArticles.length === 0 ? (
-            <p className="font-body text-[14px] text-[var(--text-muted)] italic max-w-[60ch] leading-relaxed">
+            <p className="font-body text-[14px] text-(--text-muted) italic max-w-[60ch] leading-relaxed">
               {COPY.dossier.noRecent}
             </p>
           ) : (
@@ -259,7 +259,7 @@ export default function OutletDossier({
               {recentArticles.map((article) => (
                 <li
                   key={article.id}
-                  className="border-b border-[var(--border-subtle)] last:border-b-0 py-3.5"
+                  className="border-b border-(--border-subtle) last:border-b-0 py-3.5"
                 >
                   <a
                     href={article.sourceUrl}
@@ -267,10 +267,10 @@ export default function OutletDossier({
                     rel="noopener noreferrer"
                     className="block group no-underline"
                   >
-                    <p className="font-heading text-[17px] leading-snug text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                    <p className="font-heading text-[17px] leading-snug text-(--text) group-hover:text-(--accent) transition-colors">
                       {article.title}
                     </p>
-                    <p className="font-body text-meta text-[var(--text-muted)] mt-1.5 flex items-center gap-3">
+                    <p className="font-body text-meta text-(--text-muted) mt-1.5 flex items-center gap-3">
                       <span>{timeAgo(article.publishedDate)}</span>
                       <span className="opacity-30">·</span>
                       <span>{article.readTime} min read</span>
@@ -282,19 +282,19 @@ export default function OutletDossier({
           )}
         </section>
 
-        <hr className="border-0 border-t border-[var(--border)] my-10" />
+        <hr className="border-0 border-t border-(--border) my-10" />
 
         {/* Footer: methodology hint + back link */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <Link
             href="/"
-            className="font-body text-outlet uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors no-underline inline-flex items-center gap-1.5"
+            className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline inline-flex items-center gap-1.5"
           >
             <span aria-hidden>←</span> Back to Sift
           </Link>
           <Link
             href="/methodology"
-            className="font-body text-meta text-[var(--text-muted)] italic no-underline hover:text-[var(--accent)] hover:not-italic transition-colors"
+            className="font-body text-meta text-(--text-muted) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
           >
             {COPY.dossier.methodologyHint}
           </Link>

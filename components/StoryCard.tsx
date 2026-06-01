@@ -97,8 +97,8 @@ export default function StoryCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`
-        bg-[var(--card-bg)] rounded-[14px] overflow-hidden
-        border border-[var(--border)]
+        bg-(--card-bg) rounded-[14px] overflow-hidden
+        border border-(--border)
         ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
       `}
       style={{
@@ -170,7 +170,7 @@ export default function StoryCard({
 
         {/* Headline */}
         <h3
-          className={`font-heading font-bold text-[var(--text)] ${
+          className={`font-heading font-bold text-(--text) ${
             featured ? "text-headline-lg" : "text-headline"
           }`}
         >
@@ -179,7 +179,7 @@ export default function StoryCard({
 
         {/* Summary */}
         <p
-          className={`text-[var(--text-secondary)] ${featured ? "text-body-lg" : "text-body"}`}
+          className={`text-(--text-secondary) ${featured ? "text-body-lg" : "text-body"}`}
           style={{
             display: "-webkit-box",
             WebkitLineClamp: featured ? 4 : 3,
@@ -207,7 +207,7 @@ export default function StoryCard({
               </span>
             ))}
             {entityTags.length > 6 && (
-              <span className="text-[10px] text-[var(--text-muted)] self-center">
+              <span className="text-[10px] text-(--text-muted) self-center">
                 +{entityTags.length - 6}
               </span>
             )}
@@ -230,19 +230,19 @@ export default function StoryCard({
         {isMultiSource && !renderCrossSpectrum && (
           <div className="mt-1">
             <div className="flex items-center gap-3 mb-3">
-              <p className="text-kicker font-bold uppercase text-[var(--text-muted)] shrink-0">
+              <p className="text-kicker font-bold uppercase text-(--text-muted) shrink-0">
                 {COPY.stories.framing(uniqueSourceCount)}
               </p>
               <span
                 aria-hidden
-                className="flex-1 h-px bg-gradient-to-r from-[var(--border)] to-transparent"
+                className="flex-1 h-px bg-linear-to-r from-(--border) to-transparent"
               />
             </div>
             <div className="flex flex-col">
               {uniqueFramings.map((f) => (
                 <div
                   key={f.sourceName}
-                  className="story-row flex items-start gap-4 py-2.5 border-b border-[color:var(--border-subtle)] last:border-b-0"
+                  className="story-row flex items-start gap-4 py-2.5 border-b border-(--border-subtle) last:border-b-0"
                 >
                   <span aria-hidden className="story-row__rail" />
                   <OutletBadge
@@ -251,7 +251,7 @@ export default function StoryCard({
                     variant="rail"
                     className="story-row__source shrink-0 min-w-[88px]"
                   />
-                  <span className="text-body text-[var(--text-secondary)] flex-1">
+                  <span className="text-body text-(--text-secondary) flex-1">
                     {f.framing}
                   </span>
                 </div>
@@ -269,7 +269,7 @@ export default function StoryCard({
           ).size;
           if (uniqueSourcesInArticles < 2) return null;
           return (
-            <p className="text-body text-[var(--text-muted)] italic">
+            <p className="text-body text-(--text-muted) italic">
               {COPY.stories.analyzingFallback}
             </p>
           );
@@ -299,8 +299,8 @@ export default function StoryCard({
         >
           <div style={{ overflow: "hidden", minHeight: 0 }}>
             {expanded && (
-              <div className="mt-3 pt-4 border-t border-[var(--border)]">
-                <p className="text-meta text-[var(--text-muted)] mb-3">
+              <div className="mt-3 pt-4 border-t border-(--border)">
+                <p className="text-meta text-(--text-muted) mb-3">
                   {COPY.stories.expandedMeta(timeAgo(story.publishedDate), story.articles.length)}
                 </p>
                 <div
@@ -317,7 +317,7 @@ export default function StoryCard({
                         href={article.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="story-row flex items-center gap-4 py-3 no-underline border-b border-[color:var(--border-subtle)] last:border-b-0"
+                        className="story-row flex items-center gap-4 py-3 no-underline border-b border-(--border-subtle) last:border-b-0"
                         style={{
                           animation: "row-reveal 320ms var(--ease-out-expo) both",
                           // Stagger after the framings rows when those render;
@@ -334,7 +334,7 @@ export default function StoryCard({
                           className="story-row__source shrink-0 min-w-[88px]"
                         />
                         <span
-                          className="text-body text-[var(--text)] flex-1"
+                          className="text-body text-(--text) flex-1"
                           style={{
                             display: "-webkit-box",
                             WebkitLineClamp: 2,
@@ -344,7 +344,7 @@ export default function StoryCard({
                         >
                           {article.title}
                         </span>
-                        <span className="text-meta text-[var(--text-muted)] shrink-0">
+                        <span className="text-meta text-(--text-muted) shrink-0">
                           {timeAgo(article.publishedDate)}
                         </span>
                         {onCompare && (
@@ -370,7 +370,7 @@ export default function StoryCard({
         </div>
 
         {/* Meta row */}
-        <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-[var(--text-muted)] font-medium">
+        <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-(--text-muted) font-medium">
           <span>{timeAgo(story.publishedDate)}</span>
           <span className="opacity-30">&middot;</span>
           <span>{story.articleCount} article{story.articleCount !== 1 ? "s" : ""}</span>
