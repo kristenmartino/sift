@@ -79,6 +79,15 @@ describe("rating primitives — §3 neutrality", () => {
     expect(container.innerHTML).not.toMatch(PARTISAN);
   });
 
+  it("FactualChip meterOnly shows the neutral meter alone — no MBFC text, no link, still neutral", () => {
+    const { container } = render(<FactualChip rating="high" meterOnly />);
+    expect(within(container).queryByText(/MBFC:/)).toBeNull();
+    expect(container.querySelector("a")).toBeNull();
+    const img = container.querySelector('[role="img"]');
+    expect(img?.getAttribute("aria-label")).toMatch(/MBFC factual reporting/i);
+    expect(container.innerHTML).not.toMatch(PARTISAN);
+  });
+
   it("PartyTag renders a neutral letter + full label, never red/blue", () => {
     const { container: r } = render(<PartyTag party="Republican" />);
     const { container: d } = render(<PartyTag party="Democrat" />);

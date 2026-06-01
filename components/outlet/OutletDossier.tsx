@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import LandingMasthead from "@/components/landing/LandingMasthead";
+import { LeanGlyph, FactualChip } from "@/components/primitives";
 import {
   formatAllSidesLabel,
   formatFundingLabel,
@@ -64,7 +65,7 @@ export default function OutletDossier({
   }
 
   return (
-    <div className="min-h-screen bg-(--bg) text-(--text)">
+    <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
       <LandingMasthead />
 
       <main
@@ -73,14 +74,14 @@ export default function OutletDossier({
       >
         {/* Eyebrow + headline */}
         <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-3 flex items-center">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3 flex items-center">
             <span
               aria-hidden
               className="inline-block w-7 h-px bg-(--border) mr-3"
             />
             {COPY.dossier.eyebrow}
           </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text)">
+          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text-primary)">
             {outlet.name}
           </h1>
           {ledeBits.length > 0 && (
@@ -99,13 +100,16 @@ export default function OutletDossier({
           <section className="mb-12 grid gap-8 md:grid-cols-2">
             {allSidesLabel && (
               <div>
-                <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+                <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
                   {COPY.dossier.bias}
                 </p>
-                <p className="font-heading text-[26px] font-semibold text-(--text) leading-tight mb-2">
+                <p className="font-heading text-[26px] font-semibold text-(--text-primary) leading-tight mb-2">
                   {allSidesLabel}
                 </p>
-                <p className="font-body text-[12px] text-(--text-muted) leading-relaxed">
+                <div className="mb-2.5">
+                  <LeanGlyph rating={outlet.allSidesRating} />
+                </div>
+                <p className="font-body text-[12px] text-(--text-tertiary) leading-relaxed">
                   {outlet.allSidesUrl ? (
                     <a
                       href={outlet.allSidesUrl}
@@ -124,13 +128,16 @@ export default function OutletDossier({
             )}
             {mbfcLabel && (
               <div>
-                <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+                <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
                   {COPY.dossier.factual}
                 </p>
-                <p className="font-heading text-[26px] font-semibold text-(--text) leading-tight mb-2">
+                <p className="font-heading text-[26px] font-semibold text-(--text-primary) leading-tight mb-2">
                   {mbfcLabel}
                 </p>
-                <p className="font-body text-[12px] text-(--text-muted) leading-relaxed">
+                <div className="mb-2.5">
+                  <FactualChip rating={outlet.mbfcFactual} meterOnly />
+                </div>
+                <p className="font-body text-[12px] text-(--text-tertiary) leading-relaxed">
                   {outlet.mbfcUrl ? (
                     <a
                       href={outlet.mbfcUrl}
@@ -159,7 +166,7 @@ export default function OutletDossier({
         {/* Ownership */}
         {(outlet.parentCompany || outlet.parentCompanyUrl) && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {COPY.dossier.ownership}
             </p>
             <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch]">
@@ -168,12 +175,12 @@ export default function OutletDossier({
                   href={outlet.parentCompanyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-(--text) no-underline hover:underline hover:text-(--accent) font-semibold"
+                  className="text-(--text-primary) no-underline hover:underline hover:text-(--accent) font-semibold"
                 >
                   {outlet.parentCompany} <span aria-hidden>↗</span>
                 </a>
               ) : (
-                <span className="text-(--text) font-semibold">
+                <span className="text-(--text-primary) font-semibold">
                   {outlet.parentCompany}
                 </span>
               )}
@@ -184,7 +191,7 @@ export default function OutletDossier({
         {/* Major funders (foundation/donations-funded outlets) */}
         {outlet.majorFunders.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {COPY.dossier.majorFunders}
             </p>
             <ul className="space-y-1.5">
@@ -203,7 +210,7 @@ export default function OutletDossier({
         {/* External links — Wikipedia, official site, ownership reference */}
         {externalLinkEntries.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {COPY.dossier.links}
             </p>
             <ul className="space-y-2.5">
@@ -214,7 +221,7 @@ export default function OutletDossier({
                   key={key}
                   className="flex flex-col gap-y-1 md:grid md:grid-cols-[180px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
                 >
-                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-muted)">
+                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-tertiary)">
                     {label}
                   </span>
                   <a
@@ -234,7 +241,7 @@ export default function OutletDossier({
         {/* Free-form notes */}
         {outlet.notes && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {COPY.dossier.notes}
             </p>
             <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] italic">
@@ -247,11 +254,11 @@ export default function OutletDossier({
 
         {/* Recent stories from this outlet on Sift */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-5">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-5">
             {COPY.dossier.recentStories}
           </p>
           {recentArticles.length === 0 ? (
-            <p className="font-body text-[14px] text-(--text-muted) italic max-w-[60ch] leading-relaxed">
+            <p className="font-body text-[14px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed">
               {COPY.dossier.noRecent}
             </p>
           ) : (
@@ -267,10 +274,10 @@ export default function OutletDossier({
                     rel="noopener noreferrer"
                     className="block group no-underline"
                   >
-                    <p className="font-heading text-[17px] leading-snug text-(--text) group-hover:text-(--accent) transition-colors">
+                    <p className="font-heading text-[17px] leading-snug text-(--text-primary) group-hover:text-(--accent) transition-colors">
                       {article.title}
                     </p>
-                    <p className="font-body text-meta text-(--text-muted) mt-1.5 flex items-center gap-3">
+                    <p className="font-body text-meta text-(--text-tertiary) mt-1.5 flex items-center gap-3">
                       <span>{timeAgo(article.publishedDate)}</span>
                       <span className="opacity-30">·</span>
                       <span>{article.readTime} min read</span>
@@ -294,7 +301,7 @@ export default function OutletDossier({
           </Link>
           <Link
             href="/methodology"
-            className="font-body text-meta text-(--text-muted) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
+            className="font-body text-meta text-(--text-tertiary) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
           >
             {COPY.dossier.methodologyHint}
           </Link>

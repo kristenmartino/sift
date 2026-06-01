@@ -63,7 +63,7 @@ export default function OrgDossier({ org }: OrgDossierProps) {
   }
 
   return (
-    <div className="min-h-screen bg-(--bg) text-(--text)">
+    <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
       <LandingMasthead />
 
       <main
@@ -72,14 +72,14 @@ export default function OrgDossier({ org }: OrgDossierProps) {
       >
         {/* Eyebrow + headline */}
         <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-3 flex items-center">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3 flex items-center">
             <span
               aria-hidden
               className="inline-block w-7 h-px bg-(--border) mr-3"
             />
             {c.eyebrow}
           </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text)">
+          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text-primary)">
             {org.name}
           </h1>
           {ledeBits.length > 0 && (
@@ -94,10 +94,10 @@ export default function OrgDossier({ org }: OrgDossierProps) {
         {/* Political lean — Fraunces display, citation muted below */}
         {leanLabel && (
           <section className="mb-12">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.politicalLean}
             </p>
-            <p className="font-heading text-[26px] font-semibold text-(--text) leading-tight">
+            <p className="font-heading text-[26px] font-semibold text-(--text-primary) leading-tight">
               {leanLabel}
             </p>
           </section>
@@ -111,7 +111,7 @@ export default function OrgDossier({ org }: OrgDossierProps) {
             <p className="font-body text-kicker uppercase text-(--accent) mb-3">
               {c.sections.fara}
             </p>
-            <p className="font-heading text-[20px] font-semibold text-(--text) leading-snug mb-3">
+            <p className="font-heading text-[20px] font-semibold text-(--text-primary) leading-snug mb-3">
               {c.faraRegisteredHeader}
             </p>
             <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] mb-3">
@@ -122,7 +122,7 @@ export default function OrgDossier({ org }: OrgDossierProps) {
                 href={org.externalLinks.fara}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-body text-meta text-(--text-muted) no-underline hover:underline hover:text-(--accent)"
+                className="font-body text-meta text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
               >
                 Source: FARA filings (justice.gov) <span aria-hidden>↗</span>
               </a>
@@ -133,7 +133,7 @@ export default function OrgDossier({ org }: OrgDossierProps) {
         {/* Major funders */}
         {org.majorFunders.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.majorFunders}
             </p>
             <ul className="space-y-1.5">
@@ -147,12 +147,12 @@ export default function OrgDossier({ org }: OrgDossierProps) {
               ))}
             </ul>
             {org.externalLinks.propublica && (
-              <p className="font-body text-meta text-(--text-muted) mt-3">
+              <p className="font-body text-meta text-(--text-tertiary) mt-3">
                 <a
                   href={org.externalLinks.propublica}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-(--text-muted) no-underline hover:underline hover:text-(--accent)"
+                  className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
                 >
                   Source: ProPublica Nonprofit Explorer (latest 990){" "}
                   <span aria-hidden>↗</span>
@@ -165,7 +165,7 @@ export default function OrgDossier({ org }: OrgDossierProps) {
         {/* External links — public-record citations */}
         {externalLinkEntries.length > 0 && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.links}
             </p>
             <ul className="space-y-2.5">
@@ -176,7 +176,7 @@ export default function OrgDossier({ org }: OrgDossierProps) {
                   key={key}
                   className="flex flex-col gap-y-1 md:grid md:grid-cols-[200px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
                 >
-                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-muted)">
+                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-tertiary)">
                     {label}
                   </span>
                   <a
@@ -196,7 +196,7 @@ export default function OrgDossier({ org }: OrgDossierProps) {
         {/* Free-form notes (curator commentary) */}
         {org.notes && (
           <section className="mb-10">
-            <p className="font-body text-kicker uppercase text-(--text-muted) mb-3">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.notes}
             </p>
             <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] italic">
@@ -217,7 +217,7 @@ export default function OrgDossier({ org }: OrgDossierProps) {
           </Link>
           <Link
             href="/methodology"
-            className="font-body text-meta text-(--text-muted) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
+            className="font-body text-meta text-(--text-tertiary) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
           >
             {c.methodologyHint}
           </Link>
