@@ -1,5 +1,9 @@
 import type { Config } from "jest";
-import nextJest from "next/jest";
+// Use the explicit `.js` subpath: Next 16's package exports are ESM-only, so the
+// extensionless `next/jest` no longer resolves when Node (>=22, per .nvmrc)
+// loads this .ts config as an ES module — CI failed with ERR_MODULE_NOT_FOUND.
+// `next/jest.js` resolves under both CJS (local Node 20) and ESM (CI Node 22).
+import nextJest from "next/jest.js";
 
 const createJestConfig = nextJest({ dir: "./" });
 
