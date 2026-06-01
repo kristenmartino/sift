@@ -11,7 +11,7 @@ export default function LandingMasthead() {
   const { dark: darkMode, toggle: toggleDark, mounted } = useTheme();
 
   return (
-    <header className="border-b border-(--border) bg-(--nav-bg)">
+    <header className="border-b border-(--border) bg-(--surface-raised)">
       {/* Dateline strip — intentionally NOT time-stamped. The issue number and
           date here were computed from `new Date()`, which froze stale into the
           ISR-prerendered HTML: a cold visitor saw the date from the last
@@ -23,7 +23,7 @@ export default function LandingMasthead() {
         <div className="max-w-[1200px] mx-auto px-6 h-9 flex items-center justify-between gap-4">
           <p className="font-body text-outlet uppercase text-(--text-secondary) truncate">
             <span>{COPY.header.tagline}</span>
-            <span className="mx-2 text-(--text-muted) hidden sm:inline">·</span>
+            <span className="mx-2 text-(--text-tertiary) hidden sm:inline">·</span>
             <span className="hidden sm:inline">{COPY.header.dateline}</span>
           </p>
 
@@ -37,14 +37,14 @@ export default function LandingMasthead() {
                 {darkMode ? "Newsprint" : "Late Edition"}
               </button>
             )}
-            <span className="text-(--text-muted) hidden sm:inline">·</span>
+            <span className="text-(--text-tertiary) hidden sm:inline">·</span>
             <Link
               href="/civic"
               className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline hidden sm:inline"
             >
               Civic ↗
             </Link>
-            <span className="text-(--text-muted)">·</span>
+            <span className="text-(--text-tertiary)">·</span>
             <Link
               href="/news"
               className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline"
@@ -67,7 +67,7 @@ export default function LandingMasthead() {
         <div className="max-w-[1200px] mx-auto px-6 h-11 flex items-center gap-x-6 overflow-x-auto whitespace-nowrap scrollbar-none">
           <Link
             href="/news"
-            className="font-body text-outlet uppercase tracking-wider text-(--text) hover:text-(--accent) transition-colors no-underline shrink-0"
+            className="font-body text-outlet uppercase tracking-wider text-(--text-primary) hover:text-(--accent) transition-colors no-underline shrink-0"
           >
             Today
           </Link>
@@ -77,7 +77,7 @@ export default function LandingMasthead() {
               <Link
                 key={cat.id}
                 href={`/news?category=${cat.id}`}
-                className="font-body text-outlet uppercase tracking-wider text-(--text-muted) hover:text-(--text) transition-colors no-underline inline-flex items-center gap-2 shrink-0"
+                className="font-body text-outlet uppercase tracking-wider text-(--text-tertiary) hover:text-(--text-primary) transition-colors no-underline inline-flex items-center gap-2 shrink-0"
               >
                 <span
                   aria-hidden

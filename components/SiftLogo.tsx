@@ -41,7 +41,7 @@ export default function SiftLogo({
     return (
       <span
         className={`font-heading font-extrabold tracking-tight leading-none ${className}`}
-        style={{ fontSize: size, color: "var(--text)" }}
+        style={{ fontSize: size, color: "var(--text-primary)" }}
       >
         Sift
       </span>
@@ -54,7 +54,7 @@ export default function SiftLogo({
         <DiamondMark size={markSize} />
         <span
           className="font-heading font-extrabold tracking-tight leading-none"
-          style={{ fontSize: size, color: "var(--text)" }}
+          style={{ fontSize: size, color: "var(--text-primary)" }}
         >
           S
         </span>
@@ -68,7 +68,7 @@ export default function SiftLogo({
       <DiamondMark size={markSize} />
       <span
         className="font-heading font-extrabold tracking-tight leading-none"
-        style={{ fontSize: size, color: "var(--text)" }}
+        style={{ fontSize: size, color: "var(--text-primary)" }}
       >
         Sift
       </span>
