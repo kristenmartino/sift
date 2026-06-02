@@ -14,6 +14,14 @@ Civic-literacy pivot rollout (web). Android v1 build entering Phase 0 (per [`doc
 
 Native platform direction resolved 2026-05-20 as **Android-first** (Path A from [`docs/IOS_VS_ANDROID.md`](./docs/IOS_VS_ANDROID.md)). What remains open: v1 content scope (U.S.-only vs global from launch) and monetization timeline (free indefinitely vs subscription exploration in 2027). Both shape whether Android-first holds longer-term or eventually pairs with iOS-as-second-platform. See [`docs/IOS_VS_ANDROID.md`](./docs/IOS_VS_ANDROID.md) §Decision queue.
 
+**Rating system + entity coverage — how far past AllSides bias + MBFC factual?**
+
+Surfaced 2026-06-01 while refining the outlet-provenance UI. Sift cites two ratings today — AllSides political-bias + MBFC factual-reporting (the only rating data in `outlet_profiles`). MBFC also publishes a **credibility** score, its own **bias** scale (Extreme Left → Extreme Right / "Least Biased" / "Questionable"), **country + press-freedom** ratings, and profiles for journalists / public figures + a genre taxonomy. Calls made:
+- **Won't do (breaks §3 neutrality):** MBFC **credibility** (folds political lean into the score — 30% weight — penalizing left/right outlets, plus traffic + country) and MBFC's **bias** scale + **"Questionable"** flag ("Extreme" / "Least Biased" / a one-sided negative badge). All re-introduce the good-bad, lean-as-value framing §3 was built to remove. Keep **AllSides** for bias.
+- **Pursue when prioritized** (`sift-api` data; likely a paid MBFC license + ToS review): **country + press-freedom** per outlet (RSF + Freedom House via MBFC; Excellent Freedom → Total Oppression). The §3-clean option — environmental, symmetric across the spectrum, cited — and most valuable for international sources. Lives on the outlet dossier, never folded into a composite score.
+- **Roadmap idea:** extend the dossier system to journalists / world leaders / more legislators + a genre taxonomy (overlaps existing politician/org/bill/outlet dossiers).
+- **Shipping now** (no new data): plain-language `Bias rating:` / `Factual Reporting:` labels with the source named in hover + link (#147); a `/methodology` "how we rate sources" section is filed as an issue.
+
 ## Next 3
 
 1. **[committed]** [#56 — SSR / streaming for `/news` first-paint](https://github.com/kristenmartino/sift/issues/56) — architectural fix to break the 5.5s mobile LCP floor. LCP element after PR #55 is hydrated text inside `NewsAggregator`, not image. Tier `v1.5` · `effort-week`.

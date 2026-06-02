@@ -74,7 +74,7 @@ describe("rating primitives — §3 neutrality", () => {
         lastChecked="2026-01-01"
       />,
     );
-    expect(within(container).getByText(/Factual rating: High/)).toBeInTheDocument();
+    expect(within(container).getByText(/Factual Reporting: High/)).toBeInTheDocument();
     expect(container.querySelector("a")?.getAttribute("href")).toBe(
       "https://mediabiasfactcheck.com/x",
     );
@@ -83,7 +83,7 @@ describe("rating primitives — §3 neutrality", () => {
 
   it("FactualChip meterOnly shows the neutral meter alone — no MBFC text, no link, still neutral", () => {
     const { container } = render(<FactualChip rating="high" meterOnly />);
-    expect(within(container).queryByText(/Factual rating:/)).toBeNull();
+    expect(within(container).queryByText(/Factual Reporting:/)).toBeNull();
     expect(container.querySelector("a")).toBeNull();
     const img = container.querySelector('[role="img"]');
     expect(img?.getAttribute("aria-label")).toMatch(/MBFC factual reporting/i);
@@ -104,7 +104,7 @@ describe("rating primitives — §3 neutrality", () => {
       <OutletChip outlet={REUTERS} fallback="Reuters" />,
     );
     expect(within(container).getByText("Reuters")).toBeInTheDocument();
-    expect(within(container).getByText(/Factual rating: High/)).toBeInTheDocument();
+    expect(within(container).getByText(/Factual Reporting: High/)).toBeInTheDocument();
     expect(container.querySelector('[role="img"]')).toBeTruthy(); // LeanGlyph
     expect(container.innerHTML).not.toMatch(PARTISAN);
 

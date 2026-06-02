@@ -67,6 +67,7 @@ export default function FactualChip({
         className={`inline-flex items-center align-middle ${className}`}
         role="img"
         aria-label={`MBFC factual reporting: ${label}`}
+        title={`MBFC factual-reporting rating: ${label}`}
       >
         {meter}
       </span>
@@ -74,8 +75,11 @@ export default function FactualChip({
   }
 
   const body = (
-    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] whitespace-nowrap">
-      Factual rating: {label}
+    <span
+      title={`MBFC factual-reporting rating: ${label}${lastChecked ? `, verified ${lastChecked}` : ""}`}
+      className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] whitespace-nowrap"
+    >
+      Factual Reporting: {label}
       {meter}
     </span>
   );
