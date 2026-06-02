@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, truncateToSentence } from "@/lib/utils";
 import CardImage from "./CardImage";
 import SourceRow from "./SourceRow";
 import {
@@ -176,12 +176,12 @@ export default function StoryCard({
             className={`text-(--text-secondary) ${featured ? "text-body-lg" : "text-body"}`}
             style={{
               display: "-webkit-box",
-              WebkitLineClamp: featured ? 3 : 2,
+              WebkitLineClamp: featured ? 5 : 4,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
           >
-            {story.summary}
+            {truncateToSentence(story.summary, featured ? 220 : 150)}
           </p>
 
           {/* Entity tags */}

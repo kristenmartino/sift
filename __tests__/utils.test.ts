@@ -4,7 +4,41 @@ import {
   extractSourceDomain,
   stableHash,
   formatUsdCompact,
+  truncateToSentence,
 } from "@/lib/utils";
+
+// ─── truncateToSentence ─────────────────────────────────
+
+describe("truncateToSentence", () => {
+  it("returns the text unchanged when within the limit", () => {
+    expect(truncateToSentence("Short and sweet.", 100)).toBe("Short and sweet.");
+  });
+
+  it("keeps whole sentences and never cuts mid-sentence", () => {
+    const t =
+      "The body was found by a hiker. The discovery closes a long missing-persons case. It has drawn national attention.";
+    const out = truncateToSentence(t, 85);
+    expect(out).toBe(
+      "The body was found by a hiker. The discovery closes a long missing-persons case.",
+    );
+    expect(out.endsWith(".")).toBe(true);
+  });
+
+  it("does not treat abbreviations / initials as sentence ends", () => {
+    const t = "Trump met with the U.S. Senate. Markets rose.";
+    expect(truncateToSentence(t, 40)).toBe("Trump met with the U.S. Senate.");
+  });
+
+  it("falls back to a clean word boundary + ellipsis for one long sentence", () => {
+    const t =
+      "This is a single very long sentence that runs on well past the budget without any terminator inside the window";
+    const out = truncateToSentence(t, 40);
+    expect(out.endsWith("…")).toBe(true);
+    // text before the ellipsis is a real prefix, cut on a word boundary
+    expect(t.startsWith(out.slice(0, -1))).toBe(true);
+    expect(out.length).toBeLessThanOrEqual(42);
+  });
+});
 
 // ─── estimateReadTime ───────────────────────────────────
 

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, truncateToSentence } from "@/lib/utils";
 import CardImage from "./CardImage";
 import BackgroundPrimer from "./primer/BackgroundPrimer";
 import { OutletChip, LeanSpread } from "./primitives";
@@ -147,13 +147,7 @@ export default function ArticleCard({
         {/* Title — serves as the card's primary link */}
         <h3
           className="font-heading font-bold leading-snug tracking-tight"
-          style={{
-            fontSize: featured ? 24 : 17,
-            display: "-webkit-box",
-            WebkitLineClamp: featured ? 3 : 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
+          style={{ fontSize: featured ? 24 : 17 }}
         >
           {article.sourceUrl ? (
             <a
@@ -188,12 +182,12 @@ export default function ArticleCard({
             fontSize: featured ? 15 : 13.5,
             flex: 1,
             display: "-webkit-box",
-            WebkitLineClamp: featured ? 5 : 4,
+            WebkitLineClamp: featured ? 6 : 5,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
           }}
         >
-          {article.summary}
+          {truncateToSentence(article.summary, featured ? 300 : 175)}
         </p>
 
         {/* Why it matters */}
