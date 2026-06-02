@@ -37,7 +37,7 @@ export default function GlobalError({
     <main
       id="main-content"
       className="min-h-screen flex items-center justify-center px-5"
-      style={{ background: "var(--bg)", color: "var(--text)" }}
+      style={{ background: "var(--surface-base)", color: "var(--text-primary)" }}
     >
       <div className="text-center max-w-[400px]">
         <div
@@ -50,11 +50,11 @@ export default function GlobalError({
         <p className="font-heading text-xl font-bold text-(--text-secondary) mb-2">
           {COPY.errorBoundary.title}
         </p>
-        <p className="text-sm text-(--text-muted) leading-relaxed mb-6">
+        <p className="text-sm text-(--text-tertiary) leading-relaxed mb-6">
           {COPY.errorBoundary.body}
         </p>
         {error.digest && (
-          <p className="font-mono text-[11px] text-(--text-muted) mb-6">
+          <p className="font-mono text-[11px] text-(--text-tertiary) mb-6">
             id: {error.digest}
           </p>
         )}

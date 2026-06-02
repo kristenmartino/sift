@@ -51,7 +51,7 @@ export default async function MethodologyPage() {
   const m = COPY.methodology;
 
   return (
-    <div className="min-h-screen bg-(--bg) text-(--text)">
+    <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
       <LandingMasthead />
 
       <main
@@ -60,14 +60,14 @@ export default async function MethodologyPage() {
       >
         {/* Eyebrow + headline + lede */}
         <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-3 flex items-center">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3 flex items-center">
             <span
               aria-hidden
               className="inline-block w-7 h-px bg-(--border) mr-3"
             />
             {m.eyebrow}
           </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text)">
+          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text-primary)">
             {m.title}
           </h1>
           <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
@@ -79,7 +79,7 @@ export default async function MethodologyPage() {
 
         {/* What Sift reads — live outlet list grouped by AllSides bucket */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             {m.sections.includes.kicker}
           </p>
           <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] mb-7">
@@ -92,7 +92,7 @@ export default async function MethodologyPage() {
                 if (list.length === 0) return null;
                 return (
                   <div key={bucket}>
-                    <p className="font-body text-outlet uppercase tracking-wider text-(--text) font-semibold mb-2.5">
+                    <p className="font-body text-outlet uppercase tracking-wider text-(--text-primary) font-semibold mb-2.5">
                       {m.sections.includes.bucketLabels[bucket]} ({list.length})
                     </p>
                     <ul className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5">
@@ -111,7 +111,7 @@ export default async function MethodologyPage() {
                 );
               })}
               {groups.unrated.length > 0 && (
-                <p className="font-body text-[12px] text-(--text-muted) italic max-w-[60ch] leading-relaxed pt-2">
+                <p className="font-body text-[12px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed pt-2">
                   {m.sections.includes.unratedNote}
                 </p>
               )}
@@ -120,7 +120,7 @@ export default async function MethodologyPage() {
             // Graceful: outlet_profiles isn't populated yet (or table missing).
             // The page still reads as a methodology doc; the missing list is
             // an acceptable empty state rather than a broken section.
-            <p className="font-body text-[14px] text-(--text-muted) italic max-w-[60ch] leading-relaxed">
+            <p className="font-body text-[14px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed">
               The curated outlet list will appear here once it's seeded.
             </p>
           )}
@@ -128,7 +128,7 @@ export default async function MethodologyPage() {
 
         {/* What Sift excludes */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             {m.sections.excludes.kicker}
           </p>
           <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] mb-4">
@@ -151,7 +151,7 @@ export default async function MethodologyPage() {
 
         {/* Bias ratings explainer */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             {m.sections.bias.kicker}
           </p>
           <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] mb-3">
@@ -161,7 +161,7 @@ export default async function MethodologyPage() {
             href={m.sections.bias.citeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-body text-meta text-(--text-muted) no-underline hover:underline hover:text-(--accent)"
+            className="font-body text-meta text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
           >
             {m.sections.bias.cite} <span aria-hidden>↗</span>
           </a>
@@ -169,7 +169,7 @@ export default async function MethodologyPage() {
 
         {/* Factual-reporting explainer */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             {m.sections.factual.kicker}
           </p>
           <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] mb-3">
@@ -179,7 +179,7 @@ export default async function MethodologyPage() {
             href={m.sections.factual.citeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-body text-meta text-(--text-muted) no-underline hover:underline hover:text-(--accent)"
+            className="font-body text-meta text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
           >
             {m.sections.factual.cite} <span aria-hidden>↗</span>
           </a>
@@ -187,7 +187,7 @@ export default async function MethodologyPage() {
 
         {/* Symmetric application */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             {m.sections.symmetric.kicker}
           </p>
           <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch]">
@@ -197,7 +197,7 @@ export default async function MethodologyPage() {
 
         {/* Refresh cadence */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             {m.sections.cadence.kicker}
           </p>
           <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch]">
@@ -207,7 +207,7 @@ export default async function MethodologyPage() {
 
         {/* Suggest an addition or correction */}
         <section className="mb-12">
-          <p className="font-body text-kicker uppercase text-(--text-muted) mb-4">
+          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             {m.sections.suggest.kicker}
           </p>
           <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] mb-3">
@@ -217,7 +217,7 @@ export default async function MethodologyPage() {
             href={m.sections.suggest.githubUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-body text-meta text-(--text-muted) no-underline hover:underline hover:text-(--accent)"
+            className="font-body text-meta text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
           >
             {m.sections.suggest.github} <span aria-hidden>↗</span>
           </a>
