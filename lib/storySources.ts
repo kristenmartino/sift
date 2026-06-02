@@ -7,7 +7,7 @@
 // StoryCard / SourceRow stay declarative. See components/SourceRow.tsx.
 
 import { bucketize, type CrossSpectrumBucket } from "./crossSpectrum";
-import type { Article, StoryFraming } from "./types";
+import type { Article, OutletAllSidesRating, StoryFraming } from "./types";
 
 /**
  * One outlet's complete contribution to a clustered story.
@@ -108,19 +108,19 @@ export interface LeanSpread {
   total: number;
 }
 
-export function summarizeLeanSpread(units: SourceUnit[]): LeanSpread {
+export function leanSpreadFromRatings(
+  ratings: (OutletAllSidesRating | null | undefined)[],
+): LeanSpread {
   const spread: LeanSpread = {
     left: 0,
     center: 0,
     right: 0,
     unknown: 0,
     bucketsCovered: 0,
-    total: units.length,
+    total: ratings.length,
   };
-  for (const unit of units) {
-    const bucket: CrossSpectrumBucket | null = bucketize(
-      unit.outlet?.allSidesRating,
-    );
+  for (const rating of ratings) {
+    const bucket: CrossSpectrumBucket | null = bucketize(rating);
     if (bucket) spread[bucket] += 1;
     else spread.unknown += 1;
   }
@@ -129,4 +129,9 @@ export function summarizeLeanSpread(units: SourceUnit[]): LeanSpread {
     (spread.center > 0 ? 1 : 0) +
     (spread.right > 0 ? 1 : 0);
   return spread;
+}
+
+/** Spread across a story's source units (one entry per outlet). */
+export function summarizeLeanSpread(units: SourceUnit[]): LeanSpread {
+  return leanSpreadFromRatings(units.map((u) => u.outlet?.allSidesRating));
 }

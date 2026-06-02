@@ -5,3 +5,4 @@ export { default as OutletChip } from "./OutletChip";
 export { default as LeanGlyph } from "./LeanGlyph";
 export { default as FactualChip } from "./FactualChip";
 export { default as PartyTag } from "./PartyTag";
+export { default as LeanSpread } from "./LeanSpread";

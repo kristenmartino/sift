@@ -6,7 +6,8 @@ import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
 import CardImage from "./CardImage";
 import BackgroundPrimer from "./primer/BackgroundPrimer";
-import { OutletChip } from "./primitives";
+import { OutletChip, LeanSpread } from "./primitives";
+import { leanSpreadFromRatings } from "@/lib/storySources";
 import EntityLinksList from "./glossary/EntityLinksList";
 import type { ArticleCardProps } from "@/lib/types";
 
@@ -34,6 +35,9 @@ export default function ArticleCard({
   const cat = CATEGORIES.find((c) => c.id === article.category) || CATEGORIES[0];
   const color = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.top;
   const hasImage = !!article.imageUrl;
+  // Spread cue above the headline — one outlet, so one cell fills (kept for
+  // consistency with the multi-source story cards).
+  const leanSpread = leanSpreadFromRatings([article.outlet?.allSidesRating]);
 
   // Trigger pop animation when bookmark state changes to true
   useEffect(() => {
@@ -99,16 +103,19 @@ export default function ArticleCard({
       >
         {/* Category badge + bookmark */}
         <div className="flex justify-between items-center">
-          <span
-            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
-            style={{
-              background: `rgba(${color.rgb}, 0.08)`,
-              color: color.hex,
-              border: `1px solid rgba(${color.rgb}, 0.15)`,
-            }}
-          >
-            {cat.icon} {cat.label}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
+              style={{
+                background: `rgba(${color.rgb}, 0.08)`,
+                color: color.hex,
+                border: `1px solid rgba(${color.rgb}, 0.15)`,
+              }}
+            >
+              {cat.icon} {cat.label}
+            </span>
+            {leanSpread.bucketsCovered > 0 && <LeanSpread spread={leanSpread} />}
+          </div>
           <button
             onClick={(e) => {
               e.stopPropagation();

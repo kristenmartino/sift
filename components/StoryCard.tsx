@@ -9,10 +9,10 @@ import SourceRow from "./SourceRow";
 import {
   buildSourceUnits,
   summarizeLeanSpread,
-  type LeanSpread,
   type SourceUnit,
 } from "@/lib/storySources";
 import { bucketize, type CrossSpectrumBucket } from "@/lib/crossSpectrum";
+import { LeanSpread } from "./primitives";
 import type { StoryCardProps } from "@/lib/types";
 
 function Chevron({ expanded }: { expanded: boolean }) {
@@ -47,41 +47,6 @@ const BUCKET_ORDER: Record<CrossSpectrumBucket, number> = {
 function leanRank(unit: SourceUnit): number {
   const b = bucketize(unit.outlet?.allSidesRating);
   return b ? BUCKET_ORDER[b] : 3;
-}
-
-/**
- * Compact, NEUTRAL coverage-spread cue — three position cells (Left · Center ·
- * Right), filled where an outlet covers that bucket. Mirrors LeanGlyph's
- * language (position + neutral ink, never hue, §3) so a reader sees at a glance
- * whether a story spans the spectrum or clusters on one side.
- */
-function LeanSpreadCue({ spread }: { spread: LeanSpread }) {
-  const cells: { key: CrossSpectrumBucket; on: boolean }[] = [
-    { key: "left", on: spread.left > 0 },
-    { key: "center", on: spread.center > 0 },
-    { key: "right", on: spread.right > 0 },
-  ];
-  const covered = cells.filter((c) => c.on).map((c) => c.key);
-  const label = `Coverage spread: ${covered.length ? covered.join(", ") : "unrated"}`;
-  return (
-    <span
-      role="img"
-      aria-label={label}
-      title={label}
-      className="inline-flex items-center gap-[3px] align-middle"
-    >
-      {cells.map((c) => (
-        <span
-          key={c.key}
-          aria-hidden
-          className="inline-block w-[10px] h-[3px] rounded-[1px]"
-          style={{
-            background: c.on ? "var(--text-secondary)" : "var(--border-strong)",
-          }}
-        />
-      ))}
-    </span>
-  );
 }
 
 export default function StoryCard({
@@ -119,7 +84,8 @@ export default function StoryCard({
   const uniqueSourceCount = framedUnits.length;
   // Multi-source affordances only when 2+ distinct outlets framed the story.
   const isMultiSource = uniqueSourceCount >= 2;
-  const spread = summarizeLeanSpread(framedUnits);
+  // Spread across every outlet on the story (single-source shows one cell).
+  const spread = summarizeLeanSpread(sourceUnits);
   // Framed units sorted L→C→R→unrated so the list reads as a spectrum.
   const sortedFramed = isMultiSource
     ? [...framedUnits].sort((a, b) => leanRank(a) - leanRank(b))
@@ -192,9 +158,7 @@ export default function StoryCard({
                 {COPY.stories.sourcesBadge(uniqueSourceCount)}
               </span>
             )}
-            {isMultiSource && spread.bucketsCovered > 0 && (
-              <LeanSpreadCue spread={spread} />
-            )}
+            {spread.bucketsCovered > 0 && <LeanSpread spread={spread} />}
           </div>
 
           {/* Headline */}

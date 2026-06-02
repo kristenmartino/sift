@@ -50,33 +50,30 @@ export default function OutletChip({
         {outlet.name}
       </a>
 
-      {/* Line 2 — ratings (lean + factual), always beneath the name so the
-          layout is deterministic regardless of column width / label length.
-          Each rating is a nowrap group; the meter aligns cleanly because the
-          line holds only same-size mono text (no larger name to fight). */}
-      {((outlet.allSidesRating && allSides) || outlet.mbfcFactual) && (
-        <span className="inline-flex items-center gap-x-2 gap-y-1 flex-wrap">
-          {outlet.allSidesRating && allSides && (
-            <a
-              href={outlet.allSidesUrl ?? `/outlet/${outlet.slug}`}
-              target={outlet.allSidesUrl ? "_blank" : undefined}
-              rel={outlet.allSidesUrl ? "noopener noreferrer" : undefined}
-              onClick={(e) => e.stopPropagation()}
-              aria-label={`AllSides bias rating: ${allSides}${outlet.allSidesLastChecked ? `, verified ${outlet.allSidesLastChecked}` : ""}${outlet.allSidesUrl ? " (opens AllSides in a new tab)" : ""}`}
-              className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] no-underline hover:text-[var(--text-secondary)] relative z-[2] whitespace-nowrap"
-            >
-              <LeanGlyph rating={outlet.allSidesRating} />
-              {allSides}
-            </a>
-          )}
-
-          <FactualChip
-            rating={outlet.mbfcFactual}
-            url={outlet.mbfcUrl}
-            lastChecked={outlet.mbfcLastChecked}
-          />
-        </span>
+      {/* Line 2 — bias rating, on its own line so placement is deterministic
+          regardless of column width / label length. Source (AllSides) named in
+          the tooltip + as the link target; the visible label stays plain. */}
+      {outlet.allSidesRating && allSides && (
+        <a
+          href={outlet.allSidesUrl ?? `/outlet/${outlet.slug}`}
+          target={outlet.allSidesUrl ? "_blank" : undefined}
+          rel={outlet.allSidesUrl ? "noopener noreferrer" : undefined}
+          onClick={(e) => e.stopPropagation()}
+          title={`AllSides political-bias rating: ${allSides}`}
+          aria-label={`AllSides bias rating: ${allSides}${outlet.allSidesLastChecked ? `, verified ${outlet.allSidesLastChecked}` : ""}${outlet.allSidesUrl ? " (opens AllSides in a new tab)" : ""}`}
+          className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] no-underline hover:text-[var(--text-secondary)] relative z-[2] whitespace-nowrap"
+        >
+          Bias rating: {allSides}
+          <LeanGlyph rating={outlet.allSidesRating} />
+        </a>
       )}
+
+      {/* Line 3 — factual-reporting rating, on its own line. */}
+      <FactualChip
+        rating={outlet.mbfcFactual}
+        url={outlet.mbfcUrl}
+        lastChecked={outlet.mbfcLastChecked}
+      />
 
       {showVerified && (outlet.allSidesLastChecked || outlet.mbfcLastChecked) && (
         <span className="font-mono text-[9.5px] uppercase tracking-wider text-[var(--text-tertiary)] w-full">
