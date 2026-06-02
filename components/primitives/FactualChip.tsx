@@ -74,7 +74,7 @@ export default function FactualChip({
   }
 
   const body = (
-    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">
+    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] whitespace-nowrap">
       MBFC: {label}
       {meter}
     </span>

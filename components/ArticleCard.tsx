@@ -219,27 +219,28 @@ export default function ArticleCard({
         <EntityLinksList links={article.entityLinks} />
 
         {/* Meta */}
-        <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-(--text-tertiary) font-medium flex-wrap">
+        <div className="flex flex-col gap-1.5 mt-auto pt-2">
           <OutletChip outlet={article.outlet} fallback={article.sourceName} />
-          <span className="opacity-30">&middot;</span>
-          <span>{timeAgo(article.publishedDate)}</span>
-          <span className="opacity-30">&middot;</span>
-          <span>{article.readTime} min read</span>
-          {onCompare && (
-            <>
-              <span className="opacity-30">&middot;</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCompare(article.title, article.sourceName);
-                }}
-                className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200 relative z-2"
-                style={{ color: "var(--accent)" }}
-              >
-                {COPY.compare.button}
-              </button>
-            </>
-          )}
+          <div className="flex items-center gap-3 text-xs text-(--text-tertiary) font-medium flex-wrap">
+            <span>{timeAgo(article.publishedDate)}</span>
+            <span className="opacity-30">&middot;</span>
+            <span>{article.readTime} min read</span>
+            {onCompare && (
+              <>
+                <span className="opacity-30">&middot;</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCompare(article.title, article.sourceName);
+                  }}
+                  className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200 relative z-2"
+                  style={{ color: "var(--accent)" }}
+                >
+                  {COPY.compare.button}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </article>
