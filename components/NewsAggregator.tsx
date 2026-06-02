@@ -416,9 +416,8 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         {/* Category pills with sliding indicator */}
         {!showBookmarks && !searchMode && !compareMode && (
           <div className="max-w-[1200px] mx-auto relative">
-            {/* Scroll fade indicators for mobile. --nav-bg is rgba(...,0.92) so a
-                gradient from that color is barely visible over the pills. Use the
-                solid --bg color so the fade is unmistakable. */}
+            {/* Scroll fade indicators for mobile — a gradient from the page
+                surface so the fade stays unmistakable over the pills. */}
             <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-linear-to-r from-(--surface-base) to-transparent md:hidden" />
             <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-linear-to-l from-(--surface-base) to-transparent md:hidden" />
           <div ref={pillContainerRef} className="px-4 sm:px-6 lg:px-10 pb-3 flex gap-1.5 overflow-x-auto relative scrollbar-none" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>

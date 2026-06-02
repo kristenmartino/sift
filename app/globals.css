@@ -45,12 +45,6 @@
   --text-display--line-height: 1.1;
   --text-display--letter-spacing: -0.025em;
 
-  --color-sift-bg: var(--bg);
-  --color-sift-card: var(--card-bg);
-  --color-sift-border: var(--border);
-  --color-sift-accent: var(--accent);
-  --color-sift-skeleton: var(--skeleton);
-
   --color-category-top: #dc2626;
   --color-category-technology: #2563eb;
   --color-category-business: #059669;
@@ -203,26 +197,16 @@ html[data-theme="dark"] {
 
   --ring: var(--accent);
 
-  /* ── Legacy stone palette — un-migrated surfaces only; deleted in Phase 2d ──
-     --text-secondary / --border / --border-subtle / --accent were here with the
-     old stone/indigo values; they now resolve to the editorial tokens above.
-     Surfaces still on --bg/--card-bg/--text/--text-muted migrate in 2c–2d. */
-  --bg: #0c0a09;
-  --card-bg: #1c1917;
-  --text: #f5f5f4;
-  --text-muted: #78716c;
+  /* ── Functional tokens (kept) — neutral depth + the story "well" gradient.
+     The stone/indigo color tokens that lived here (--bg / --card-bg / --text /
+     --text-muted / --nav-bg / --pill-* / --skeleton / --highlight-*) were retired
+     in Phase 2d; every surface now uses the editorial semantic tokens above. */
   --shadow-low: rgba(0, 0, 0, 0.18);
   --shadow-mid: rgba(0, 0, 0, 0.4);
   --shadow-high: rgba(0, 0, 0, 0.62);
   --shadow: var(--shadow-mid);
   --shadow-hover: var(--shadow-high);
-  --well-bg: linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, transparent 8px), var(--bg);
-  --highlight-color: rgba(255, 255, 255, 0.025);
-  --highlight-blend: screen;
-  --skeleton: #292524;
-  --nav-bg: rgba(12, 10, 9, 0.92);
-  --pill-active: #818cf8;
-  --pill-text: #f5f5f4;
+  --well-bg: linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, transparent 8px), var(--surface-base);
 
   /* Motion tokens — used across rows, badges, disclosures */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -263,23 +247,13 @@ html[data-theme="light"] {
 
   --ring: var(--accent);
 
-  /* ── Legacy stone palette (light) — deleted in 2d ── */
-  --bg: #f5f2ed;
-  --card-bg: #ffffff;
-  --text: #1c1917;
-  --text-muted: #8a8380;
+  /* ── Functional tokens (kept), light ── */
   --shadow-low: rgba(0, 0, 0, 0.04);
   --shadow-mid: rgba(0, 0, 0, 0.06);
   --shadow-high: rgba(0, 0, 0, 0.14);
   --shadow: var(--shadow-mid);
   --shadow-hover: var(--shadow-high);
-  --well-bg: linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0%, transparent 8px), var(--bg);
-  --highlight-color: rgba(0, 0, 0, 0.025);
-  --highlight-blend: multiply;
-  --skeleton: #e7e5e4;
-  --nav-bg: rgba(245, 242, 237, 0.92);
-  --pill-active: #1c1917;
-  --pill-text: #ffffff;
+  --well-bg: linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0%, transparent 8px), var(--surface-base);
 }
 
 /* ─── Theme Transition ─────────────────────────────────── */
@@ -317,8 +291,8 @@ html {
 
 body {
   font-family: var(--font-body), "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--surface-base);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease;
@@ -378,9 +352,7 @@ input:focus-visible,
 header,
 main,
 footer,
-article,
-[style*="background: var(--card-bg)"],
-[style*="background: var(--nav-bg)"] {
+article {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
 }
 
