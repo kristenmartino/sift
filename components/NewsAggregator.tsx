@@ -877,7 +877,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
       {/* ── Footer ──────────────────────────────────── */}
       <footer className="border-t border-(--border) py-6 px-6 text-center text-xs text-(--text-tertiary) max-w-[1200px] mx-auto">
         <SiftLogo variant="full" size={18} />
-        <span className="mx-2">&mdash;</span>{COPY.footer.main}
+        <span className="mx-2">&mdash;</span>{COPY.footer.main()}
         <div className="mt-2 flex items-center justify-center gap-3">
           <a href="/privacy" className="text-(--text-tertiary) no-underline hover:text-(--text-secondary) transition-colors">Privacy</a>
           <span className="opacity-30">&middot;</span>

@@ -7,6 +7,11 @@ import {
   parseDbPoliticianProfile,
   type DbPoliticianProfileRow,
 } from "./politician";
+import {
+  computeOutletStats,
+  EMPTY_OUTLET_STATS,
+  type OutletStats,
+} from "./outletStats";
 import type {
   BillListItem,
   BillProfile,
@@ -549,6 +554,21 @@ export async function getAllOutletProfiles(): Promise<OutletProfile[]> {
     const msg = String(err);
     if (msg.includes("does not exist")) return [];
     throw err;
+  }
+}
+
+/**
+ * Spectrum stats for the curated outlet set — the single server-side source
+ * for outlet-count copy (issue #153), read from the same `outlet_profiles`
+ * table as the public outlet list. Fully graceful: any DB/table miss degrades
+ * to all-zero stats so callers fall back to count-free, still-truthful copy
+ * rather than rendering "0".
+ */
+export async function getOutletStats(): Promise<OutletStats> {
+  try {
+    return computeOutletStats(await getAllOutletProfiles());
+  } catch {
+    return { ...EMPTY_OUTLET_STATS };
   }
 }
 

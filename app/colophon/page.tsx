@@ -2,12 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import LandingMasthead from "@/components/landing/LandingMasthead";
 import SiftLogo from "@/components/SiftLogo";
+import { getOutletStats } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Colophon",
   description:
     "How Sift is built. Stack, architecture, and credits for the AI-curated news aggregator.",
 };
+
+// ISR — the architecture note carries the live curated-outlet count, read from
+// outlet_profiles. Same 10-minute heartbeat as the landing + methodology.
+export const revalidate = 600;
 
 const STACK = [
   { name: "Next.js 15", role: "Frontend & App Router on Vercel" },
@@ -20,14 +25,21 @@ const STACK = [
   { name: "next/font", role: "Self-hosted Fraunces, Hanken Grotesk & DM Mono" },
 ];
 
-const ARCHITECTURE = [
+const ARCHITECTURE_STATIC = [
   "Articles load in under 50ms — AI processing happens in the background, not when you read.",
   "Works without an account — sign in only if you want bookmarks synced across devices.",
   "Graceful degradation: every feature works independently, so one slow service never blocks the page.",
-  "~50 vetted sources are ingested, deduplicated, and ranked every 30 minutes before you open the app.",
 ];
 
-export default function ColophonPage() {
+// The ingest principle carries the live curated-outlet count (issue #153);
+// count-free fallback on a DB miss.
+function ingestPrinciple(total: number): string {
+  return `${total > 0 ? `${total} curated outlets` : "Curated outlets"} are ingested, deduplicated, and ranked every 30 minutes before you open the app.`;
+}
+
+export default async function ColophonPage() {
+  const { total } = await getOutletStats();
+  const architecture = [...ARCHITECTURE_STATIC, ingestPrinciple(total)];
   return (
     <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
       <LandingMasthead />
@@ -119,7 +131,7 @@ export default function ColophonPage() {
             Principles
           </p>
           <ul className="space-y-4 max-w-[60ch]">
-            {ARCHITECTURE.map((point) => (
+            {architecture.map((point) => (
               <li
                 key={point}
                 className="font-body text-[15px] leading-relaxed text-(--text-secondary) flex items-baseline gap-3"

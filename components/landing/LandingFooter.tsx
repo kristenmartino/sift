@@ -5,7 +5,7 @@ import SlDiamond from "./SlDiamond";
 const F = COPY.landingReskin.footer;
 
 /** Reskinned footer — real in-app routes + byline → kristenmartino.ai. */
-export default function LandingFooter() {
+export default function LandingFooter({ count }: { count: number }) {
   const year = new Date().getFullYear();
 
   return (
@@ -17,7 +17,7 @@ export default function LandingFooter() {
               <SlDiamond />
               Sift
             </a>
-            <p>{F.blurb}</p>
+            <p>{F.blurb(count)}</p>
           </div>
 
           <div className="sl-foot-cols">

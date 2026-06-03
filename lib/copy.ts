@@ -8,6 +8,26 @@
 
 import type { StoryFraming } from "./types";
 
+// ── Outlet-count phrasing (issue #153) ──────────────────
+// One source of truth for how the LIVE curated-outlet count reads, so it can't
+// drift the way the old hardcoded "~50" did (28 copies, while the real set had
+// grown to ~77). The data (outlet_profiles) proves a CURATED set — not which
+// outlets are actively ingested — so the honest noun is "curated outlets".
+// `n <= 0` (DB miss / empty) drops the number for a graceful, still-truthful
+// fallback instead of printing "0".
+const curatedOutlets = (n: number): string =>
+  n > 0 ? `${n} curated outlets` : "curated outlets";
+
+// The shared brand blurb — rendered in BOTH the /news footer and the landing
+// footer. Pass the live count on the landing (the outlet list is already
+// fetched for the colophon, ISR-cached); call with no argument on /news (a hot,
+// per-request path that doesn't fetch the outlet list — render count-free
+// rather than add a DB read there).
+const siftBlurb = (n = 0): string =>
+  `Sift curates ${n > 0 ? `${n} ` : ""}outlets across the political spectrum, ` +
+  `surfaces the civic context the news assumes you already know, and shows you ` +
+  `who's behind every story. Every link goes to the original.`;
+
 export const COPY = {
   header: {
     tagline: "The news, with footnotes",
@@ -18,7 +38,9 @@ export const COPY = {
     dateline: "Curated civic context for the day's news",
   },
   footer: {
-    main: "Sift reads from ~50 vetted outlets across the political spectrum, surfaces the civic context the news assumes you already know, and shows you who's behind every story. Every link goes to the original.",
+    // Shared with landingReskin.footer.blurb via siftBlurb. The /news footer
+    // calls it with no count (count-free); the landing passes the live count.
+    main: siftBlurb,
   },
   error: {
     title: "We hit a snag pulling today's stories",
@@ -158,8 +180,8 @@ export const COPY = {
     sections: {
       includes: {
         kicker: "What Sift reads",
-        body:
-          "Around 50 outlets, hand-picked to balance the political spectrum (AllSides Left → Center → Right), span sector specialties (finance, tech, science, climate, health), and clear a factual-reporting bar. Each outlet has a dossier with ownership, funding model, and external rating links — click any name below.",
+        body: (n: number): string =>
+          `${n > 0 ? `${n} curated outlets` : "Curated outlets"}, hand-picked to balance the political spectrum (AllSides Left → Center → Right), span sector specialties (finance, tech, science, climate, health), and clear a factual-reporting bar. Each outlet has a dossier with ownership, funding model, and external rating links — click any name below.`,
         bucketLabels: {
           left: "Left",
           center: "Center",
@@ -369,18 +391,19 @@ export const COPY = {
       eyebrow: "Curated civic context for the news",
       headingLead: "The news, with ",
       headingAccent: "footnotes",
-      lede: "Sift reads ~50 vetted outlets across the political spectrum and adds the context the news assumes you already know — the background, the people and organizations involved, and how to read each source. Every link goes to the original.",
+      lede: (n: number): string =>
+        `Sift curates ${n > 0 ? `${n} ` : ""}outlets across the political spectrum and adds the context the news assumes you already know — the background, the people and organizations involved, and how to read each source. Every link goes to the original.`,
       ctaPrimary: "Open Sift",
       ctaSecondary: "See what Sift adds",
-      foot: "~50 vetted outlets · Left → Center → Right",
+      foot: (n: number): string => `${curatedOutlets(n)} · Left → Center → Right`,
     },
     card: {
       barLabel: "Today · Top story",
       badge: "civic context on",
       primerLabel: "What you should know first",
     },
-    strip: [
-      "~50 vetted outlets",
+    strip: (n: number): string[] => [
+      curatedOutlets(n),
       "Left → Center → Right",
       "Ratings cited, never computed",
       "Every link goes to the original",
@@ -390,11 +413,16 @@ export const COPY = {
       headingLead: "The news is written for people who ",
       headingEm: "already have the context.",
       body: "Most reporting assumes you know the players, the precedent, and where the source is coming from. Sift adds it back — so you can read across the spectrum and judge for yourself, with the footnotes in front of you.",
-      spectrum: [
-        { label: "Left", count: 22 },
-        { label: "Center", count: 24 },
-        { label: "Right", count: 11 },
-        { label: "Specialty", count: 20 },
+      spectrum: (s: {
+        left: number;
+        center: number;
+        right: number;
+        specialty: number;
+      }): { label: string; count: number }[] => [
+        { label: "Left", count: s.left },
+        { label: "Center", count: s.center },
+        { label: "Right", count: s.right },
+        { label: "Specialty", count: s.specialty },
       ],
       spectrumCaption:
         "Hand-picked to balance the spectrum and clear a factual-reporting bar. Outlets without a political-lean rating are peer-reviewed journals or sector specialists.",
@@ -458,8 +486,9 @@ export const COPY = {
     },
     sources: {
       eyebrow: "Curated & cited",
-      titleLead: "About ",
-      titleIt: "50 outlets.",
+      titleLead: "",
+      titleIt: (n: number): string =>
+        n > 0 ? `${n} curated outlets.` : "Curated outlets.",
       titleRest: " Every rating sourced.",
       body: "Hand-picked across Left, Center, and Right, each with a dossier: ownership, funding model, AllSides lean, and MBFC factual tier — cited verbatim with a link, reviewed quarterly, and applied symmetrically to every outlet.",
       methodologyCta: "Read the methodology",
@@ -471,18 +500,18 @@ export const COPY = {
         { term: "Sites without", desc: "mastheads, bylines, or corrections policies." },
         { term: "Crypto & supplement sites", desc: "dressed up as news." },
       ],
-      outletsLabel: "Outlets Sift reads",
+      outletsLabel: "Curated outlets",
     },
     cta: {
       titleLead: "Read today's news — ",
       titleEm: "with the footnotes.",
-      body: "~50 vetted outlets, the civic context the news assumes you already know, and a link to the original on every story.",
+      body: (n: number): string =>
+        `${n > 0 ? `${n} curated outlets` : "Curated outlets across the spectrum"}, the civic context the news assumes you already know, and a link to the original on every story.`,
       ctaPrimary: "Open Sift",
       ctaSecondary: "How it works",
     },
     footer: {
-      blurb:
-        "Sift reads from ~50 vetted outlets across the political spectrum, surfaces the civic context the news assumes you already know, and shows you who's behind every story. Every link goes to the original.",
+      blurb: siftBlurb,
       cols: [
         {
           heading: "Read",

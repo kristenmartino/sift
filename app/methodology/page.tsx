@@ -83,7 +83,7 @@ export default async function MethodologyPage() {
             {m.sections.includes.kicker}
           </p>
           <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] mb-7">
-            {m.sections.includes.body}
+            {m.sections.includes.body(outlets.length)}
           </p>
           {outlets.length > 0 ? (
             <div className="space-y-7">

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     absolute: "Sift — The news, with footnotes.",
   },
   description:
-    "Sift reads from ~50 vetted outlets across the political spectrum and adds the civic context, cross-spectrum framing, and money trail the news assumes you already know. Every claim links to a public record.",
+    "Sift curates outlets across the political spectrum and adds the civic context, cross-spectrum framing, and money trail the news assumes you already know. Every claim links to a public record.",
 };
 
 // ISR: re-render at most once every 10 minutes. This bounds staleness of the
