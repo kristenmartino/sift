@@ -341,28 +341,15 @@ export const COPY = {
       "No recent stories from this outlet on Sift. The pipeline reads from this outlet \u2014 nothing has surfaced in the last day or two.",
   },
   landing: {
-    // Single editorial paragraph below the lead story. The "what is this".
-    explainer:
-      "Sift surfaces today's news across categories from ~50 outlets \u2014 and adds civic footnotes to every story. What you should know first, terms you may not know, the political viewpoint of the outlet, dossiers on the senators and organizations involved, and side-by-side coverage across sources.",
-    leadEyebrow: "Today\u2019s lead",
+    // Lead-story fallback + feed CTA, shown by components/landing/LeadStory.tsx
+    // when the morning ingest hasn't filed a lead story yet. The rest of the old
+    // `landing` block (the "what is this" explainer, the Fed compare demo, and
+    // the colophon strings) was superseded by `landingReskin` and removed in the
+    // #150 copy pass \u2014 all were 0-use.
     leadFallbackTitle: "Today\u2019s stories are still being filed",
     leadFallbackBody:
       "The morning ingest is in progress. Open the feed for what\u2019s already in.",
-    leadCta: "Read in full",
     feedCta: "Open the full feed",
-    // Section heading for the multi-source comparison demo.
-    compareEyebrow: "How outlets framed it",
-    compareTitle: "The Federal Reserve\u2019s May rate decision",
-    compareSubtitle: "One story, three angles. Sift shows what each outlet chose to emphasize \u2014 described, not labeled \u201cbiased\u201d or \u201cobjective.\u201d You read; the product does the legwork.",
-    compareCta: "Compare any topic",
-    // Source colophon.
-    colophonHeading: "Curated outlets",
-    colophonDescription:
-      "Sift maintains structured outlet profiles for its curated source set, including ownership, funding model, bias-rating references, and factual-reporting references where available.",
-    colophonSummary:
-      "Outlet profiles are curated from public source metadata and updated as the source set evolves.",
-    // Footer colophon link.
-    colophonLink: "Colophon",
   },
   // ─── Homepage reskin ("The news, with footnotes") ──────
   // Copy for the reskinned `/` sections. Kept separate from `landing` (still
