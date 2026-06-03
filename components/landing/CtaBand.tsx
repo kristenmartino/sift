@@ -4,7 +4,7 @@ import { COPY } from "@/lib/copy";
 const C = COPY.landingReskin.cta;
 
 /** Closing CTA band → /news. */
-export default function CtaBand() {
+export default function CtaBand({ count }: { count: number }) {
   return (
     <section className="sl-cta">
       <div className="sl-wrap sl-cta-inner">
@@ -12,7 +12,7 @@ export default function CtaBand() {
           {C.titleLead}
           <em>{C.titleEm}</em>
         </h2>
-        <p>{C.body}</p>
+        <p>{C.body(count)}</p>
         <div className="sl-hero-actions">
           <Link href="/news" className="sl-btn sl-btn-solid">
             {C.ctaPrimary}{" "}

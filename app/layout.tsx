@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     template: "%s | Sift",
   },
   description:
-    "Sift reads from ~50 vetted outlets across the political spectrum and adds the footnotes — the civic context the news assumes, the framing across the spectrum, and the financial and political ties behind every story. Every claim links to a public record.",
+    "Sift curates outlets across the political spectrum and adds the footnotes — the civic context the news assumes, the framing across the spectrum, and the financial and political ties behind every story. Every claim links to a public record.",
   metadataBase: new URL("https://siftnews.kristenmartino.ai"),
   openGraph: {
     title: "Sift — The news, with footnotes.",

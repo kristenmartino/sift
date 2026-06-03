@@ -21,6 +21,8 @@ describe("SourceColophon", () => {
     // Section eyebrow + exclusions list always render.
     expect(screen.getByText(S.eyebrow)).toBeInTheDocument();
     expect(screen.getByText(S.exclusionsLabel)).toBeInTheDocument();
+    // Heading carries the LIVE count of the outlets passed in (issue #153).
+    expect(screen.getByText("3 curated outlets.")).toBeInTheDocument();
   });
 
   it("does not bake in a hardcoded source list — only renders provided outlets", () => {
@@ -42,6 +44,8 @@ describe("SourceColophon", () => {
     expect(screen.getByText(S.eyebrow)).toBeInTheDocument();
     expect(screen.getByText(S.exclusionsLabel)).toBeInTheDocument();
     expect(screen.getByText(S.methodologyCta)).toBeInTheDocument();
+    // ...the heading falls back to count-free copy (never "0 outlets")...
+    expect(screen.getByText("Curated outlets.")).toBeInTheDocument();
     // ...and the live outlet list is omitted entirely (no stale names).
     expect(container.querySelector("ul.sl-outlets")).toBeNull();
   });

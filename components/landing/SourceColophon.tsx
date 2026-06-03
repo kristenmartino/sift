@@ -28,7 +28,7 @@ export default function SourceColophon({
           <span className="sl-eyebrow">{S.eyebrow}</span>
           <h2>
             {S.titleLead}
-            <span className="sl-it">{S.titleIt}</span>
+            <span className="sl-it">{S.titleIt(outlets.length)}</span>
             {S.titleRest}
           </h2>
           <p>{S.body}</p>

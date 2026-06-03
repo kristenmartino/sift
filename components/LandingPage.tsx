@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { COPY } from "@/lib/copy";
+import { computeOutletStats } from "@/lib/outletStats";
 import LandingHeader from "./landing/LandingHeader";
 import LeadStory from "./landing/LeadStory";
 import PrincipleStrip from "./landing/PrincipleStrip";
@@ -26,6 +27,10 @@ interface LandingPageProps {
 const HERO = COPY.landingReskin.hero;
 
 export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
+  // Live spectrum stats from the server-fetched outlet list — drives every
+  // outlet-count surface on the landing (issue #153). Pure + already-fetched,
+  // so no extra round-trip; an empty list (DB miss) degrades to count-free copy.
+  const stats = computeOutletStats(outlets);
   const rootRef = useRef<HTMLDivElement>(null);
   // `sl-anim` gates the reveal/stagger starting states. It's added only after
   // mount, and only when motion is allowed — so SSR / no-JS / reduced-motion
@@ -91,7 +96,7 @@ export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
                 </span>
                 .
               </h1>
-              <p className="sl-lede">{HERO.lede}</p>
+              <p className="sl-lede">{HERO.lede(stats.total)}</p>
               <div className="sl-hero-actions">
                 <Link href="/news" className="sl-btn sl-btn-solid">
                   {HERO.ctaPrimary}{" "}
@@ -105,7 +110,7 @@ export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
               </div>
               <div className="sl-hero-foot">
                 <span className="sl-pip" aria-hidden />
-                {HERO.foot}
+                {HERO.foot(stats.total)}
               </div>
             </div>
 
@@ -113,15 +118,15 @@ export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
           </div>
         </section>
 
-        <PrincipleStrip />
-        <Manifesto />
+        <PrincipleStrip count={stats.total} />
+        <Manifesto stats={stats} />
         <WhatSiftAdds />
         <ComparisonDemo />
         <SourceColophon outlets={outlets} />
-        <CtaBand />
+        <CtaBand count={stats.total} />
       </main>
 
-      <LandingFooter />
+      <LandingFooter count={stats.total} />
     </div>
   );
 }
