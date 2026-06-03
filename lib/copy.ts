@@ -77,7 +77,9 @@ export const COPY = {
       center: "Center",
       right: "Right",
     } as const,
-    compareRow: "See angles",
+    compareRow: "Compare coverage",
+    moreFromOutlet: (count: number, outlet: string) =>
+      `+${count} more from ${outlet}`,
     expandedMeta: (when: string, count: number) =>
       `Updated ${when} · ${count} ${count === 1 ? "source" : "sources"}`,
     analyzingFallback: "Sources are still being analyzed — articles below.",

@@ -4,7 +4,9 @@ import {
   FactualChip,
   PartyTag,
   OutletChip,
+  LeanSpread,
 } from "@/components/primitives";
+import { leanSpreadFromRatings } from "@/lib/storySources";
 import type { OutletProfile } from "@/lib/types";
 
 // Any partisan color (tailwind red/blue or the old indigo/category hexes) is a
@@ -72,7 +74,7 @@ describe("rating primitives — §3 neutrality", () => {
         lastChecked="2026-01-01"
       />,
     );
-    expect(within(container).getByText(/MBFC: High/)).toBeInTheDocument();
+    expect(within(container).getByText(/Factual Reporting: High/)).toBeInTheDocument();
     expect(container.querySelector("a")?.getAttribute("href")).toBe(
       "https://mediabiasfactcheck.com/x",
     );
@@ -81,7 +83,7 @@ describe("rating primitives — §3 neutrality", () => {
 
   it("FactualChip meterOnly shows the neutral meter alone — no MBFC text, no link, still neutral", () => {
     const { container } = render(<FactualChip rating="high" meterOnly />);
-    expect(within(container).queryByText(/MBFC:/)).toBeNull();
+    expect(within(container).queryByText(/Factual Reporting:/)).toBeNull();
     expect(container.querySelector("a")).toBeNull();
     const img = container.querySelector('[role="img"]');
     expect(img?.getAttribute("aria-label")).toMatch(/MBFC factual reporting/i);
@@ -102,7 +104,7 @@ describe("rating primitives — §3 neutrality", () => {
       <OutletChip outlet={REUTERS} fallback="Reuters" />,
     );
     expect(within(container).getByText("Reuters")).toBeInTheDocument();
-    expect(within(container).getByText(/MBFC: High/)).toBeInTheDocument();
+    expect(within(container).getByText(/Factual Reporting: High/)).toBeInTheDocument();
     expect(container.querySelector('[role="img"]')).toBeTruthy(); // LeanGlyph
     expect(container.innerHTML).not.toMatch(PARTISAN);
 
@@ -110,5 +112,14 @@ describe("rating primitives — §3 neutrality", () => {
       <OutletChip outlet={null} fallback="Some Blog" />,
     );
     expect(fb.textContent).toContain("Some Blog");
+  });
+
+  it("LeanSpread is a neutral position cue — filled cells encode coverage, never hue", () => {
+    const { container } = render(
+      <LeanSpread spread={leanSpreadFromRatings(["center", "right"])} />,
+    );
+    const img = container.querySelector('[role="img"]');
+    expect(img?.getAttribute("aria-label")).toMatch(/coverage spread/i);
+    expect(container.innerHTML).not.toMatch(PARTISAN);
   });
 });

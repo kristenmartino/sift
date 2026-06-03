@@ -3,10 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, truncateToSentence } from "@/lib/utils";
 import CardImage from "./CardImage";
 import BackgroundPrimer from "./primer/BackgroundPrimer";
-import { OutletChip } from "./primitives";
+import { OutletChip, LeanSpread } from "./primitives";
+import { leanSpreadFromRatings } from "@/lib/storySources";
 import EntityLinksList from "./glossary/EntityLinksList";
 import type { ArticleCardProps } from "@/lib/types";
 
@@ -34,6 +35,9 @@ export default function ArticleCard({
   const cat = CATEGORIES.find((c) => c.id === article.category) || CATEGORIES[0];
   const color = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.top;
   const hasImage = !!article.imageUrl;
+  // Spread cue above the headline — one outlet, so one cell fills (kept for
+  // consistency with the multi-source story cards).
+  const leanSpread = leanSpreadFromRatings([article.outlet?.allSidesRating]);
 
   // Trigger pop animation when bookmark state changes to true
   useEffect(() => {
@@ -99,16 +103,19 @@ export default function ArticleCard({
       >
         {/* Category badge + bookmark */}
         <div className="flex justify-between items-center">
-          <span
-            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
-            style={{
-              background: `rgba(${color.rgb}, 0.08)`,
-              color: color.hex,
-              border: `1px solid rgba(${color.rgb}, 0.15)`,
-            }}
-          >
-            {cat.icon} {cat.label}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
+              style={{
+                background: `rgba(${color.rgb}, 0.08)`,
+                color: color.hex,
+                border: `1px solid rgba(${color.rgb}, 0.15)`,
+              }}
+            >
+              {cat.icon} {cat.label}
+            </span>
+            {leanSpread.bucketsCovered > 0 && <LeanSpread spread={leanSpread} />}
+          </div>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -140,13 +147,7 @@ export default function ArticleCard({
         {/* Title — serves as the card's primary link */}
         <h3
           className="font-heading font-bold leading-snug tracking-tight"
-          style={{
-            fontSize: featured ? 24 : 17,
-            display: "-webkit-box",
-            WebkitLineClamp: featured ? 3 : 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
+          style={{ fontSize: featured ? 24 : 17 }}
         >
           {article.sourceUrl ? (
             <a
@@ -181,12 +182,12 @@ export default function ArticleCard({
             fontSize: featured ? 15 : 13.5,
             flex: 1,
             display: "-webkit-box",
-            WebkitLineClamp: featured ? 5 : 4,
+            WebkitLineClamp: featured ? 6 : 5,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
           }}
         >
-          {article.summary}
+          {truncateToSentence(article.summary, featured ? 300 : 175)}
         </p>
 
         {/* Why it matters */}
@@ -219,27 +220,28 @@ export default function ArticleCard({
         <EntityLinksList links={article.entityLinks} />
 
         {/* Meta */}
-        <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-(--text-tertiary) font-medium flex-wrap">
+        <div className="flex flex-col gap-1.5 mt-auto pt-2">
           <OutletChip outlet={article.outlet} fallback={article.sourceName} />
-          <span className="opacity-30">&middot;</span>
-          <span>{timeAgo(article.publishedDate)}</span>
-          <span className="opacity-30">&middot;</span>
-          <span>{article.readTime} min read</span>
-          {onCompare && (
-            <>
-              <span className="opacity-30">&middot;</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCompare(article.title, article.sourceName);
-                }}
-                className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200 relative z-2"
-                style={{ color: "var(--accent)" }}
-              >
-                {COPY.compare.button}
-              </button>
-            </>
-          )}
+          <div className="flex items-center gap-3 text-xs text-(--text-tertiary) font-medium flex-wrap">
+            <span>{timeAgo(article.publishedDate)}</span>
+            <span className="opacity-30">&middot;</span>
+            <span>{article.readTime} min read</span>
+            {onCompare && (
+              <>
+                <span className="opacity-30">&middot;</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCompare(article.title, article.sourceName);
+                  }}
+                  className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200 relative z-2"
+                  style={{ color: "var(--accent)" }}
+                >
+                  {COPY.compare.button}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </article>

@@ -3,16 +3,17 @@
 import { useState } from "react";
 import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, truncateToSentence } from "@/lib/utils";
 import CardImage from "./CardImage";
-import CrossSpectrumCompare from "./CrossSpectrumCompare";
-import OutletBadge from "./outlet/OutletBadge";
-import { shouldRenderCrossSpectrum } from "@/lib/crossSpectrum";
+import SourceRow from "./SourceRow";
+import {
+  buildSourceUnits,
+  summarizeLeanSpread,
+  type SourceUnit,
+} from "@/lib/storySources";
+import { bucketize, type CrossSpectrumBucket } from "@/lib/crossSpectrum";
+import { LeanSpread } from "./primitives";
 import type { StoryCardProps } from "@/lib/types";
-
-// Tone labels are no longer rendered (civic-literacy pivot, Phase 0).
-// Schema fields + COPY.stories.toneLabels lookup remain for backward
-// compatibility and possible future re-introduction. See plans/sift-civic-literacy.md.
 
 function Chevron({ expanded }: { expanded: boolean }) {
   return (
@@ -36,11 +37,21 @@ function Chevron({ expanded }: { expanded: boolean }) {
   );
 }
 
+// Sort order for the per-outlet list so it reads Left → Center → Right →
+// unrated — the "spectrum" without needing literal columns.
+const BUCKET_ORDER: Record<CrossSpectrumBucket, number> = {
+  left: 0,
+  center: 1,
+  right: 2,
+};
+function leanRank(unit: SourceUnit): number {
+  const b = bucketize(unit.outlet?.allSidesRating);
+  return b ? BUCKET_ORDER[b] : 3;
+}
+
 export default function StoryCard({
   story,
   featured,
-  onBookmark,
-  bookmarks,
   index,
   onCompare,
 }: StoryCardProps) {
@@ -66,31 +77,23 @@ export default function StoryCard({
   }
   const visibleTags = entityTags.slice(0, 6);
 
-  // Dedupe framings by source so a story doesn't claim multi-outlet
-  // coverage when one outlet just published several near-duplicate
-  // articles. The clusterer can group same-outlet posts into a single
-  // story; we should never render that as "How 4 outlets covered this".
-  // Keeps first-seen framing per outlet (preserves the LLM's chosen
-  // representative wording per source).
-  const uniqueFramings = (() => {
-    const sourcesSeen = new Set<string>();
-    return story.framings.filter((f) => {
-      if (sourcesSeen.has(f.sourceName)) return false;
-      sourcesSeen.add(f.sourceName);
-      return true;
-    });
-  })();
-  const uniqueSourceCount = uniqueFramings.length;
-  // Only show multi-source affordances (the "N sources" badge + the
-  // framings section) when there are at least 2 distinct outlets.
-  // Below threshold, the cluster reads as related coverage from one
-  // outlet and the article-list expand still works as intended.
+  // One unit per outlet: provenance + how it framed the story + its article(s).
+  const sourceUnits = buildSourceUnits(story.framings, story.articles);
+  const framedUnits = sourceUnits.filter((u) => u.framing);
+  const unframedUnits = sourceUnits.filter((u) => !u.framing);
+  const uniqueSourceCount = framedUnits.length;
+  // Multi-source affordances only when 2+ distinct outlets framed the story.
   const isMultiSource = uniqueSourceCount >= 2;
-  // Stricter check: the cross-spectrum L/C/R view needs ≥3 framings
-  // bucketed across ≥2 of the L/C/R buckets (the plan-recommended
-  // "Moderate" threshold). When this clears, render CrossSpectrumCompare;
-  // otherwise fall back to the existing flat-list framings render.
-  const renderCrossSpectrum = isMultiSource && shouldRenderCrossSpectrum(uniqueFramings);
+  // Spread across every outlet on the story (single-source shows one cell).
+  const spread = summarizeLeanSpread(sourceUnits);
+  // Framed units sorted L→C→R→unrated so the list reads as a spectrum.
+  const sortedFramed = isMultiSource
+    ? [...framedUnits].sort((a, b) => leanRank(a) - leanRank(b))
+    : framedUnits;
+
+  const isFeaturedGrid = featured && hasImage;
+  const pad = featured ? "p-7 md:p-8" : "p-5";
+  const padX = featured ? "px-7 md:px-8" : "px-5";
 
   return (
     <article
@@ -99,7 +102,7 @@ export default function StoryCard({
       className={`
         bg-(--surface-raised) rounded-[14px] overflow-hidden
         border border-(--border)
-        ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
+        ${isFeaturedGrid ? "col-span-full" : ""}
       `}
       style={{
         position: "relative",
@@ -107,12 +110,8 @@ export default function StoryCard({
           "transform var(--dur-slow) var(--ease-out-expo), box-shadow var(--dur-slow) var(--ease-out-expo)",
         transform: hovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: hovered
-          ? featured && expanded
-            ? "0 24px 80px var(--shadow-high)"
-            : "0 20px 60px var(--shadow-hover)"
-          : featured && expanded
-            ? "0 4px 24px var(--shadow-mid)"
-            : "0 2px 16px var(--shadow)",
+          ? "0 20px 60px var(--shadow-hover)"
+          : "0 2px 16px var(--shadow)",
         borderTop: !hasImage ? `3px solid ${color.hex}` : undefined,
         animation: index <= 2 ? `card-enter-left 0.5s ease-out both` : undefined,
         animationDelay: index <= 2 ? `${index * 60}ms` : undefined,
@@ -120,176 +119,155 @@ export default function StoryCard({
     >
       {/* Hover glow */}
       <div
-        className="absolute top-0 left-0 right-0 h-[2px] transition-opacity duration-300 pointer-events-none"
-        style={{ background: color.hex, opacity: hovered ? 0.6 : 0, zIndex: 1 }}
+        className="absolute top-0 left-0 right-0 h-[2px] transition-opacity duration-300 pointer-events-none z-1"
+        style={{ background: color.hex, opacity: hovered ? 0.6 : 0 }}
       />
 
-      {/* Light-source radial highlight — only on the signature expanded card */}
-      {featured && expanded && (
-        <div
-          aria-hidden
-          className="story-highlight absolute top-0 left-0 right-0 h-[120px] pointer-events-none"
-        />
-      )}
+      {/* Hero: image + body. Featured-with-image is a 2-col grid where the
+          image fills the (stable) body height. The body never grows on expand —
+          the only disclosure (single-source) renders full-width BELOW this grid —
+          so the image never re-crops/"zooms". */}
+      <div className={isFeaturedGrid ? "grid grid-cols-1 md:grid-cols-2" : ""}>
+        {hasImage && (
+          <CardImage
+            src={story.imageUrl}
+            alt={story.headline}
+            featured={featured}
+            category={story.category}
+          />
+        )}
 
-      {/* Image */}
-      {hasImage && (
-        <CardImage
-          src={story.imageUrl}
-          alt={story.headline}
-          featured={featured}
-          category={story.category}
-        />
-      )}
-
-      <div className={`flex flex-col gap-3 ${featured ? "p-7 md:p-8" : "p-5"}`}>
-        {/* Category badge + sources badge (only when multi-outlet) */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
-            style={{
-              background: `rgba(${color.rgb}, 0.08)`,
-              color: color.hex,
-              border: `1px solid rgba(${color.rgb}, 0.15)`,
-            }}
-          >
-            {cat.icon} {cat.label}
-          </span>
-          {isMultiSource && (
+        <div className={`flex flex-col gap-3 ${pad}`}>
+          {/* Category badge + sources badge + coverage-spread cue */}
+          <div className="flex items-center gap-2 flex-wrap">
             <span
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
               style={{
-                background: "var(--accent)",
-                color: "#fff",
+                background: `rgba(${color.rgb}, 0.08)`,
+                color: color.hex,
+                border: `1px solid rgba(${color.rgb}, 0.15)`,
               }}
             >
-              {COPY.stories.sourcesBadge(uniqueSourceCount)}
+              {cat.icon} {cat.label}
             </span>
-          )}
-        </div>
-
-        {/* Headline */}
-        <h3
-          className={`font-heading font-bold text-(--text-primary) ${
-            featured ? "text-headline-lg" : "text-headline"
-          }`}
-        >
-          {story.headline}
-        </h3>
-
-        {/* Summary */}
-        <p
-          className={`text-(--text-secondary) ${featured ? "text-body-lg" : "text-body"}`}
-          style={{
-            display: "-webkit-box",
-            WebkitLineClamp: featured ? 4 : 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {story.summary}
-        </p>
-
-        {/* Entity tags */}
-        {visibleTags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {visibleTags.map((tag) => (
+            {isMultiSource && (
               <span
-                key={tag}
-                className="px-2 py-0.5 rounded-full text-[10px] font-medium"
-                style={{
-                  background: "var(--surface-base)",
-                  color: "var(--text-secondary)",
-                  border: "1px solid var(--border)",
-                }}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide"
+                style={{ background: "var(--accent)", color: "#fff" }}
               >
-                {tag}
-              </span>
-            ))}
-            {entityTags.length > 6 && (
-              <span className="text-[10px] text-(--text-tertiary) self-center">
-                +{entityTags.length - 6}
+                {COPY.stories.sourcesBadge(uniqueSourceCount)}
               </span>
             )}
+            {spread.bucketsCovered > 0 && <LeanSpread spread={spread} />}
           </div>
-        )}
 
-        {/* Framings section — only render when 2+ unique outlets disagree
-            on framing. Single-outlet clusters (one outlet, multiple
-            near-duplicate articles) skip this section entirely so the card
-            never claims cross-outlet coverage that doesn't exist.
+          {/* Headline */}
+          <h3
+            className={`font-heading font-bold text-(--text-primary) ${
+              featured ? "text-headline-lg" : "text-headline"
+            }`}
+          >
+            {story.headline}
+          </h3>
 
-            When the cross-spectrum threshold clears (≥3 framings, ≥2 of
-            L/C/R buckets occupied — Phase 2.C.2), render the side-by-side
-            CrossSpectrumCompare. Otherwise render the historical flat list,
-            which still makes a multi-outlet point even without political
-            spectrum diversity (e.g. all framings from Lean Left outlets). */}
-        {isMultiSource && renderCrossSpectrum && (
-          <CrossSpectrumCompare framings={uniqueFramings} />
-        )}
-        {isMultiSource && !renderCrossSpectrum && (
-          <div className="mt-1">
-            <div className="flex items-center gap-3 mb-3">
-              <p className="text-kicker font-bold uppercase text-(--text-tertiary) shrink-0">
-                {COPY.stories.framing(uniqueSourceCount)}
-              </p>
-              <span
-                aria-hidden
-                className="flex-1 h-px bg-linear-to-r from-(--border) to-transparent"
-              />
-            </div>
-            <div className="flex flex-col">
-              {uniqueFramings.map((f) => (
-                <div
-                  key={f.sourceName}
-                  className="story-row flex items-start gap-4 py-2.5 border-b border-(--border-subtle) last:border-b-0"
+          {/* Summary — tightened so the per-outlet framing comparison is the
+              card's center of gravity, not the restated-headline blurb. */}
+          <p
+            className={`text-(--text-secondary) ${featured ? "text-body-lg" : "text-body"}`}
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: featured ? 5 : 4,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {truncateToSentence(story.summary, featured ? 220 : 150)}
+          </p>
+
+          {/* Entity tags */}
+          {visibleTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {visibleTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                  style={{
+                    background: "var(--surface-base)",
+                    color: "var(--text-secondary)",
+                    border: "1px solid var(--border)",
+                  }}
                 >
-                  <span aria-hidden className="story-row__rail" />
-                  <OutletBadge
-                    outlet={f.outlet}
-                    fallback={f.sourceName}
-                    variant="rail"
-                    className="story-row__source shrink-0 min-w-[88px]"
-                  />
-                  <span className="text-body text-(--text-secondary) flex-1">
-                    {f.framing}
-                  </span>
-                </div>
+                  {tag}
+                </span>
               ))}
+              {entityTags.length > 6 && (
+                <span className="text-[10px] text-(--text-tertiary) self-center">
+                  +{entityTags.length - 6}
+                </span>
+              )}
             </div>
+          )}
+
+          {/* Multi-source: per-outlet framing comparison, always visible. Each
+              row carries provenance (lean + factual, cited), how the outlet
+              framed the story, and a link to its actual headline + any
+              same-outlet extras. Sorted L→C→R so it reads as a spectrum;
+              unframed sources (rare) follow as "also covered" rows. */}
+          {isMultiSource && (
+            <div className="mt-1">
+              <div className="flex items-center gap-3 mb-1">
+                <p className="text-kicker font-bold uppercase text-(--text-tertiary) shrink-0">
+                  {COPY.stories.framing(uniqueSourceCount)}
+                </p>
+                <span
+                  aria-hidden
+                  className="flex-1 h-px bg-linear-to-r from-(--border) to-transparent"
+                />
+              </div>
+              <div className="flex flex-col">
+                {sortedFramed.map((u) => (
+                  <SourceRow key={u.sourceName} unit={u} onCompare={onCompare} />
+                ))}
+                {unframedUnits.map((u) => (
+                  <SourceRow key={u.sourceName} unit={u} onCompare={onCompare} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Single-source disclosure trigger (the tray itself is full-width
+              below the hero grid, so opening it can't stretch the image). */}
+          {!isMultiSource && story.articles.length > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(!expanded);
+              }}
+              className="story-expand-btn self-start bg-transparent border-none p-0 cursor-pointer text-xs font-semibold transition-colors duration-200 mt-1 inline-flex items-center gap-1.5"
+              style={{ color: "var(--accent)" }}
+              aria-expanded={expanded}
+            >
+              {expanded
+                ? COPY.stories.collapse
+                : COPY.stories.expand(story.articles.length)}
+              <Chevron expanded={expanded} />
+            </button>
+          )}
+
+          {/* Meta row */}
+          <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-(--text-tertiary) font-medium">
+            <span>{timeAgo(story.publishedDate)}</span>
+            <span className="opacity-30">&middot;</span>
+            <span>
+              {story.articleCount} article{story.articleCount !== 1 ? "s" : ""}
+            </span>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* Empty-framings fallback — articles exist but framings still pending.
-            Only shown for multi-outlet clusters; single-outlet clusters render
-            as a regular card (no synthesis pending state). */}
-        {story.framings.length === 0 && story.articles.length > 0 && (() => {
-          const uniqueSourcesInArticles = new Set(
-            story.articles.map((a) => a.sourceName)
-          ).size;
-          if (uniqueSourcesInArticles < 2) return null;
-          return (
-            <p className="text-body text-(--text-tertiary) italic">
-              {COPY.stories.analyzingFallback}
-            </p>
-          );
-        })()}
-
-        {/* Expand/collapse toggle */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setExpanded(!expanded);
-          }}
-          className="story-expand-btn self-start bg-transparent border-none p-0 cursor-pointer text-xs font-semibold transition-colors duration-200 mt-1 inline-flex items-center gap-1.5"
-          style={{ color: "var(--accent)" }}
-          aria-expanded={expanded}
-        >
-          {expanded ? COPY.stories.collapse : COPY.stories.expand(story.articles.length)}
-          <Chevron expanded={expanded} />
-        </button>
-
-        {/* Expanded child articles — grid-template-rows disclosure (no max-height) */}
+      {/* Single-source "read the originals" tray — full-width below the hero so
+          expanding never resizes the image column. grid-template-rows disclosure. */}
+      {!isMultiSource && story.articles.length > 0 && (
         <div
           style={{
             display: "grid",
@@ -298,84 +276,28 @@ export default function StoryCard({
           }}
         >
           <div style={{ overflow: "hidden", minHeight: 0 }}>
-            {expanded && (
-              <div className="mt-3 pt-4 border-t border-(--border)">
-                <p className="text-meta text-(--text-tertiary) mb-3">
-                  {COPY.stories.expandedMeta(timeAgo(story.publishedDate), story.articles.length)}
-                </p>
-                <div
-                  className="rounded-[10px] px-2"
-                  style={{
-                    background: "var(--well-bg)",
-                    boxShadow: "inset 0 1px 0 var(--border)",
-                  }}
-                >
-                  <div className="flex flex-col">
-                    {story.articles.map((article, i) => (
-                      <a
-                        key={article.id}
-                        href={article.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="story-row flex items-center gap-4 py-3 no-underline border-b border-(--border-subtle) last:border-b-0"
-                        style={{
-                          animation: "row-reveal 320ms var(--ease-out-expo) both",
-                          // Stagger after the framings rows when those render;
-                          // otherwise start from zero so the article list
-                          // doesn't pause for invisible framings.
-                          animationDelay: `${((isMultiSource ? uniqueSourceCount : 0) + Math.min(i, 11)) * 24}ms`,
-                        }}
-                      >
-                        <span aria-hidden className="story-row__rail" />
-                        <OutletBadge
-                          outlet={article.outlet}
-                          fallback={article.sourceName}
-                          variant="rail"
-                          className="story-row__source shrink-0 min-w-[88px]"
-                        />
-                        <span
-                          className="text-body text-(--text-primary) flex-1"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {article.title}
-                        </span>
-                        <span className="text-meta text-(--text-tertiary) shrink-0">
-                          {timeAgo(article.publishedDate)}
-                        </span>
-                        {onCompare && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              onCompare(article.title, article.sourceName);
-                            }}
-                            className="story-row__cta bg-transparent border-none p-0 cursor-pointer text-meta font-medium shrink-0"
-                            style={{ color: "var(--accent)" }}
-                          >
-                            {COPY.stories.compareRow}
-                          </button>
-                        )}
-                      </a>
-                    ))}
-                  </div>
-                </div>
+            <div className={`${padX} pb-6 pt-1 border-t border-(--border)`}>
+              <p className="text-meta text-(--text-tertiary) my-3">
+                {COPY.stories.expandedMeta(
+                  timeAgo(story.publishedDate),
+                  story.articleCount,
+                )}
+              </p>
+              <div
+                className="rounded-[10px] px-3"
+                style={{
+                  background: "var(--well-bg)",
+                  boxShadow: "inset 0 1px 0 var(--border)",
+                }}
+              >
+                {sourceUnits.map((u) => (
+                  <SourceRow key={u.sourceName} unit={u} onCompare={onCompare} />
+                ))}
               </div>
-            )}
+            </div>
           </div>
         </div>
-
-        {/* Meta row */}
-        <div className="flex items-center gap-3 mt-auto pt-2 text-xs text-(--text-tertiary) font-medium">
-          <span>{timeAgo(story.publishedDate)}</span>
-          <span className="opacity-30">&middot;</span>
-          <span>{story.articleCount} article{story.articleCount !== 1 ? "s" : ""}</span>
-        </div>
-      </div>
+      )}
     </article>
   );
 }

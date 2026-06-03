@@ -39,30 +39,36 @@ export default function OutletChip({
   const allSides = formatAllSidesLabel(outlet.allSidesRating);
 
   return (
-    <span className={`inline-flex items-center gap-2 flex-wrap ${className}`}>
+    <span className={`inline-flex flex-col items-start gap-1 ${className}`}>
+      {/* Line 1 — outlet name (the identity). */}
       <a
         href={`/outlet/${outlet.slug}`}
         onClick={(e) => e.stopPropagation()}
         aria-label={`Outlet dossier for ${outlet.name}`}
-        className="font-bold text-[var(--text-secondary)] no-underline hover:text-[var(--text-primary)] hover:underline relative z-[2]"
+        className="text-[13px] font-bold text-[var(--text-secondary)] no-underline hover:text-[var(--text-primary)] hover:underline relative z-[2]"
       >
         {outlet.name}
       </a>
 
+      {/* Line 2 — bias rating, on its own line so placement is deterministic
+          regardless of column width / label length. Source (AllSides) named in
+          the tooltip + as the link target; the visible label stays plain. */}
       {outlet.allSidesRating && allSides && (
         <a
           href={outlet.allSidesUrl ?? `/outlet/${outlet.slug}`}
           target={outlet.allSidesUrl ? "_blank" : undefined}
           rel={outlet.allSidesUrl ? "noopener noreferrer" : undefined}
           onClick={(e) => e.stopPropagation()}
+          title={`AllSides political-bias rating: ${allSides}`}
           aria-label={`AllSides bias rating: ${allSides}${outlet.allSidesLastChecked ? `, verified ${outlet.allSidesLastChecked}` : ""}${outlet.allSidesUrl ? " (opens AllSides in a new tab)" : ""}`}
           className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] no-underline hover:text-[var(--text-secondary)] relative z-[2] whitespace-nowrap"
         >
+          Bias rating: {allSides}
           <LeanGlyph rating={outlet.allSidesRating} />
-          {allSides}
         </a>
       )}
 
+      {/* Line 3 — factual-reporting rating, on its own line. */}
       <FactualChip
         rating={outlet.mbfcFactual}
         url={outlet.mbfcUrl}
