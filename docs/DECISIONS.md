@@ -793,7 +793,7 @@ Both share tool handlers, the cost-cap pool, the Anthropic SDK pattern, and SSE;
 
 **Depends on:** D41 (merge — hard prereq, so the loops don't duplicate the 5 tools), D42 (REST/SSE transport). Cost caps: per-turn $0.50 hard / per-user-day $5 signed–$2 anon / global $50/day (alarm at $30); a kill-switch env var disables both agent paths.
 
-**Source:** sift-api #63 (the live spec); STATUS 2026-05-20 (the Refined Compare, Ask Sift, and REST-only entries). *Note: `docs/ASK_SIFT_PLAN.md` / `docs/REFINED_COMPARE_PLAN.md`, referenced from #63 and the STATUS files, are not present on `sift-api` main — issue #63 is the authoritative spec.*
+**Source:** sift-api #63 (the live spec); STATUS 2026-05-20 (the Refined Compare, Ask Sift, and REST-only entries). *Note: `docs/ASK_SIFT_PLAN.md` / `docs/REFINED_COMPARE_PLAN.md`, referenced from #63 and the STATUS files, are not present on `sift-api` main (tracked: sift-api#96) — issue #63 is the authoritative spec.*
 **Cost:** $0 to decide; build ~2 wk backend + ~1 wk web + ~1 wk Android.
 
 ---
@@ -820,7 +820,7 @@ Both share tool handlers, the cost-cap pool, the Anthropic SDK pattern, and SSE;
 - **depth-engagement** signals (compare / dossier / bookmark opens — **not** raw clicks),
 - a **Sift-native impact proxy** (stories tied to a bill / policy / dossier).
 
-**Reader accessibility / paywall signal (added 2026-06-03):** include whether a story's sources are **freely reachable** as a ranking input — when a high-impact story is available from a non-paywalled source, prefer surfacing that source so readers can actually reach the reporting instead of hitting a paywall at every turn. This needs a per-outlet **access field** (e.g. free / metered / hard paywall), which does not exist today — capture it alongside the outlet-schema / authoritative-seeder work (D40 / sift-api#93). It also answers the previously-noted "paywalled outlets in the feed" open question from the iOS plan.
+**Reader accessibility / paywall signal (added 2026-06-03):** include whether a story's sources are **freely reachable** as a ranking input — when a high-impact story is available from a non-paywalled source, prefer surfacing that source so readers can actually reach the reporting instead of hitting a paywall at every turn. This needs a per-outlet **access field** (e.g. free / metered / hard paywall), which does not exist today — capture it alongside the outlet-schema / authoritative-seeder work (D40 / sift-api#93). Tracked at sift#160. It also answers the previously-noted "paywalled outlets in the feed" open question from the iOS plan.
 
 **Pairs with:** D44 (both want a labeled / measured baseline) and D37 (accessibility and neutrality are both "serve the reader" signals, not editorial value judgments).
 
