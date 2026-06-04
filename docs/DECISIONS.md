@@ -1,7 +1,7 @@
 # Sift — Architecture Decision Register
 
-**Last updated:** May 20, 2026
-**Status:** D1–D30 settled (v1 production live); D31–D34 added for v1.5 / v2 direction (May 2026)
+**Last updated:** June 3, 2026
+**Status:** D1–D30 settled (v1 production live); D31–D35 added for v1.5 / v2 direction (May 2026); D36–D45 added June 2026 (editorial theme, content + source quality, native + agentic scope)
 
 ---
 
@@ -41,6 +41,16 @@
 | D33 | Canonical /v1/* mobile API in sift-api | Deferred — reuse Next.js routes for now, collapse later | $0 | DEFERRED (May 2026) |
 | D34 | github-projects MCP server | Installed via .mcp.json + .claude/settings.json (Projects v2 tools for future sessions) | $0 | SETTLED (May 2026) |
 | D35 | Topic-search AI ownership | Move AI calls + DB writes to `sift-api`, phased; current Next.js route grandfathered | $0 | SETTLED (May 2026) |
+| D36 | App-wide editorial theme | Un-scope `.sift-landing` to one global token layer (both themes); delete stone/indigo — not fork | $0 | SETTLED; 2E QA left (Jun 2026) |
+| D37 | Rating treatments (§3) | Neutral + sourced: lean by position, party by letter, factual by neutral meter — never hue; reject MBFC credibility/bias-scale | $0 | SETTLED rule (Jun 2026) |
+| D38 | "Every word is gold" | Fix copy at generation (rubric + LLM-judge, sift-api#90); reject the frontend overlap-suppressor on the evidence | $0 | SETTLED; gate in flight (Jun 2026) |
+| D39 | Outlet count | Derive live from `outlet_profiles`; say "curated," drop the number on a DB miss | $0 | SETTLED (Jun 2026) |
+| D40 | Outlet-data integrity | Prune drifted prod rows; seed CSV is no longer prod's source of truth → authoritative seeder | $0 | SETTLED; seeder open #93 (Jun 2026) |
+| D41 | sift-mcp → sift-api | Merge into one service, two transports (REST + MCP), shared handlers | $0 | DECIDED, phased (May 2026) |
+| D42 | Mobile protocol | REST/SSE only; agent loop server-side, MCP internal; hosted MCP deferred | $0 | SETTLED (May 2026) |
+| D43 | Agentic surfaces | Refined Compare (`lens`) + Ask Sift in v1.5 (web + Android); depends on D41 | $0 to decide | SETTLED scope; build in flight (May 2026) |
+| D44 | Source expansion | Grow ~50 → ~200 by empirical set-cover; "curated AND rated," factual floor + resolvable/ingestable gates | $0 to decide | DECIDED, in design (Jun 2026) |
+| D45 | Rank by civic impact | Rank by civic impact + reader accessibility (paywall) signal, not coverage volume; validate empirically | $0 to decide | DECIDED, in design (Jun 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -648,6 +658,177 @@ The next four decisions are added after the v1 production launch. They steer v1.
 
 ---
 
+## v1.5 — content, theme & native batch (May–June 2026)
+
+D36–D45 record ~2 weeks of cross-repo decisions (2026-05-20 through 2026-06-03) that previously lived only in the `sift` / `sift-api` `STATUS.md` files. Two threads run through them: the **native + agentic** architecture calls (D41–D43, settled 2026-05-20) and the **editorial-theme + content/source-quality** work on the web (D36–D40, D44–D45, early June). The STATUS files now point here instead of duplicating these.
+
+---
+
+### D36. App-wide editorial theme — un-scope to a global token layer (not fork)
+**Decision (status: SETTLED, June 2026):** Promote the homepage reskin's editorial design tokens out of their `.sift-landing` scope into a single **global semantic token layer** — two full maps (light + warm-dark) under `[data-theme]` — migrate every surface onto it, and delete the legacy stone/indigo palette. One system, one source of truth.
+
+**Changed from:** the Phase-1 homepage reskin (2026-05-31), which deliberately scoped the editorial palette under `.sift-landing` so it wouldn't leak while shipping one page safely. That scoping was right for shipping one page; it's the wrong long-term structure.
+
+**Considered and rejected:**
+- **(B) Keep both palettes; migrate only some surfaces.** Leaves Sift permanently two-toned and doubles maintenance.
+
+**How it shipped (sub-phased, with a review gate between each):**
+- **2A** — promote tokens to the global layer + build the §3 neutral primitives, then re-point the homepage at the global names with **zero visual change** (pixel-parity verified first). [#144]
+- **2B** — the `/news` reader; warm dark (`#15120C`, not pure black) preserved for long reading. [#144]
+- **2C** — civic index + dossiers. [#145]
+- **2D** — retire **all** legacy stone/indigo tokens (the global layer is now the only source of truth) + migrate methodology / colophon / legal + the shared masthead. [#146]
+- **2E** — QA (AA contrast in both themes, neutrality audit, reduced-motion, responsive) — **remaining**.
+
+A Tailwind v3→v4 cascade-layer regression was fixed in the same work: the universal reset `* { margin:0; padding:0 }` was unlayered and, under v4's native cascade layers, beat every layered utility regardless of specificity — silently killing `/news` spacing. Moved into `@layer base`.
+
+**Source:** `SIFT_THEME_MIGRATION.md` §1–§2, §7; sift #144 / #145 / #146; STATUS 2026-06-01.
+**Cost:** $0 — design tokens + migration.
+
+---
+
+### D37. Rating treatments are neutral and sourced (the §3 brand rule)
+**Decision (status: SETTLED rule, June 2026):** Sift cites AllSides / MBFC verbatim, links the source, and never editorializes about which side is more or less reliable — applied **symmetrically** — and the UI must encode that:
+- **Political lean is never hue-coded.** AllSides buckets and party tags (R / D / I) render in neutral ink; lean is shown by **position** (a 5-tick glyph), party by a neutral letter chip. No red/blue.
+- **Factual-reporting tier is a neutral fill-level meter**, not green-good / red-bad.
+- **Every rating chip cites + links its source** (AllSides / MBFC) with a last-verified date.
+- Built as shared primitives — `OutletChip`, `LeanGlyph`, `FactualChip`, `PartyTag` — so the reader, the comparison view, and all dossiers share one neutral, sourced treatment, bound onto clustered-story sources so provenance reads identically on Top Stories and `/news` [#147].
+
+**Considered and rejected** (each re-introduces the good/bad, lean-as-value framing §3 exists to remove):
+- **MBFC credibility score** — folds political lean into the number (~30% weight) plus traffic + country; penalizes left/right outlets.
+- **MBFC's own bias scale** (Extreme Left → Extreme Right / "Least Biased") and the **"Questionable" flag** (a one-sided negative badge).
+- Keep **AllSides** for bias.
+
+**Shipping now (no new data):** plain-language `Bias rating:` / `Factual Reporting:` labels with the source named on hover + link [#147]; a `/methodology` "how we rate sources" section filed.
+
+**Open tail (→ OQ5):** MBFC **country + press-freedom** ratings (RSF / Freedom House) are the §3-clean expansion — environmental, symmetric across the spectrum, cited, most valuable for international sources. "Pursue when prioritized" (likely a paid MBFC license + ToS review); lives on the outlet dossier, **never** folded into a composite score.
+
+**Source:** `SIFT_THEME_MIGRATION.md` §3; STATUS 2026-06-01 (the theme entry + the rating-system question); sift #144 / #147.
+**Cost:** $0 to decide.
+
+---
+
+### D38. "Every word is gold" — fix copy at generation, not with a frontend overlap-suppressor
+**Decision (status: SETTLED principle; generation gate in flight, June 2026):** Every AI line (summary / "why it matters" / the "What you should know first" primer) and every static string must be **specific, verifiable, neutral, and mission-aligned** — never trite or a headline restatement. Each card element must answer a *different* question or be cut; rendering nothing beats rendering filler.
+
+**The method (empirical, not vibes):** audited 500 live articles, measuring how much `whyItMatters` / `contextPrimer.background` restate vs. add to title + summary (a lexical-novelty proxy). Findings: `whyItMatters` is inconsistent but **not** wholesale-trite (~3/5 land a real stake; ~20% restate; ~17% lean on vague-significance clichés) and fails in **two** directions — restating **and** editorializing; `contextPrimer.background` validated (93% add real context).
+
+**Considered and rejected:**
+- **A frontend overlap-suppressor** (a client-side lexical-overlap check that hides near-duplicate lines). Rejected **on the evidence**: lexical overlap can't catch the dominant editorial-fluff failure or paraphrased restatement.
+
+**Instead:** keep `whyItMatters` + `contextPrimer`; **fix quality at generation time** via a two-sided rubric ("must add information not already in the headline/summary; specific, verifiable, neutral; else return null") + an LLM-judge eval → **sift-api#90**.
+
+**Static-copy slice:** dropped the dead `landing.*` block (0 use, superseded by `landingReskin`) [#154]. The same audit surfaced the stale outlet count (→ D39) and outlet-table drift (→ D40).
+
+**Source:** STATUS 2026-06-01 (a) + 2026-06-02; sift #150 (issue) / #154; sift-api #90.
+**Cost:** $0 to decide.
+
+---
+
+### D39. Outlet count is derived live ("curated," not "reads from N")
+**Decision (status: SETTLED, June 2026):** Replace the hardcoded "~50 outlets" copy (it had drifted into **28 places** while the curated set grew to ~77) with a single **live count** computed from `outlet_profiles` — the same source as the public outlet list — so it can't drift again.
+
+**Truthfulness:** `outlet_profiles` has no active/ingested field, so it proves a **curated** set, not a *read* one — copy says **"curated outlets,"** not "reads from N sources." On a DB miss (`n ≤ 0`) the copy **drops the number** rather than printing "0".
+
+**How:** `lib/outletStats.ts` (pure, client-safe) + a graceful `getOutletStats()` server helper; centralized phrasing in `lib/copy.ts`; landing / `/methodology` / `/colophon` derive from already-fetched data (no new fetches); page metadata reworded count-free. [#155]
+
+**Source:** STATUS 2026-06-02; sift #153 (issue) / #155 (PR).
+**Cost:** $0.
+
+---
+
+### D40. Outlet-data integrity — prune drift; the seed CSV is no longer prod's source of truth
+**Decision (status: SETTLED cleanup; authoritative seeder OPEN, June 2026):** Treat prod `outlet_profiles` as drift-prone and reconcile it.
+- **Cleanup (shipped):** pruned 5 rows that had drifted into prod but were never in the seed CSV (the seeder is upsert-only and never prunes): deduped `bbc` → canonical `bbc-news` and `bloomberg-news` → `bloomberg` (aliases + `articles.entity_links` repointed to the canonical first), and dropped the 3 excluded Yahoo verticals (`yahoo-news` / `-finance` / `-sports`, which contradicted `/methodology`'s aggregator exclusion). 77 → 72, via an idempotent, transactional, dry-run-first script. This makes sift's live outlet count (D39) self-correct on the next ISR revalidate.
+- **Process finding (→ sift-api#93):** prod has ~15 legit outlets (al-jazeera, espn, le-monde…) **not** in the seed CSV, and `seed_outlet_profiles.py` is upsert-only, so the CSV is no longer prod's source of truth. An **authoritative seeder** is the foundation for the deliberate source expansion (D44).
+
+**Source:** sift-api STATUS 2026-06-03; sift-api #91 (issue) / #94 (PR) / #93 (follow-up); surfaced by sift #153.
+**Cost:** $0.
+
+---
+
+### D41. `sift-mcp` merges into `sift-api` — one service, two transports
+**Decision (status: DECIDED, phased — Phase 0 pending; May 2026):** Consolidate `sift-mcp` into `sift-api` as a single Python service exposing **two transports** — REST (HTTP) and MCP (stdio + optional HTTP/SSE) — backed by shared, transport-agnostic handlers. Resolves the standing "should `sift-mcp` merge into `sift-api`?" open question (sift-mcp strategic-Q #2 / sift-api strategic-Q #3) in favor of merging.
+
+**Why:**
+- Real (not theoretical) duplication: the web compare path (`app/api/compare/route.ts` → sift-api `/analyze/compare`) and sift-mcp's `compare_outlets` already drift.
+- The agentic surfaces (D43) want the tool handlers in one place rather than duplicated or reached via an internal MCP client.
+- Merging collapses sift-mcp #4's hosting work into a route mount — no new Railway service, subdomain, env-var set, or DNS.
+- Net effort ~7–10 days vs ~2 weeks for the two-service path, plus ongoing duplication-tax savings.
+
+**Phases** (full spec in `sift-api/docs/MERGE_MCP_INTO_API.md`):
+- **Phase 0** — merge source via `git subtree` (preserve history), wire the MCP transport mount into FastAPI, add a stdio entrypoint; confirm all 5 tools work via both transports. One PR.
+- **Phase 1** — cost-cap primitives in a shared `app/caps.py` (closes sift-mcp #2); both transports benefit.
+- **Phase 2** — Bearer auth on the `/mcp` mount + tokens table (supersedes sift-mcp #4), only if external MCP traffic is real.
+- **Cleanup** — archive `sift-mcp` with a redirect README (preserves issue history); update Claude Desktop / Code wiring to the new entrypoint.
+
+**Prerequisites:** land sift-api #54 (DMCA audit) before any public MCP transport; a ~30-min spike to confirm the `mcp` Python SDK mounts cleanly as an ASGI sub-app.
+
+**Reconsider when:** MCP traffic ever needs to scale independently of REST (theoretical at current volume) — the handler-module split keeps re-extraction cheap.
+
+**Source:** `sift-api/docs/MERGE_MCP_INTO_API.md`; sift-api #62; STATUS 2026-05-20.
+**Cost:** $0 to decide; net ~3–5 days saved on v0.5.
+
+---
+
+### D42. Mobile is REST-only — hosted MCP deferred indefinitely
+**Decision (status: SETTLED, May 2026):** Every mobile data/AI feature calls **REST/SSE** on `sift-api`. Even the agentic surfaces (Ask Sift, Refined Compare) run the agent loop **server-side**, with MCP as internal plumbing — there is **no MCP transport on the device**. The hosted HTTP/SSE MCP (sift-mcp #4) is deferred indefinitely.
+
+**Why:** the per-feature protocol worksheet in `sift-api/docs/MOBILE_PROTOCOL_DECISION.md` yields **zero** "MCP (public)" features — pre-computed content → REST; server-side LLM → REST + internal MCP; on-device LLM → the native Anthropic SDK with a tool-handler hitting REST, not an embedded MCP client. Getting this wrong would cost 1–2 weeks of misplaced hosting/auth infrastructure.
+
+**Consequence:** this is *why* D41's public-transport phase (Phase 2) is gated on real external demand rather than on the mobile launch — mobile doesn't need it.
+
+**Source:** `sift-api/docs/MOBILE_PROTOCOL_DECISION.md`; STATUS 2026-05-20; reinforced by sift-api #62 / #63.
+**Cost:** $0 (avoids ~1–2 weeks of misplaced infra).
+
+---
+
+### D43. Refined Compare + Ask Sift — agentic surfaces in v1.5 (web + Android)
+**Decision (status: SETTLED scope; build in flight; May 2026):** Ship two specialized **server-side agent loops** over the shared 5-tool surface (post-D41):
+- **Refined Compare** — `POST /api/compare` with a `lens` parameter (SSE), returning structured per-outlet framings. Same endpoint as the deterministic compare; the backend routes on `lens` presence.
+- **Ask Sift** — `POST /api/ask` (SSE), open-ended conversational chat with citations.
+
+Both share tool handlers, the cost-cap pool, the Anthropic SDK pattern, and SSE; they differ in system prompt and output schema.
+
+**Scope call (retiered v1.6 → v1.5, 2026-05-20):** these ship in **Android v1**, not as a v1.1 add-on. Rationale: without Ask Sift, native mobile is a polished reader competing with Apple News / Artifact; **with** it, mobile is a civic-literacy agent on the phone — the wedge that justifies building native at all. Timeline impact ~10 → ~12 weeks.
+
+**Depends on:** D41 (merge — hard prereq, so the loops don't duplicate the 5 tools), D42 (REST/SSE transport). Cost caps: per-turn $0.50 hard / per-user-day $5 signed–$2 anon / global $50/day (alarm at $30); a kill-switch env var disables both agent paths.
+
+**Source:** sift-api #63 (the live spec); STATUS 2026-05-20 (the Refined Compare, Ask Sift, and REST-only entries). *Note: `docs/ASK_SIFT_PLAN.md` / `docs/REFINED_COMPARE_PLAN.md`, referenced from #63 and the STATUS files, are not present on `sift-api` main — issue #63 is the authoritative spec.*
+**Cost:** $0 to decide; build ~2 wk backend + ~1 wk web + ~1 wk Android.
+
+---
+
+### D44. Source expansion to ~200 — empirical selection, "curated AND rated"
+**Decision (status: DECIDED, in design; June 2026):** Grow the curated outlet set from ~50 → ~200, choosing outlets **data-drivenly** (a reproducible scoring + selection procedure) rather than by hand. The set stays **"curated AND rated,"** not AllSides-scale breadth. (Execution is `sift-api` / data — `outlet_profiles`, `source_name_aliases`, ingestion; tracked at sift#151.)
+
+**Candidate universe:** AllSides + MBFC's already-rated outlets, so every candidate ships with a bias + factual rating.
+
+**Hard gates (deterministic):** an MBFC **factual floor** (exclude Low / Very-Low / Questionable); **resolvable + ingestable** — AllSides + MBFC ratings, a correct `source_name_aliases` entry, and a working feed (per the NYT non-resolution bug, a source with no alias renders cards with no ratings).
+
+**Empirical scoring + selection:** reach / authority (Similarweb traffic), spectrum-balance contribution (move the L/C/R distribution toward symmetric per §3 / D37), category-coverage contribution, international / press-freedom diversity, marginal novelty (de-prioritize pure syndication overlap), and feed reliability — combined by a **greedy set-cover** that maximizes the weighted objective under a spectrum-symmetry constraint until ~200. Validated by re-running a coverage-gap analysis.
+
+**Depends on:** the authoritative seeder (D40 / sift-api#93) as the data foundation; pairs with the civic-impact ranking eval (D45).
+
+**Source:** STATUS 2026-06-01 (b); sift #151.
+**Cost:** $0 to decide.
+
+---
+
+### D45. Rank by civic impact — including reader accessibility (paywall) — not coverage volume
+**Decision (status: DECIDED, in design; June 2026):** Rank the feed by **civic impact**, not by coverage volume (which would magnify mainstream bias — the trap raw clicks fall into). Evaluate empirically rather than by gut:
+- a **human importance gold-set** (rank ↔ importance correlation + a high-importance / low-volume "burial" rate),
+- **depth-engagement** signals (compare / dossier / bookmark opens — **not** raw clicks),
+- a **Sift-native impact proxy** (stories tied to a bill / policy / dossier).
+
+**Reader accessibility / paywall signal (added 2026-06-03):** include whether a story's sources are **freely reachable** as a ranking input — when a high-impact story is available from a non-paywalled source, prefer surfacing that source so readers can actually reach the reporting instead of hitting a paywall at every turn. This needs a per-outlet **access field** (e.g. free / metered / hard paywall), which does not exist today — capture it alongside the outlet-schema / authoritative-seeder work (D40 / sift-api#93). It also answers the previously-noted "paywalled outlets in the feed" open question from the iOS plan.
+
+**Pairs with:** D44 (both want a labeled / measured baseline) and D37 (accessibility and neutrality are both "serve the reader" signals, not editorial value judgments).
+
+**Source:** STATUS 2026-06-01 (d); the accessibility / paywall extension is a 2026-06-03 decision recorded here.
+**Cost:** $0 to decide.
+
+---
+
 ## Open questions (May 2026)
 
 Tracked here so they don't get lost between session restarts. Promoted to settled decisions when resolved.
@@ -658,3 +839,4 @@ Tracked here so they don't get lost between session restarts. Promoted to settle
 | OQ2 | DMCA fair-use posture for AI summarization on Railway | Audit + methodology update in flight (sift-api#54) |
 | OQ3 | Monetization — when, what, and at what tier | Not until v1.5 KPIs validate D30 ≥ 20% |
 | OQ4 | Cross-platform vs native-per-platform if both ship | Decide after platform-first is settled |
+| OQ5 | Outlet ratings beyond AllSides bias + MBFC factual — how far? | MBFC country + press-freedom (RSF / Freedom House) is the §3-clean next step; pursue when prioritized (paid license + ToS). See D37. |
