@@ -6,6 +6,8 @@ import {
   getOutletProfilesMap,
   resolveOutletForSourceName,
   getArticleEntityLinks,
+  getTodayAiSpendUsd,
+  recordAiUsage,
 } from "@/lib/db";
 import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
@@ -47,6 +49,13 @@ function cleanImageUrl(raw: string | null): string | null {
 const SIMILARITY_THRESHOLD = 0.35;
 const MIN_STRONG_RESULTS = 3;
 const MAX_RESULTS = 10;
+
+// Interim cost guard for the paid web-search fallback (sift-api#79). Mirrors
+// sift-api's env contract: inert unless AI_COST_GUARD_ENABLED=true, so enabling
+// it is an explicit opt-in and never silently changes live behavior. Reads/writes
+// the SAME ai_usage_daily ledger the backend guard uses → the ceiling is global.
+const AI_COST_GUARD_ENABLED = process.env.AI_COST_GUARD_ENABLED === "true";
+const DAILY_AI_COST_LIMIT_USD = Number(process.env.DAILY_AI_COST_LIMIT_USD ?? "10");
 
 function getVoyageApiKey(): string {
   const key = process.env.VOYAGE_API_KEY;
@@ -278,8 +287,12 @@ export async function GET(request: NextRequest) {
         totalArticles = articles.length;
         resultCountVector = articles.length;
 
-        // 5. If < 3 results, run Claude web_search fallback
-        if (articles.length < MIN_STRONG_RESULTS) {
+        // 5. If < 3 results, run Claude web_search fallback — unless the daily
+        // AI budget is exhausted (interim cost guard, sift-api#79). The vector
+        // results above still stream regardless of the budget decision.
+        const fallbackBudgetOk =
+          !AI_COST_GUARD_ENABLED || (await isUnderDailyAiBudget());
+        if (articles.length < MIN_STRONG_RESULTS && fallbackBudgetOk) {
           fallbackUsed = true;
           controller.enqueue(sseEvent("fallback-start", {}));
 
@@ -388,6 +401,28 @@ async function embedQuery(text: string): Promise<number[]> {
   return data.data[0].embedding;
 }
 
+// ─── Interim daily-budget check ─────────────────────────
+
+// Is the shared daily AI ledger still under the ceiling? Fails OPEN (returns
+// true) on any read error so a ledger hiccup never breaks search — only a
+// confirmed over-budget read skips the paid fallback. The durable #79 version
+// runs server-side in sift-api and can fail closed like the compare path.
+async function isUnderDailyAiBudget(): Promise<boolean> {
+  try {
+    const spent = await getTodayAiSpendUsd();
+    if (spent >= DAILY_AI_COST_LIMIT_USD) {
+      console.warn(
+        `Topic-search fallback skipped: daily AI spend $${spent.toFixed(2)} >= limit $${DAILY_AI_COST_LIMIT_USD}`
+      );
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("AI budget check failed; allowing fallback:", err);
+    return true;
+  }
+}
+
 // ─── Claude Web Search Fallback ─────────────────────────
 
 async function webSearchFallback(query: string): Promise<Article[]> {
@@ -424,7 +459,18 @@ If you truly cannot find any articles, respond with an empty array: []`,
       },
     ],
   });
-  logUsage("news.topic.webSearchFallback", response, "claude-haiku-4-5");
+  const usage = logUsage("news.topic.webSearchFallback", response, "claude-haiku-4-5");
+  if (usage) {
+    // Interim: meter the fallback's Claude spend into the shared daily ledger
+    // (sift-api#79 moves this server-side). Voyage micro-costs are dwarfed by the
+    // $0.01/web_search and are deferred to #79. Fire-and-forget; never blocks.
+    recordAiUsage({
+      provider: "anthropic",
+      model: "claude-haiku-4-5",
+      operation: "news.topic.webSearchFallback",
+      costUsd: usage.cost_usd,
+    }).catch((err) => console.warn("recordAiUsage failed:", err));
+  }
 
   // Extract JSON from response — Claude may return multiple text blocks
   const textBlocks = response.content
