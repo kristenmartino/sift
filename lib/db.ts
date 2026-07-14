@@ -370,6 +370,42 @@ export async function insertArticle(article: {
   );
 }
 
+// ─── AI cost ledger (interim cost-guard for topic search, sift-api#79) ──
+// The topic-search route runs paid Claude/Voyage calls on the user path but,
+// unlike sift-api, those calls were never recorded in ai_usage_daily or checked
+// against the daily ceiling (init.sql flags this as a temporary D35 gap). Until
+// the fallback moves into sift-api (#79), the route meters its spend into the
+// SAME shared ledger the backend guard reads, so the daily ceiling stays global.
+
+/** Today's combined estimated AI spend (USD) across backend + frontend. */
+export async function getTodayAiSpendUsd(): Promise<number> {
+  const result = await pool.query<{ total: number | null }>(
+    `SELECT COALESCE(SUM(estimated_cost_usd), 0) AS total
+       FROM ai_usage_daily
+      WHERE usage_date = CURRENT_DATE`
+  );
+  return Number(result.rows[0]?.total ?? 0);
+}
+
+/** Add one paid call's estimated cost to today's ledger (idempotent upsert). */
+export async function recordAiUsage(entry: {
+  provider: string;
+  model: string;
+  operation: string;
+  costUsd: number;
+}): Promise<void> {
+  await pool.query(
+    `INSERT INTO ai_usage_daily
+        (usage_date, provider, model, operation, estimated_cost_usd, call_count)
+     VALUES (CURRENT_DATE, $1, $2, $3, $4, 1)
+     ON CONFLICT (usage_date, provider, model, operation) DO UPDATE SET
+        estimated_cost_usd = ai_usage_daily.estimated_cost_usd + EXCLUDED.estimated_cost_usd,
+        call_count = ai_usage_daily.call_count + 1,
+        updated_at = NOW()`,
+    [entry.provider, entry.model, entry.operation, entry.costUsd]
+  );
+}
+
 // ─── Custom Topics ────────────────────────────────────
 
 export interface DbCustomTopic {
