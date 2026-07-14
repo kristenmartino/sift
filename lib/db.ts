@@ -59,6 +59,14 @@ export interface DbArticle {
   reading_levels: unknown;
 }
 
+// The category feed queries (here and the standalone query in
+// getStoriesWithArticles) carry a 30-day recency floor. The EXP() decay in
+// ORDER BY already zeroes out older rows (score × ~1e-13 at 30 days), so
+// they can never rank — but without the floor Postgres still fetches and
+// sorts every feed-quality row in the category (29k for business, 73k for
+// sports as of 2026-07; sift-api#16). Written as an OR rather than
+// COALESCE(published_date, created_at) so both branches stay servable by
+// idx_articles_feed (category, published_date DESC).
 export async function getArticlesByCategory(
   category: string,
   limit = 30
@@ -70,6 +78,8 @@ export async function getArticlesByCategory(
      WHERE category = $1 AND from_search = false
        AND summary IS NOT NULL AND summary != ''
        AND LOWER(summary) NOT LIKE 'unable to provide%'
+       AND (published_date > NOW() - INTERVAL '30 days'
+            OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
      ORDER BY
        COALESCE(importance_score, 3)::float *
        EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
@@ -185,6 +195,8 @@ export async function getStoriesWithArticles(
          AND (story_id IS NULL OR story_id <> ALL($2::text[]))
          AND summary IS NOT NULL AND summary != ''
          AND LOWER(summary) NOT LIKE 'unable to provide%'
+         AND (published_date > NOW() - INTERVAL '30 days'
+              OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
        ORDER BY
          COALESCE(importance_score, 3)::float *
          EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
@@ -203,6 +215,8 @@ export async function getStoriesWithArticles(
        WHERE category = $1 AND from_search = false
          AND summary IS NOT NULL AND summary != ''
          AND LOWER(summary) NOT LIKE 'unable to provide%'
+         AND (published_date > NOW() - INTERVAL '30 days'
+              OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
        ORDER BY
          COALESCE(importance_score, 3)::float *
          EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
