@@ -439,6 +439,7 @@ If you truly cannot find any articles, respond with an empty array: []`,
     source_url: string;
     source_name: string;
   }> | null = null;
+  let sawEmptyArray = false;
 
   for (const text of textBlocks) {
     try {
@@ -450,9 +451,16 @@ If you truly cannot find any articles, respond with an empty array: []`,
       const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
       if (arrayMatch) {
         const candidate = JSON.parse(arrayMatch[0]);
-        if (Array.isArray(candidate) && candidate.length > 0 && candidate[0].title) {
-          parsed = candidate;
-          break;
+        if (Array.isArray(candidate)) {
+          if (candidate.length === 0) {
+            // Valid "no relevant articles found" response, not a parse failure
+            sawEmptyArray = true;
+            continue;
+          }
+          if (candidate[0].title) {
+            parsed = candidate;
+            break;
+          }
         }
       }
     } catch {
@@ -461,6 +469,7 @@ If you truly cannot find any articles, respond with an empty array: []`,
   }
 
   if (!parsed) {
+    if (sawEmptyArray) return [];
     console.error("Failed to parse Claude web search response. Text blocks:", JSON.stringify(textBlocks.map(t => t.substring(0, 500))));
     console.error("All content block types:", response.content.map(b => b.type));
     return [];
