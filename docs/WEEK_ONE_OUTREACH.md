@@ -31,7 +31,7 @@ The second clause is Q3 answered in writing, months earlier than the original pl
 >
 > Every line links to the section of the U.S. Code it came from. Nothing on the page is AI-generated.
 >
-> [link]
+> https://siftnews.io/agencies
 >
 > Two questions, if you have a minute: **is this useful to you or your patrons, and does your institution pay for anything like it?**
 >
@@ -57,7 +57,7 @@ Different reader, different opening. A legislative aide doesn't curate resources
 >
 > Every entry cites the section it came from, so it's usable in a memo rather than just orienting.
 >
-> [link]
+> https://siftnews.io/agencies
 >
 > If you have a minute: **is this useful in your work, and does your office pay for anything that covers this?** A "no, we use X" is genuinely useful — I'd rather know.
 >
@@ -110,7 +110,17 @@ Keep the media-bias list for a later `/think-tanks` send. Don't spend it here.
 
 ## Domain
 
-`siftnews.io` was registered 2026-07-28 and is on Vercel with correct nameservers, but is **not yet attached to the `sift` project**.
+**✅ Done 2026-07-28.** `siftnews.io` is attached to the Vercel project and serving. `/agencies` and `/think-tanks` return 200 with correct content. `metadataBase` points at it (sift#181), so both hosts emit a canonical of `siftnews.io` — the old subdomain keeps working, which preserves the portfolio case-study link that `GROWTH_STRATEGY.md` §7 wanted kept for a year.
+
+**Send links as `https://siftnews.io/agencies`.**
+
+`acquirer` called the portfolio subdomain *fatal* for transferability — *"no buyer can acquire a subdomain of your personal portfolio."* That objection is answered, for $46/yr and about twenty minutes.
+
+### What is still on the old host
+
+Sign-in, bookmarks and compare. The three Clerk CSP entries in `next.config.js` still pin `clerk.siftnews.kristenmartino.ai`, so **someone who lands on `siftnews.io` and clicks Sign in hits a broken flow.** Theoretical at zero users, and it is the tradeoff that made this twenty minutes instead of six hours. Migrating the Clerk production instance is the 4–6 hour job `red-team` costed, and it still has no day-90 payoff on its own.
+
+### Original assessment, kept for the record
 
 The old host appears in only four places — three CSP entries in `next.config.js` pinning `clerk.siftnews.kristenmartino.ai`, and `metadataBase` in `app/layout.tsx`. **All three CSP entries are Clerk's**, and `/agencies` and `/think-tanks` use no auth at all.
 
