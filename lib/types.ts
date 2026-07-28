@@ -217,6 +217,49 @@ export interface OrgProfile {
   notes: string | null;
 }
 
+/**
+ * An agency whose governance is documented and cited. Powers /agencies.
+ *
+ * Only rows with BOTH `governance_structure` and `governance_source` are ever
+ * built into this shape — an uncited claim about how a federal agency is
+ * controlled is the same defect the Sift-assigned `political_lean` was
+ * (migration 012). The query enforces it; the type has no nullable variant on
+ * purpose, so a caller cannot render one without a source.
+ */
+export interface AgencyGovernance {
+  slug: string;
+  name: string;
+  governanceStructure: string;
+  governanceSource: string;
+  /**
+   * True when the citing statute caps how many members may share a political
+   * party. Derived from the statutory text, not asserted by Sift — see
+   * lib/agencies.ts for why this is read off the prose rather than stored.
+   */
+  hasPartisanBalanceCap: boolean;
+}
+
+/**
+ * An organization rendered through its own words. Powers /think-tanks.
+ *
+ * Like AgencyGovernance, there is no nullable-source variant: a quote without
+ * the page it came from is the defect migration 012 removed, and the query
+ * refuses to build one.
+ */
+export interface SelfDescribedOrg {
+  slug: string;
+  name: string;
+  type: OrgType | null;
+  selfDescription: string;
+  selfDescriptionSource: string;
+  selfDescriptionChecked: string | null;
+  /** FARA-registered. A public-record fact, shown because it sits oddly beside a non-partisanship claim. */
+  faraRegistered: boolean;
+  faraCountries: string[];
+  /** True when the org's own wording claims non-partisanship — see lib/thinkTanks.ts. */
+  claimsNonPartisanship: boolean;
+}
+
 // ─── Entity Links (Phase 3.H) ──────────────────────────
 
 /**

@@ -1,6 +1,8 @@
 import { Pool } from "pg";
 
 import { parseDbOrgProfile, type DbOrgProfileRow } from "./org";
+import { hasPartisanBalanceCap } from "./agencies";
+import { claimsNonPartisanship } from "./thinkTanks";
 import { parseDbBillProfile, type DbBillProfileRow } from "./bill";
 import { parseDbOutletProfile, type DbOutletProfileRow } from "./outlet";
 import {
@@ -13,6 +15,8 @@ import {
   type OutletStats,
 } from "./outletStats";
 import type {
+  AgencyGovernance,
+  SelfDescribedOrg,
   BillListItem,
   BillProfile,
   OrgListItem,
@@ -798,6 +802,98 @@ export async function listAllPoliticiansLite(): Promise<PoliticianListItem[]> {
  * Lite list of every curated org for the civic index page. Sorted by type
  * then name so the index can group by type without re-sorting client-side.
  */
+/**
+ * Agencies whose governance is documented AND cited. Powers /agencies.
+ *
+ * The WHERE clause is the load-bearing part: both the text and its source URL
+ * must be present, so a row can never reach the page as an uncited assertion
+ * about how a federal agency is controlled. As of migration 012 that is 15 of
+ * 93 agency rows — the rest render nothing rather than something unsourced.
+ */
+export async function listCitedAgencies(): Promise<AgencyGovernance[]> {
+  try {
+    const result = await pool.query<{
+      slug: string;
+      name: string;
+      governance_structure: string;
+      governance_source: string;
+    }>(
+      `SELECT slug, name, governance_structure, governance_source
+       FROM org_profiles
+       WHERE type = 'agency'
+         AND governance_structure IS NOT NULL
+         AND governance_source IS NOT NULL
+       ORDER BY name ASC`,
+    );
+    return result.rows.map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      governanceStructure: r.governance_structure,
+      governanceSource: r.governance_source,
+      hasPartisanBalanceCap: hasPartisanBalanceCap(r.governance_structure),
+    }));
+  } catch (err) {
+    // Pre-012 databases lack the columns; degrade to an empty page rather
+    // than a 500. The page renders its own empty state.
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
+/**
+ * Organizations that describe themselves, quoted and cited. Powers /think-tanks.
+ *
+ * Both the quote and its source must be present — same rule as
+ * listCitedAgencies. Excludes agencies: a federal agency does not "describe
+ * itself" in the sense this page means, and lumping them together would blur
+ * the distinction the page is built on.
+ */
+export async function listSelfDescribedOrgs(): Promise<SelfDescribedOrg[]> {
+  try {
+    const result = await pool.query<{
+      slug: string;
+      name: string;
+      type: string | null;
+      self_description: string;
+      self_description_source: string;
+      self_description_checked: Date | string | null;
+      fara_registered: boolean | null;
+      fara_countries: unknown;
+    }>(
+      `SELECT slug, name, type, self_description, self_description_source,
+              self_description_checked, fara_registered, fara_countries
+       FROM org_profiles
+       WHERE type <> 'agency'
+         AND self_description IS NOT NULL
+         AND self_description_source IS NOT NULL
+       ORDER BY name ASC`,
+    );
+    return result.rows.map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      type: (r.type as SelfDescribedOrg["type"]) ?? null,
+      selfDescription: r.self_description,
+      selfDescriptionSource: r.self_description_source,
+      selfDescriptionChecked:
+        r.self_description_checked instanceof Date
+          ? r.self_description_checked.toISOString().slice(0, 10)
+          : (r.self_description_checked?.trim() || null),
+      faraRegistered: r.fara_registered === true,
+      faraCountries: Array.isArray(r.fara_countries)
+        ? (r.fara_countries as unknown[]).filter(
+            (v): v is string => typeof v === "string",
+          )
+        : [],
+      claimsNonPartisanship: claimsNonPartisanship(r.self_description),
+    }));
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
 export async function listAllOrgsLite(): Promise<OrgListItem[]> {
   try {
     const result = await pool.query<{
