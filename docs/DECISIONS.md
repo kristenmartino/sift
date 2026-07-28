@@ -48,9 +48,10 @@
 | D40 | Outlet-data integrity | Prune drifted prod rows; seed CSV is no longer prod's source of truth → authoritative seeder | $0 | SETTLED; seeder open #93 (Jun 2026) |
 | D41 | sift-mcp → sift-api | Merge into one service, two transports (REST + MCP), shared handlers | $0 | DECIDED, phased (May 2026) |
 | D42 | Mobile protocol | REST/SSE only; agent loop server-side, MCP internal; hosted MCP deferred | $0 | SETTLED (May 2026) |
-| D43 | Agentic surfaces | Refined Compare (`lens`) + Ask Sift in v1.5 (web + Android); depends on D41 | $0 to decide | SETTLED scope; build in flight (May 2026) |
-| D44 | Source expansion | Grow ~50 → ~200 by empirical set-cover; "curated AND rated," factual floor + resolvable/ingestable gates | $0 to decide | DECIDED, in design (Jun 2026) |
+| D43 | Agentic surfaces | Refined Compare (`lens`) + Ask Sift in v1.5 (web + Android); depends on D41 | $0 to decide | SETTLED scope; **build PAUSED by D46** (Jul 2026) |
+| D44 | Source expansion | Grow ~50 → ~200 by empirical set-cover; "curated AND rated," factual floor + resolvable/ingestable gates | $0 to decide | DECIDED; **PAUSED by D46** — it is building, not evidence (Jul 2026) |
 | D45 | Rank by civic impact | Rank by civic impact + reader accessibility (paywall) signal, not coverage volume; validate empirically | $0 to decide | DECIDED, in design (Jun 2026) |
+| D46 | Android paused; launch re-planned around evidence | Pause Android v1 for 90 days; replace the feature roadmap with a ~10-hr week-one evidence test; re-baseline budget to 6 hrs/wk | $0 to decide | SETTLED (Jul 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -825,6 +826,27 @@ Both share tool handlers, the cost-cap pool, the Anthropic SDK pattern, and SSE;
 **Pairs with:** D44 (both want a labeled / measured baseline) and D37 (accessibility and neutrality are both "serve the reader" signals, not editorial value judgments).
 
 **Source:** STATUS 2026-06-01 (d); the accessibility / paywall extension is a 2026-06-03 decision recorded here.
+**Cost:** $0 to decide.
+
+---
+
+### D46. Android v1 paused; the launch is re-planned around evidence, not features
+
+**Context.** `docs/GROWTH_STRATEGY.md` (2026-07-27) proposed a 90-day plan to take Sift from "launched, not adopted" to an asset with revenue. It was run through the six role agents in `.claude/agents/` as an independent panel, then the reconciled result was run through `red-team`. Full record — including where the roles disagreed and how it was resolved — in [`LAUNCH_DECISION_MEMO.md`](./LAUNCH_DECISION_MEMO.md).
+
+**Decision (status: SETTLED; July 2026):**
+
+1. **Android v1 is paused for 90 days.** `GROWTH_STRATEGY.md` §9 supersedes the previous committed Next-3 in `STATUS.md`. `sift-android` reached Phase 2 (nav host, feed, article detail, Custom Tabs); that work is preserved, not deleted. Twelve weeks of build against zero validated demand was the largest resource question on the board. The buyer's read: a Phase-2 Android repo with zero users was never a transferable asset, so the pause is costless on the sale ledger. The **interview** cost is real, and is recovered only if the user conversations actually happen — without them the pause reads as abandonment; with them, as judgment.
+
+2. **The feature roadmap is replaced by a ~10-hour week-one evidence test.** Publish the 25 org dossiers as one static page; send it to ~40 librarians and ~20 policy staffers with one question; count replies. It tests Q1, Q2, and Q3 simultaneously, and it carries no Art. 50(4) exposure, no ratings-licensing dependency, no signup wall, and no news-avoidance problem — the org dossiers are reference, not news.
+
+3. **The time budget is re-baselined to 6 hrs/week.** The prior plans assumed 10–15. Observed velocity over the preceding six weeks was **zero commits in both repos** (last commit 2026-06-17), while `STATUS.md` advertised "High (10+ PRs / week)." Cut by name: Bluesky, the domain migration (deferred, with a recorded dissent from the acquirer view — buy the name now, migrate when there is evidence), the dossier SEO pass, and Show HN.
+
+**Why this is a decision and not a plan.** The test any future proposal must pass: *does it add a row to the asset the strategy says is being sold?* The superseded 12-week sequence added none. Verified dataset composition at the time of this decision — `interest_group_ratings` empty on all 536 politician rows, PAC figures from the 2022 cycle (OpenSecrets API discontinued Apr 2025), 25 orgs against migration 007's planned ~200, one bill, no refresh job.
+
+**Pairs with:** D32 (iOS under review — now moot for the same reason), D44 (source expansion — also paused; it is building, not evidence).
+
+**Source:** `LAUNCH_DECISION_MEMO.md` §4, §6, §7 (2026-07-27).
 **Cost:** $0 to decide.
 
 ---
