@@ -196,6 +196,18 @@ export default function CivicIndex({
                 </p>
               ) : null;
             })()}
+            {/* Cross-link to /agencies. Placed here rather than in the nav
+                because it is a cut of this section, not a separate area of the
+                site — and the agencies are the majority of these rows, so a
+                reader scanning the org list is exactly who wants it. */}
+            <p className="font-body text-[14px] mt-3 leading-relaxed">
+              <Link
+                href="/agencies"
+                className="text-(--accent) no-underline hover:underline"
+              >
+                {c.agenciesCrossLink}
+              </Link>
+            </p>
           </header>
 
           {orgTypeGroups.length === 0 ? (

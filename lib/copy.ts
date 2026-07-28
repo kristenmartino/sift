@@ -626,6 +626,11 @@ export const COPY = {
     emptyPoliticians:
       "No politicians match this filter. Try Senate, House, or All.",
     emptyOrgs: "No organizations curated yet.",
+    // Cross-link into /agencies. States the payoff rather than the
+    // destination — "see the agencies page" gives a reader no reason to
+    // click; the partisan-balance fact does.
+    agenciesCrossLink:
+      "Who controls a federal agency \u2014 appointment, terms, and the party-balance limits written into statute \u2192",
     emptyBills: "No bills curated yet.",
     billsMoreSoon: "More bills as they're curated.",
     backLink: "Back to Sift",
