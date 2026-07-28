@@ -705,7 +705,10 @@ export async function getOrgBySlug(slug: string): Promise<OrgProfile | null> {
     const result = await pool.query<DbOrgProfileRow>(
       `SELECT slug, name, type, political_lean, founded_year,
               annual_budget_usd, major_funders, fara_registered,
-              fara_countries, external_links, notes
+              fara_countries, external_links, notes,
+              self_description, self_description_source,
+              self_description_checked, governance_structure,
+              governance_source
        FROM org_profiles
        WHERE slug = $1
        LIMIT 1`,

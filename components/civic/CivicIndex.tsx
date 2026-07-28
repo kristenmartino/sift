@@ -182,6 +182,20 @@ export default function CivicIndex({
             <h2 className="font-heading text-[26px] md:text-[28px] font-semibold leading-[1.15] tracking-tight text-(--text-primary)">
               {c.orgsHeading}
             </h2>
+            {/* Composition, from live counts — a reader should know the set is
+                mostly agencies before clicking into it. */}
+            {(() => {
+              const sub = c.orgsSubhead(
+                orgs.filter((o) => o.type === "think-tank").length,
+                orgs.filter((o) => o.type === "advocacy").length,
+                orgs.filter((o) => o.type === "agency").length
+              );
+              return sub ? (
+                <p className="font-body text-[14px] text-(--text-tertiary) mt-2 leading-relaxed">
+                  {sub}
+                </p>
+              ) : null;
+            })()}
           </header>
 
           {orgTypeGroups.length === 0 ? (

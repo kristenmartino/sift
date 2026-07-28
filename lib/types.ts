@@ -191,7 +191,23 @@ export interface OrgProfile {
   slug: string;
   name: string;
   type: OrgType | null;
+  /**
+   * @deprecated Migration 012 (2026-07-27). Sift-assigned and uncited, contrary
+   * to D37 ("Sift surfaces ratings verbatim and never computes its own"). No
+   * longer rendered — see `selfDescription`. Retained for rollback only.
+   */
   politicalLean: OrgPoliticalLean | null;
+  /**
+   * The organization's own characterization of itself, verbatim. NEVER Sift's
+   * assessment. Renders only when `selfDescriptionSource` is present — an
+   * uncited quote is the same failure `politicalLean` was.
+   */
+  selfDescription: string | null;
+  selfDescriptionSource: string | null;
+  selfDescriptionChecked: string | null;
+  /** Agencies only: statutory governance facts. Renders only with a source. */
+  governanceStructure: string | null;
+  governanceSource: string | null;
   foundedYear: number | null;
   annualBudgetUsd: number | null;
   majorFunders: string[];

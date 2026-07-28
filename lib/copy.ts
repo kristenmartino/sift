@@ -270,13 +270,25 @@ export const COPY = {
   orgDossier: {
     eyebrow: "Org dossier",
     sections: {
+      /** @deprecated migration 012 — Sift-assigned lean is no longer rendered. */
       politicalLean: "Political lean",
+      selfDescription: "In its own words",
+      governance: "Structure and appointment",
       finances: "Finances",
       majorFunders: "Major funders",
       fara: "Foreign-agent registration (FARA)",
       links: "Where to read more",
       notes: "Notes",
     },
+    // The caveat is not boilerplate — it is the whole reason this replaced a
+    // Sift-assigned lean. A reader must not read a self-description as an
+    // independent assessment, and organizations describe themselves favorably.
+    selfDescriptionCaveat:
+      "This is how the organization describes itself, quoted from its own site — not an assessment by Sift. Sift does not rate organizations.",
+    selfDescriptionCitation: (checked: string | null) =>
+      checked
+        ? `Source: the organization's own site · last verified ${checked}`
+        : "Source: the organization's own site",
     // External-link labels in stable display order.
     externalLinkLabels: {
       propublica: "ProPublica Nonprofit Explorer",
@@ -285,6 +297,16 @@ export const COPY = {
       official: "Official site",
       wikipedia: "Wikipedia",
     } as Record<string, string>,
+    // Funders provenance. The previous caption read "Source: ProPublica
+    // Nonprofit Explorer (latest 990)" directly under the named-funders list,
+    // which the cited record does not support: public Form 990s redact
+    // Schedule B, so the copies ProPublica hosts do NOT disclose individual
+    // donors. A citation that invites a check and fails it is worse than none.
+    // The 990 supports the *financial* figures; the donor names come from the
+    // organizations' own disclosures and public reporting.
+    fundersProvenance:
+      "Compiled from the organizations' own disclosures (annual reports, donor listings) and public reporting. Public Form 990s do not disclose individual donors — Schedule B is redacted in the copies available to the public.",
+    fundersFinancialsNote: "Financial figures:",
     // FARA disclosure copy. Symmetric — same wording regardless of which
     // country the org is registered to represent.
     faraRegisteredHeader: "Registered as a foreign agent",
@@ -548,7 +570,21 @@ export const COPY = {
     politiciansEyebrow: (count: number) => `Politicians \u00b7 ${count}`,
     politiciansHeading: "Sitting members of Congress",
     orgsEyebrow: (count: number) => `Organizations \u00b7 ${count}`,
-    orgsHeading: "Think tanks, advocacy groups, and PACs",
+    // Was "Think tanks, advocacy groups, and PACs" \u2014 wrong twice over: there
+    // are no PACs in the set, and it silently omitted the federal agencies,
+    // which are the majority of it. The heading now names what's actually
+    // there; orgsSubhead carries the split, derived from live counts rather
+    // than hardcoded so it can't drift the way the old string did.
+    orgsHeading: "Think tanks, advocacy groups, and federal agencies",
+    orgsSubhead: (thinkTanks: number, advocacy: number, agencies: number) => {
+      const parts: string[] = [];
+      if (thinkTanks) parts.push(`${thinkTanks} think tank${thinkTanks === 1 ? "" : "s"}`);
+      if (advocacy) parts.push(`${advocacy} advocacy organization${advocacy === 1 ? "" : "s"}`);
+      if (agencies) parts.push(`${agencies} federal agenc${agencies === 1 ? "y" : "ies"}`);
+      if (parts.length === 0) return "";
+      const last = parts.pop() as string;
+      return parts.length ? `${parts.join(", ")} and ${last}.` : `${last}.`;
+    },
     billsEyebrow: (count: number) => `Bills \u00b7 ${count}`,
     billsHeading: "Landmark legislation",
     filterAll: "All",
