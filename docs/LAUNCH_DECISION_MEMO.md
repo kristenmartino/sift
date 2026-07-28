@@ -40,7 +40,7 @@ These came out of the panel and were then verified by hand. Each one changes a d
 
 **a) The live masthead names a model as the editor.** `app/colophon/page.tsx:70` publishes: *"Edited by Claude. Built by Kristen Martino."* Sift currently makes an affirmative public statement that no human holds editorial responsibility — six days before EU AI Act Art. 50(4) applies (2026-08-02), and against Anthropic's Usage Policy, which requires human review for externally-published journalistic content. This is a 15-minute fix and it is the cheapest, highest-value item found anywhere in this review.
 
-**b) The AI generation prompts contain no constraint about named living people.** `services/summarizer.py:83` instructs, in full: *"Summarize each of the following news articles in 1-2 concise sentences. Focus on the key facts and why the story matters."* A grep across `summarizer.py`, `story_synthesizer.py`, and `context_generator.py` for any constraint on defamation, living persons, legal outcomes, or allegation-vs-finding returns **nothing**. This runs over ~135 feeds every 30 minutes.
+**b) The AI generation prompts contain no constraint about named living people.** `services/summarizer.py:83` instructs, in full: *"Summarize each of the following news articles in 1-2 concise sentences. Focus on the key facts and why the story matters."* A grep across `summarizer.py`, `story_synthesizer.py`, and `context_generator.py` for any constraint on defamation, living persons, legal outcomes, or allegation-vs-finding returns **nothing**. This runs over 58 feeds every 30 minutes.
 
 > **This reverses `GROWTH_STRATEGY.md` §4(d).** The doc ranks the *dossier* layer as the sharper defamation risk. The dossier tables are hand-seeded, sparse, and mostly render database fields rather than LLM prose. The **summarizer** is the uncontrolled surface generating unreviewed sentences about real people at volume. The risk ranking in §4 should be inverted.
 
@@ -52,7 +52,8 @@ These came out of the panel and were then verified by hand. Each one changes a d
 
 ### 2.3 Corrections applied to `OPERATING_CONTEXT.md` before the panel ran
 
-- Outlet count: "~50–200" → **~135 sources ingested / 72 rated outlets** (prod after the #91 cleanup, 77→72; the seed CSV is not prod's source of truth, per D40).
+- Outlet count: "~50–200" → **58 RSS feeds ingested / 72 rated outlets** (prod after the #91 cleanup, 77→72; seed CSV is not prod's source of truth, per D40).
+  > **Corrected again 2026-07-27.** This first read "~135 sources," taken from `sift-api/STATUS.md:17`. That figure is wrong: `len(services.rss.FEEDS)` is **58**, and FEEDS is a flat list of `(name, url)` tuples — 58 feeds, 58 URLs. The error was repeated here, in `OPERATING_CONTEXT.md`, and in two PR descriptions before being caught while reviewing sift-api#104, which exists to fix exactly this class of drift in the README and adds a test to prevent it recurring. Taking a number from a stale STATUS.md and repeating it as verified is the failure this memo spends §2 warning about.
 - Analytics: "PostHog *(being added)*" → nothing is being added; Vercel packages present but funnel-incapable.
 - Added §3 "Verified state of the launch prerequisites" and the COGS line (~$15/mo Anthropic pipeline spend, per `sift-api/STATUS.md` OQ1).
 - Flagged the §5 cost-guard non-negotiable as unenforced.

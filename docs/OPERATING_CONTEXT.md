@@ -11,7 +11,7 @@
 
 ## 1. What Sift is
 
-An AI-powered news aggregator with a civic-literacy layer. Ingests ~135 sources every 30 minutes across **72 rated outlets** (prod `outlet_profiles` after the #91 cleanup, 77→72; the seed CSV is *not* prod's source of truth — see D40) spanning the political spectrum, summarizes the day's stories across 10 categories, lets a reader search any topic or compare how outlets framed the same story — and adds the civic footnotes the news assumes you already have: an adaptive "what you should know first" primer, inline glossary, structured dossiers on politicians / organizations / bills / outlets built from public records, and cross-spectrum framing using AllSides + MBFC ratings surfaced verbatim.
+An AI-powered news aggregator with a civic-literacy layer. Ingests **58 RSS feeds** every 30 minutes (`len(services.rss.FEEDS)` = 58, verified 2026-07-27) across **72 rated outlets** in prod `outlet_profiles` (prod `outlet_profiles` after the #91 cleanup, 77→72; the seed CSV is *not* prod's source of truth — see D40) spanning the political spectrum, summarizes the day's stories across 10 categories, lets a reader search any topic or compare how outlets framed the same story — and adds the civic footnotes the news assumes you already have: an adaptive "what you should know first" primer, inline glossary, structured dossiers on politicians / organizations / bills / outlets built from public records, and cross-spectrum framing using AllSides + MBFC ratings surfaced verbatim.
 
 **One line:** *the news, with footnotes.*
 
