@@ -59,6 +59,55 @@ Surfaced 2026-06-01. The **neutrality rule**, the **"won't do" calls** (MBFC cre
 
 **Deliberately not next:** SSR/streaming ([#56](https://github.com/kristenmartino/sift/issues/56)), the civic-literacy final mile ([#98](https://github.com/kristenmartino/sift/issues/98)), the web `/ask` chat UI, Refined Compare's "Focus on…" input, Android. All are building; none can be justified until the week-one test returns. The failure mode this plan exists to correct is shipping more product instead of finding out whether anyone wants the product that exists.
 
+## The 10 think-tank rows are demo fixtures — scoped cleanup, 2026-07-28
+
+**Root cause, from our own commit message.** `data/org_profiles.csv` was created in [`100789a`](https://github.com/kristenmartino/sift-api/commit/100789a) (2026-05-06, sift-api#26), which describes its contents as *"a handful of **example rows** … so downstream sub-phases have something to render against **during local development**"* and *"**starter rows to exercise the seed pipeline**."* The same commit planned *"Phase 3.B replaces the politician CSV with all 535 sitting Congress members"* — and it did. **The org CSV had no equivalent replacement phase, so the fixtures shipped to production and stayed.**
+
+The data confirms it. Two populations, two signatures:
+
+| | 10 think tanks | 93 agencies |
+|---|---|---|
+| Budget precision | 1–2 significant figures, all round millions | precise to $1,000 (incl. a negative for GSA) |
+| Duplicates | $9M twice, $55M twice | none |
+| ProPublica EINs | **5 of 10 return 404** | n/a |
+
+The five correct EINs belong to the best-known organizations; the five broken ones to the less famous. That is the signature of writing from recall rather than from records.
+
+**This revises a panel finding.** `red-team` called the org dossiers *"a real dataset — the only original research in the repo"* and the launch memo repeated it. That was assessed from the CSV without checking how the CSV came to exist. The **93 agency rows** look like real extraction; the **10 think-tank rows are fixtures**. Only the self-descriptions added 2026-07-27 are verified against a primary source.
+
+### ✅ Fixed 2026-07-28 — Brookings was flagged a registered foreign agent
+
+`fara_registered = true` with `["Qatar"]`, rendering as *"Registered as a foreign agent"* on the dossier and a badge on `/think-tanks`. **Nothing supports it.** Brookings' Qatari funding is real and documented (the Doha Center, launched 2007 with Qatar's Ministry of Foreign Affairs); FARA *registration* is a different fact. In Aug 2022 four senators [wrote to the Attorney General](https://www.grassley.senate.gov/news/news-releases/senators-push-doj-on-fara-compliance-of-brookings-institution) arguing Brookings *should be required* to register — which presupposes it had not — and no source shows it ever did. The row carried no `fara` link, so the claim rendered uncited.
+
+Cleared in prod and in the seed CSV. **Rule going forward: `fara_registered = true` requires an `external_links.fara` URL.** A legal-status claim about a named organization is the sharpest thing on these pages.
+
+### Field-by-field state
+
+| Field | State | Verifiable from | Disposition |
+|---|---|---|---|
+| `fara_registered` | ✅ fixed | FARA registry | Done |
+| `annual_budget_usd` | **All 10 wrong.** Errors both directions — Heritage understated ~$44M, Manhattan overstated ~3× | ProPublica 990s — **figures already gathered** | Replace with **total functional expenses + fiscal year** |
+| `external_links.propublica` | **5 of 10 are 404s** | Corrected EINs **already in hand** | Fix: EPI `521368964`, AEI `530218495`, ACS `522313694`, Manhattan `132912529`, Roosevelt `237213592` |
+| `major_funders` | 30 names, **zero sources**. ProPublica *cannot* support them — public 990s redact Schedule B | Grantmaker 990-PF Schedule I (the funder's filing, not the recipient's) | **Decision needed** — see below |
+| `notes` | Uncited prose; several are characterizations | Nothing — they are editorial | Drop characterizations, keep sourced facts |
+| `founded_year` | Plausible, unverified | Org's own site | Verify in passing |
+| `political_lean` | Deprecated (012), unrendered | — | Drop the column |
+
+### The two decisions
+
+**1. `major_funders`.** Naming Charles Koch Foundation as a funder of Cato, or Open Society as a funder of CAP, is a specific claim about a named organization's financial relationships — with the same fixture provenance as the budgets. Verification is structurally awkward: the recipient's 990 legally cannot show donors, so each pair must be checked against the *funder's* filing. Note also that **DonorsTrust / Donors Capital Fund appear in 4 of the 10 lists and exist specifically to anonymize donors** — confirming a grant from them is possible but tells a reader nothing about ultimate source.
+Options: **(a)** drop the section; **(b)** verify all 30; **(c)** verify the top 1–2 per org and drop the rest.
+
+**2. `notes`.** Brookings' reads *"Centrist policy think tank"* — the political lean D37 removed, surviving in prose. CAP: *"Founded by John Podesta. Closely associated with the Democratic establishment."* Cato: *"Long-running Koch family backing."* ACS: *"Progressive counterpart to the Federalist Society."* `standards-counsel` flagged these during the panel and they are still live. Heritage's *"Authored Project 2025 policy framework"* is the one checkable fact among them.
+
+### Recommended scope — minimum, then stop
+
+Fix budgets to cited expenses, fix the 5 dead links, drop `major_funders` and the editorial `notes`, drop `political_lean`. Result: 10 dossiers where every rendered field is sourced — thinner, and defensible to a librarian.
+
+The funder map is the more interesting artifact and probably the best original research available here, but it fails D46's test: it adds no evidence about whether anyone wants this. **Ship the thin correct version, send the emails, let replies decide whether the funder work is worth it.**
+
+**Does not block the week-one test if `/agencies` is the send** — different rows, real provenance, no budgets or funders rendered.
+
 ## Data integrity — open, surfaced 2026-07-27
 
 Both found while applying migration 012 to prod. Neither blocks the week-one test; both should be resolved before the org dossiers go in front of people who read 990s and statutes for a living.
