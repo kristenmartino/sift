@@ -602,6 +602,35 @@ export const COPY = {
     empty: "No agency governance has been cited yet.",
     backLink: "Back to Sift",
   },
+  // /think-tanks — the self-description page. Every rendered claim is the
+  // organization's own wording, quoted and linked. Sift does not characterize
+  // these organizations; that is the whole reason this replaced the
+  // Sift-assigned political_lean (D37, migration 012).
+  thinkTanks: {
+    eyebrow: "In their own words",
+    headline: "How policy organizations describe themselves",
+    dek: "Each of these organizations, quoted from its own site \u2014 not summarized, not rated, not characterized by Sift. Every quote links to the page it came from.",
+    countLine: (n: number) =>
+      `${n} ${n === 1 ? "organization" : "organizations"}, quoted and cited`,
+    nonPartisanBadge: "Also calls itself nonpartisan",
+    faraBadge: (countries: string[]) =>
+      countries.length > 0
+        ? `Registered foreign agent \u00b7 ${countries.join(", ")}`
+        : "Registered foreign agent",
+    findingHeading: "What to notice",
+    finding: (claiming: number, total: number) =>
+      `${claiming} of these ${total} state an ideology and a claim of non-partisanship in the same breath \u2014 conservative, libertarian, progressive or liberal, alongside "nonpartisan" or a disclaimer of taking positions. Both halves are quoted below. Party and ideology are not the same thing, and an organization can honestly claim one while holding the other; a one-word label would have hidden the distinction entirely.`,
+    sourcePrefix: "Their words, from",
+    checkedPrefix: "last verified",
+    dossierLink: "Full dossier",
+    provenanceHeading: "How this page was made",
+    provenance:
+      "These are self-descriptions: what each organization says about itself, not an independent assessment. Organizations describe themselves favorably \u2014 that is exactly why the wording is quoted rather than paraphrased, and why the source sits beside every one. Sift assigns no rating to any organization on this page.",
+    notAiNote:
+      "No part of this page is AI-generated. Every quotation was read from the organization's own site on the date shown.",
+    empty: "No self-descriptions have been cited yet.",
+    backLink: "Back to Sift",
+  },
   civicIndex: {
     eyebrow: "Civic dossiers",
     headline: "Civic dossiers",
@@ -640,6 +669,8 @@ export const COPY = {
     // click; the partisan-balance fact does.
     agenciesCrossLink:
       "Who controls a federal agency \u2014 appointment, terms, and the party-balance limits written into statute \u2192",
+    thinkTanksCrossLink:
+      "How these organizations describe themselves \u2014 in their own words, quoted and linked \u2192",
     emptyBills: "No bills curated yet.",
     billsMoreSoon: "More bills as they're curated.",
     backLink: "Back to Sift",

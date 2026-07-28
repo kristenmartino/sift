@@ -239,6 +239,27 @@ export interface AgencyGovernance {
   hasPartisanBalanceCap: boolean;
 }
 
+/**
+ * An organization rendered through its own words. Powers /think-tanks.
+ *
+ * Like AgencyGovernance, there is no nullable-source variant: a quote without
+ * the page it came from is the defect migration 012 removed, and the query
+ * refuses to build one.
+ */
+export interface SelfDescribedOrg {
+  slug: string;
+  name: string;
+  type: OrgType | null;
+  selfDescription: string;
+  selfDescriptionSource: string;
+  selfDescriptionChecked: string | null;
+  /** FARA-registered. A public-record fact, shown because it sits oddly beside a non-partisanship claim. */
+  faraRegistered: boolean;
+  faraCountries: string[];
+  /** True when the org's own wording claims non-partisanship — see lib/thinkTanks.ts. */
+  claimsNonPartisanship: boolean;
+}
+
 // ─── Entity Links (Phase 3.H) ──────────────────────────
 
 /**
