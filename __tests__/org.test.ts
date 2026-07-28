@@ -1,6 +1,5 @@
 import {
   formatBudgetUsd,
-  formatOrgLeanLabel,
   formatOrgTypeLabel,
   parseDbOrgProfile,
   type DbOrgProfileRow,
@@ -12,7 +11,8 @@ const fullRow: DbOrgProfileRow = {
   slug: "brookings-institution",
   name: "Brookings Institution",
   type: "think-tank",
-  political_lean: "center",
+  annual_budget_fy: "FY ending June 2025",
+  annual_budget_source: "https://projects.propublica.org/nonprofits/organizations/530196577",
   founded_year: 1916,
   annual_budget_usd: 120_000_000,
   major_funders: [
@@ -53,25 +53,6 @@ describe("formatOrgTypeLabel", () => {
   it("returns null for null/undefined", () => {
     expect(formatOrgTypeLabel(null)).toBeNull();
     expect(formatOrgTypeLabel(undefined)).toBeNull();
-  });
-});
-
-// ─── formatOrgLeanLabel ──────────────────────────────────
-
-describe("formatOrgLeanLabel", () => {
-  it("formats every valid lean (incl. nonpartisan)", () => {
-    expect(formatOrgLeanLabel("left")).toBe("Left");
-    expect(formatOrgLeanLabel("lean-left")).toBe("Lean Left");
-    expect(formatOrgLeanLabel("center")).toBe("Center");
-    expect(formatOrgLeanLabel("lean-right")).toBe("Lean Right");
-    expect(formatOrgLeanLabel("right")).toBe("Right");
-    expect(formatOrgLeanLabel("mixed")).toBe("Mixed");
-    expect(formatOrgLeanLabel("nonpartisan")).toBe("Nonpartisan");
-  });
-
-  it("returns null for null/undefined", () => {
-    expect(formatOrgLeanLabel(null)).toBeNull();
-    expect(formatOrgLeanLabel(undefined)).toBeNull();
   });
 });
 
@@ -123,7 +104,8 @@ describe("parseDbOrgProfile", () => {
         slug: "brookings-institution",
         name: "Brookings Institution",
         type: "think-tank",
-        politicalLean: "center",
+        annualBudgetFy: "FY ending June 2025",
+        annualBudgetSource: "https://projects.propublica.org/nonprofits/organizations/530196577",
         foundedYear: 1916,
         annualBudgetUsd: 120_000_000,
         majorFunders: [
@@ -185,12 +167,20 @@ describe("parseDbOrgProfile", () => {
       expect(profile?.type).toBeNull();
     });
 
-    it("nulls out unknown political_lean values", () => {
-      const profile = parseDbOrgProfile({
-        ...fullRow,
-        political_lean: "very-left",
-      });
-      expect(profile?.politicalLean).toBeNull();
+    it("drops a budget figure that has no fiscal year or source", () => {
+      // Migration 013: an unsourced number is exactly the fixture value this
+      // replaced. Parser nulls all three together rather than let a bare
+      // figure render.
+      const noFy = parseDbOrgProfile({ ...fullRow, annual_budget_fy: null });
+      expect(noFy?.annualBudgetUsd).toBeNull();
+      expect(noFy?.annualBudgetSource).toBeNull();
+
+      const noSrc = parseDbOrgProfile({ ...fullRow, annual_budget_source: null });
+      expect(noSrc?.annualBudgetUsd).toBeNull();
+      expect(noSrc?.annualBudgetFy).toBeNull();
+
+      const badSrc = parseDbOrgProfile({ ...fullRow, annual_budget_source: "a filing somewhere" });
+      expect(badSrc?.annualBudgetUsd).toBeNull();
     });
 
     it("normalizes empty-string optional fields to null", () => {

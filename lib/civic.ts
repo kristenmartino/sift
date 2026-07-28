@@ -4,7 +4,6 @@
 
 import type {
   OrgListItem,
-  OrgPoliticalLean,
   OrgType,
   PoliticianChamber,
   PoliticianListItem,
@@ -89,20 +88,6 @@ export function orgTypeLabel(type: OrgType | null | undefined): string {
 }
 
 /** Pretty-printed lean label for sub-sorted listing inside type groups. */
-export const ORG_LEAN_LABELS: Record<OrgPoliticalLean, string> = {
-  "left": "Left",
-  "lean-left": "Lean left",
-  "center": "Center",
-  "lean-right": "Lean right",
-  "right": "Right",
-  "mixed": "Mixed",
-  "nonpartisan": "Nonpartisan",
-};
-
-export function orgLeanLabel(lean: OrgPoliticalLean | null | undefined): string {
-  if (!lean) return "—";
-  return ORG_LEAN_LABELS[lean] ?? "—";
-}
 
 /**
  * Group orgs by `type`, preserving incoming sort order within each group.

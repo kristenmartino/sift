@@ -318,7 +318,12 @@ export const COPY = {
           : `This organization is registered with the U.S. Department of Justice under FARA on behalf of: ${countries.join(", ")}.`,
     // Single-line lede builder bits.
     foundedYearLabel: (year: number) => `Founded ${year}`,
-    annualBudgetLabel: (budget: string) => `Annual budget ~${budget}`,
+    // Was `Annual budget ~${budget}` against an unsourced fixture figure.
+    // "Annual budget" was never a checkable claim; total expenses from a named
+    // filing is. The tilde is gone too — the figure is now exact.
+    annualBudgetLabel: (budget: string, fy: string) =>
+      `Total expenses ${budget} · ${fy}`,
+    budgetSourceLabel: "Per the Form 990 on ProPublica Nonprofit Explorer",
     methodologyHint: "Funding data comes from IRS 990s and FARA. Read the methodology.",
   },
   billDossier: {
