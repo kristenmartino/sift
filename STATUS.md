@@ -100,7 +100,23 @@ Options: **(a)** drop the section; **(b)** verify all 30; **(c)** verify the top
 
 **2. `notes`.** Brookings' reads *"Centrist policy think tank"* — the political lean D37 removed, surviving in prose. CAP: *"Founded by John Podesta. Closely associated with the Democratic establishment."* Cato: *"Long-running Koch family backing."* ACS: *"Progressive counterpart to the Federalist Society."* `standards-counsel` flagged these during the panel and they are still live. Heritage's *"Authored Project 2025 policy framework"* is the one checkable fact among them.
 
-### Recommended scope — minimum, then stop
+### ✅ Minimum scope completed 2026-07-28
+
+Budgets replaced with total functional expenses read to the dollar from each Form 990, each carrying a fiscal year and a source; the 5 dead ProPublica links corrected; `major_funders`, `notes` and `political_lean` removed. `sift-api`#110 + `sift`#178.
+
+**`founded_year` also dropped, after attempting to verify it.** Only **2 of 10** could be confirmed from the organization's own site — Cato (*"Since 1977…"*) and the Federalist Society (*"Founded in 1982…"*) — and **both matched the stored value**. The other eight do not state a founding year on their About or History pages; Heritage and EPI block automated fetches.
+
+That is a materially better result than the budgets (10/10 wrong), and suggests the fixture author got stable well-known facts right while fabricating the specific ones. But the available fallbacks fall below the standard now applied to every other field here: Wikipedia is secondary, and ProPublica's **"Ruling year" is the IRS determination year — a different fact.** Labelling it "Founded" would repeat the funders-citation error, where the cited record could not support the claim attached to it.
+
+Dropped rather than keeping the two confirmable: **one unsourced field on an otherwise fully-sourced page is the field a reader spot-checks precisely because everything else is cited.**
+
+**Every rendered field on those 10 dossiers now carries a source or is absent.** Verified row by row.
+
+### ⚠️ Still open: `founded_year` on the 93 agency rows
+
+All 93 have it, and it is still rendered and still unsourced. Not dropped, because that population has different provenance — its budget figures are precise to the dollar and include a negative, so it looks like real extraction rather than fixtures. **It has not been verified.** Note also that founding is often already stated, with a citation, inside `governance_structure` (EPA: *"began operations on December 2, 1970"*), so the separate field may be redundant as well as unsourced.
+
+### Original recommended scope — minimum, then stop
 
 Fix budgets to cited expenses, fix the 5 dead links, drop `major_funders` and the editorial `notes`, drop `political_lean`. Result: 10 dossiers where every rendered field is sourced — thinner, and defensible to a librarian.
 
