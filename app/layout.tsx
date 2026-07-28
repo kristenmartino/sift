@@ -44,7 +44,16 @@ export const metadata: Metadata = {
   },
   description:
     "Sift curates outlets across the political spectrum and adds the footnotes — the civic context the news assumes, the framing across the spectrum, and the financial and political ties behind every story. Every claim links to a public record.",
-  metadataBase: new URL("https://siftnews.kristenmartino.ai"),
+  // siftnews.io as of 2026-07-28. Drives canonical URLs and OG/Twitter card
+  // resolution, so it has to be the domain people are actually sent to —
+  // /agencies and /think-tanks go out in the week-one test on this host.
+  //
+  // The three Clerk entries in next.config.js still pin
+  // clerk.siftnews.kristenmartino.ai. That is deliberate and separable: the
+  // pages being sent use no auth, so they serve correctly here, while
+  // sign-in / bookmarks / compare stay on the old host until the Clerk
+  // production instance is migrated. See docs/WEEK_ONE_OUTREACH.md.
+  metadataBase: new URL("https://siftnews.io"),
   openGraph: {
     title: "Sift — The news, with footnotes.",
     description:
