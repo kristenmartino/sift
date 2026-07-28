@@ -4,7 +4,6 @@ import LandingMasthead from "@/components/landing/LandingMasthead";
 import { COPY } from "@/lib/copy";
 import {
   formatBudgetUsd,
-  formatOrgLeanLabel,
   formatOrgTypeLabel,
 } from "@/lib/org";
 import type { OrgProfile } from "@/lib/types";
@@ -28,7 +27,6 @@ interface OrgDossierProps {
 export default function OrgDossier({ org }: OrgDossierProps) {
   const c = COPY.orgDossier;
   const typeLabel = formatOrgTypeLabel(org.type);
-  const leanLabel = formatOrgLeanLabel(org.politicalLean);
   const budgetLabel = formatBudgetUsd(org.annualBudgetUsd);
 
   // Lede bits: "{type} · Founded {year} · Annual budget ~{budget}"
@@ -36,7 +34,8 @@ export default function OrgDossier({ org }: OrgDossierProps) {
   const ledeBits: string[] = [];
   if (typeLabel) ledeBits.push(typeLabel);
   if (org.foundedYear) ledeBits.push(c.foundedYearLabel(org.foundedYear));
-  if (budgetLabel) ledeBits.push(c.annualBudgetLabel(budgetLabel));
+  if (budgetLabel && org.annualBudgetFy)
+    ledeBits.push(c.annualBudgetLabel(budgetLabel, org.annualBudgetFy));
 
   // External links: stable order; forward-compat for unknown keys.
   const linkOrder: Array<keyof typeof c.externalLinkLabels> = [
@@ -85,6 +84,20 @@ export default function OrgDossier({ org }: OrgDossierProps) {
           {ledeBits.length > 0 && (
             <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
               {ledeBits.join(" · ")}
+            </p>
+          )}
+          {/* The budget figure is only meaningful with the filing it came
+              from — lib/org.ts refuses to surface one without a source. */}
+          {org.annualBudgetUsd !== null && org.annualBudgetSource && (
+            <p className="font-body text-meta text-(--text-tertiary) mt-2">
+              <a
+                href={org.annualBudgetSource}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
+              >
+                {c.budgetSourceLabel} <span aria-hidden>↗</span>
+              </a>
             </p>
           )}
         </header>

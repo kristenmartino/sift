@@ -192,12 +192,6 @@ export interface OrgProfile {
   name: string;
   type: OrgType | null;
   /**
-   * @deprecated Migration 012 (2026-07-27). Sift-assigned and uncited, contrary
-   * to D37 ("Sift surfaces ratings verbatim and never computes its own"). No
-   * longer rendered — see `selfDescription`. Retained for rollback only.
-   */
-  politicalLean: OrgPoliticalLean | null;
-  /**
    * The organization's own characterization of itself, verbatim. NEVER Sift's
    * assessment. Renders only when `selfDescriptionSource` is present — an
    * uncited quote is the same failure `politicalLean` was.
@@ -209,7 +203,14 @@ export interface OrgProfile {
   governanceStructure: string | null;
   governanceSource: string | null;
   foundedYear: number | null;
+  /**
+   * Total functional expenses from the Form 990 at `annualBudgetSource`.
+   * NOT a general "annual budget" — that was the unsourced fixture value this
+   * replaced (migration 013). Renders only with `annualBudgetFy` + source.
+   */
   annualBudgetUsd: number | null;
+  annualBudgetFy: string | null;
+  annualBudgetSource: string | null;
   majorFunders: string[];
   faraRegistered: boolean;
   faraCountries: string[];
@@ -414,7 +415,6 @@ export interface OrgListItem {
   slug: string;
   name: string;
   type: OrgType | null;
-  politicalLean: OrgPoliticalLean | null;
 }
 
 /**

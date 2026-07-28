@@ -707,8 +707,9 @@ export async function getOrgBySlug(slug: string): Promise<OrgProfile | null> {
 
   try {
     const result = await pool.query<DbOrgProfileRow>(
-      `SELECT slug, name, type, political_lean, founded_year,
-              annual_budget_usd, major_funders, fara_registered,
+      `SELECT slug, name, type, founded_year,
+              annual_budget_usd, annual_budget_fy, annual_budget_source,
+              major_funders, fara_registered,
               fara_countries, external_links, notes,
               self_description, self_description_source,
               self_description_checked, governance_structure,
@@ -900,9 +901,8 @@ export async function listAllOrgsLite(): Promise<OrgListItem[]> {
       slug: string;
       name: string;
       type: string | null;
-      political_lean: string | null;
     }>(
-      `SELECT slug, name, type, political_lean
+      `SELECT slug, name, type
        FROM org_profiles
        ORDER BY type ASC NULLS LAST, name ASC`,
     );
@@ -910,7 +910,6 @@ export async function listAllOrgsLite(): Promise<OrgListItem[]> {
       slug: r.slug,
       name: r.name,
       type: (r.type as OrgListItem["type"]) ?? null,
-      politicalLean: (r.political_lean as OrgListItem["politicalLean"]) ?? null,
     }));
   } catch (err) {
     const msg = String(err);
