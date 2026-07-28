@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import LandingMasthead from "@/components/landing/LandingMasthead";
-import { sortAgencies, sourceLabel } from "@/lib/agencies";
+import { partisanCap, sortAgencies, sourceLabel } from "@/lib/agencies";
 import { COPY } from "@/lib/copy";
 import type { AgencyGovernance } from "@/lib/types";
 
@@ -90,11 +90,19 @@ export default function AgenciesGovernance({
                           {agency.name}
                         </Link>
                       </h2>
-                      {agency.hasPartisanBalanceCap && (
-                        <span className="font-body text-meta uppercase tracking-wide text-(--accent) border border-(--accent) rounded-sm px-2 py-0.5 whitespace-nowrap">
-                          {c.capLabel}
-                        </span>
-                      )}
+                      {agency.hasPartisanBalanceCap &&
+                        (() => {
+                          // Prefer the concrete numbers; fall back only when
+                          // the statute can't be read confidently.
+                          const cap = partisanCap(agency.governanceStructure);
+                          return (
+                            <span className="font-body text-meta uppercase tracking-wide text-(--accent) border border-(--accent) rounded-sm px-2 py-0.5 whitespace-nowrap">
+                              {cap
+                                ? c.capLabel(cap.cap, cap.total)
+                                : c.capLabelFallback}
+                            </span>
+                          );
+                        })()}
                     </div>
 
                     <p className="font-body text-[16px] text-(--text-secondary) leading-relaxed max-w-[62ch]">

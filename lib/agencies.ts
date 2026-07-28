@@ -28,6 +28,59 @@ export function hasPartisanBalanceCap(governanceStructure: string): boolean {
   return /same political party/i.test(governanceStructure);
 }
 
+const NUMBER_WORDS: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+};
+
+function toNumber(word: string): number | null {
+  const w = word.toLowerCase();
+  if (NUMBER_WORDS[w] !== undefined) return NUMBER_WORDS[w];
+  const n = Number.parseInt(w, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * The cap and the body size it applies to, e.g. {cap: 3, total: 5}.
+ *
+ * Both numbers are read out of the same cited sentence-pair they describe, for
+ * the reason given on `hasPartisanBalanceCap` — a stored pair could drift from
+ * the prose and then the badge would contradict its own source link.
+ *
+ * The numbers genuinely differ across these statutes (FEC 3 of 6, NCUA 2 of 3,
+ * most commissions 3 of 5), which is exactly why the badge is worth computing
+ * rather than writing one fixed string.
+ *
+ * Returns null when either number can't be read with confidence. Callers fall
+ * back to the generic label rather than guessing — a wrong number here is
+ * worse than a vaguer one, because the source link is right beside it.
+ */
+export function partisanCap(
+  governanceStructure: string
+): { cap: number; total: number } | null {
+  if (!hasPartisanBalanceCap(governanceStructure)) return null;
+
+  // "No more than three ... may belong to the same political party"
+  // "Not more than two Board members may be of the same political party"
+  const capMatch = governanceStructure.match(
+    /(?:no|not)\s+more\s+than\s+([a-z]+|\d+)\b[^.]*?same political party/i
+  );
+  // First body-size mention: "Five commissioners", "Six voting members",
+  // "five members", "a five-member Board of Directors", "three-member Board".
+  const totalMatch = governanceStructure.match(
+    /\b([a-z]+|\d+)[-\s]+(?:voting\s+)?(?:commissioners?|members?)\b/i
+  );
+  if (!capMatch || !totalMatch) return null;
+
+  const cap = toNumber(capMatch[1]);
+  const total = toNumber(totalMatch[1]);
+  if (cap === null || total === null) return null;
+  // A cap that isn't smaller than the body isn't a constraint; treat as
+  // unreadable rather than publish something that reads as nonsense.
+  if (cap >= total) return null;
+  return { cap, total };
+}
+
 /**
  * Capped agencies first, then alphabetical within each group.
  *

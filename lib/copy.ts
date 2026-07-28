@@ -573,7 +573,16 @@ export const COPY = {
     eyebrow: "Public records",
     headline: "Who controls a federal agency",
     dek: "Appointment, terms, and the partisan-balance limits Congress wrote into statute \u2014 for the agencies whose governing law Sift has read and cited. Every line links to the section it came from.",
-    capLabel: "Statutory partisan-balance limit",
+    // Per-agency and concrete. The first reader of this page asked what
+    // "statutory partisan-balance limit" meant — naming a category made a
+    // reader decode it; the numbers state the constraint outright. They
+    // genuinely differ (FEC 3 of 6, NCUA 2 of 3), so this is computed.
+    capLabel: (cap: number, total: number) =>
+      `Max ${cap} of ${total} from one party`,
+    // Used only when the numbers can't be read out of the statute with
+    // confidence. A vaguer label beats a wrong number sitting next to a
+    // source link that contradicts it.
+    capLabelFallback: "Party balance required by law",
     capExplainerHeading: "Why this matters",
     // The finding, stated plainly. Counts are computed from live data.
     capExplainer: (capped: number, total: number) =>

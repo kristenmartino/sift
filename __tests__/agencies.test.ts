@@ -1,5 +1,6 @@
 import {
   hasPartisanBalanceCap,
+  partisanCap,
   sortAgencies,
   sourceLabel,
 } from "@/lib/agencies";
@@ -113,5 +114,56 @@ describe("sourceLabel", () => {
 
   it("degrades to a neutral label on an unparseable URL", () => {
     expect(sourceLabel("not a url")).toBe("source");
+  });
+});
+
+const FEC =
+  "Independent regulatory commission. Six voting members appointed by the President with the advice and consent of the Senate, each serving a single six-year term, plus the Secretary of the Senate and the Clerk of the House as non-voting ex officio members. No more than three appointed members may be affiliated with the same political party.";
+const FDIC =
+  "Governed by a five-member Board of Directors: the Comptroller of the Currency and the Director of the Consumer Financial Protection Bureau serve ex officio, and three members are appointed by the President with the advice and consent of the Senate for six-year terms. One appointed member must have State bank supervisory experience. Not more than three Board members may be of the same political party.";
+
+describe("partisanCap", () => {
+  it("reads the common 3-of-5 commission shape", () => {
+    expect(partisanCap(FTC)).toEqual({ cap: 3, total: 5 });
+    expect(partisanCap(FCC)).toEqual({ cap: 3, total: 5 });
+    expect(partisanCap(CPSC)).toEqual({ cap: 3, total: 5 });
+    expect(partisanCap(NTSB)).toEqual({ cap: 3, total: 5 });
+  });
+
+  it("reads the FEC's 3 of 6, ignoring the non-voting ex officio members", () => {
+    // "Six voting members ... plus the Secretary of the Senate and the Clerk
+    // of the House as non-voting ex officio members" — the cap applies to the
+    // six, and the badge must not say 3 of 8.
+    expect(partisanCap(FEC)).toEqual({ cap: 3, total: 6 });
+  });
+
+  it("reads the NCUA's 2 of 3 — the one that isn't three", () => {
+    expect(partisanCap(NCUA)).toEqual({ cap: 2, total: 3 });
+  });
+
+  it("reads a hyphenated body size (FDIC 'five-member Board')", () => {
+    expect(partisanCap(FDIC)).toEqual({ cap: 3, total: 5 });
+  });
+
+  it("returns null where no cap exists, so no badge renders", () => {
+    expect(partisanCap(NLRB)).toBeNull();
+    expect(partisanCap(TREASURY)).toBeNull();
+  });
+
+  it("returns null rather than guessing when the numbers are unreadable", () => {
+    // Cap present in words the matcher can't resolve — fall back to the
+    // generic label rather than print a wrong number beside a source link.
+    expect(
+      partisanCap("Members may not all be of the same political party.")
+    ).toBeNull();
+  });
+
+  it("rejects a cap that is not smaller than the body", () => {
+    // Nonsense input should not render "Max 5 of 5", which reads as no limit.
+    expect(
+      partisanCap(
+        "Five commissioners appointed. Not more than five commissioners may be members of the same political party."
+      )
+    ).toBeNull();
   });
 });
