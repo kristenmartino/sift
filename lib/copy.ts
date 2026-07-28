@@ -577,7 +577,14 @@ export const COPY = {
   agencies: {
     eyebrow: "Public records",
     headline: "Who controls a federal agency",
-    dek: "Appointment, terms, and the partisan-balance limits Congress wrote into statute \u2014 for the agencies whose governing law Sift has read and cited. Every line links to the section it came from.",
+    dek: "Appointment, terms, and the partisan-balance limits Congress wrote into statute, for 25 federal agencies \u2014 each cited to the section of the U.S. Code it came from.",
+    // #1 from the cold read: the masthead above this page says "the news, with
+    // footnotes" and the nav shows a Sports tab. A government-information
+    // librarian arriving from a cold email sees a news aggregator and has to
+    // reconcile that with "no AI-generated text" before reading a word. Owning
+    // the mismatch in one line beats letting them find it.
+    contextNote:
+      "Part of Sift, a news-context project \u2014 but this page is public-records reference, and contains no AI-generated text. 25 of the 93 agencies Sift holds appear here: the ones whose governing law has been read and cited.",
     // Per-agency and concrete. The first reader of this page asked what
     // "statutory partisan-balance limit" meant — naming a category made a
     // reader decode it; the numbers state the constraint outright. They
@@ -591,7 +598,7 @@ export const COPY = {
     capExplainerHeading: "Why this matters",
     // The finding, stated plainly. Counts are computed from live data.
     capExplainer: (capped: number, total: number) =>
-      `${capped} of these ${total} agencies operate under a limit, written into their authorizing statute, on how many members may belong to one political party. That constraint \u2014 not personality, and not the current administration \u2014 is why some of them deadlock. Where a statute sets no such limit, that absence is a fact about the agency too.`,
+      `${capped} of these ${total} agencies operate under a limit, written into their authorizing statute, on how many members may belong to one political party. The Federal Election Commission is the clearest case: six voting members, no more than three from either party, and no tie-breaking seat \u2014 so a party-line split is 3\u20133 and nothing carries. That is structural, not a matter of personality or of who is currently in office. Where a statute sets no such limit \u2014 the National Labor Relations Board, for instance \u2014 that absence is a fact about the agency too.`,
     countLine: (total: number) =>
       `${total} ${total === 1 ? "agency" : "agencies"} with cited governing law`,
     sourcePrefix: "Source:",
@@ -603,7 +610,7 @@ export const COPY = {
       "No part of this page is AI-generated. These are statutory facts, quoted or summarized from the sections linked beside each one.",
     incompleteHeading: "What is missing",
     incomplete: (shown: number, totalAgencies: number) =>
-      `Sift holds dossiers on ${totalAgencies} federal agencies. ${shown} appear here \u2014 the ones whose governing law has been read and cited. The rest are omitted rather than summarized from memory.`,
+      `The other ${totalAgencies - shown} agencies Sift holds are omitted rather than summarized from memory. Each one appears here only once its governing statute has been read and cited \u2014 which is slower than filling the gaps from general knowledge, and is the point.`,
     empty: "No agency governance has been cited yet.",
     backLink: "Back to Sift",
   },

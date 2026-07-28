@@ -48,11 +48,16 @@ export default function AgenciesGovernance({
           <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[62ch] leading-relaxed">
             {c.dek}
           </p>
-          {sorted.length > 0 && (
-            <p className="font-body text-meta uppercase text-(--text-tertiary) mt-4 tracking-wide">
-              {c.countLine(sorted.length)}
-            </p>
-          )}
+          {/* Cold read, #1: the masthead above says "the news, with footnotes"
+              and the nav shows a Sports tab. Someone arriving from a cold
+              email about statutory reference has to reconcile that before
+              reading a word — so say it here rather than let them find it.
+              Also pulls the "what is missing" count up from the footer, where
+              most readers never reach it. */}
+          <p className="font-body text-[15px] text-(--text-tertiary) mt-4 max-w-[62ch] leading-relaxed">
+            {c.contextNote}
+          </p>
+
         </header>
 
         <hr className="border-0 border-t border-(--border) mb-10" />
