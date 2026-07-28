@@ -124,6 +124,27 @@ export interface DbOrgProfileRow {
   fara_countries: unknown;  // expected: string[]
   external_links: unknown;  // expected: OrgExternalLinks
   notes: string | null;
+  self_description: string | null;
+  self_description_source: string | null;
+  self_description_checked: string | Date | null;
+  governance_structure: string | null;
+  governance_source: string | null;
+}
+
+/**
+ * A quote is only publishable with the record it came from. Returns the pair
+ * or nulls — never a bare characterization of a real organization.
+ * (LAUNCH_DECISION_MEMO.md §5 B6; D37.)
+ */
+function asCitedText(
+  text: string | null,
+  source: string | null
+): { text: string | null; source: string | null } {
+  const t = text?.trim() || null;
+  const s = source?.trim() || null;
+  if (!t || !s) return { text: null, source: null };
+  if (!/^https?:\/\//i.test(s)) return { text: null, source: null };
+  return { text: t, source: s };
 }
 
 function asOrgType(v: string | null): OrgType | null {
@@ -201,5 +222,20 @@ export function parseDbOrgProfile(
     faraCountries: asStringArray(row.fara_countries),
     externalLinks: asExternalLinks(row.external_links),
     notes: row.notes?.trim() || null,
+    ...(() => {
+      const self = asCitedText(row.self_description, row.self_description_source);
+      const gov = asCitedText(row.governance_structure, row.governance_source);
+      const checked =
+        row.self_description_checked instanceof Date
+          ? row.self_description_checked.toISOString().slice(0, 10)
+          : row.self_description_checked?.trim() || null;
+      return {
+        selfDescription: self.text,
+        selfDescriptionSource: self.source,
+        selfDescriptionChecked: self.text ? checked : null,
+        governanceStructure: gov.text,
+        governanceSource: gov.source,
+      };
+    })(),
   };
 }

@@ -28,6 +28,12 @@ const fullRow: DbOrgProfileRow = {
     wikipedia: "https://en.wikipedia.org/wiki/Brookings_Institution",
   },
   notes: "Centrist policy think tank. Qatar funding (Brookings Doha Center) is publicly disclosed.",
+  self_description:
+    "Brookings equips decisionmakers with nonpartisan research and policy strategies to create a more prosperous and secure country and world.",
+  self_description_source: "https://www.brookings.edu/about-us/",
+  self_description_checked: "2026-07-27",
+  governance_structure: null,
+  governance_source: null,
 };
 
 // ─── formatOrgTypeLabel ──────────────────────────────────
@@ -133,6 +139,12 @@ describe("parseDbOrgProfile", () => {
           wikipedia: "https://en.wikipedia.org/wiki/Brookings_Institution",
         },
         notes: "Centrist policy think tank. Qatar funding (Brookings Doha Center) is publicly disclosed.",
+        selfDescription:
+          "Brookings equips decisionmakers with nonpartisan research and policy strategies to create a more prosperous and secure country and world.",
+        selfDescriptionSource: "https://www.brookings.edu/about-us/",
+        selfDescriptionChecked: "2026-07-27",
+        governanceStructure: null,
+        governanceSource: null,
       });
     });
 
@@ -281,6 +293,81 @@ describe("parseDbOrgProfile", () => {
         external_links: ["a", "b"],
       });
       expect(profile?.externalLinks).toEqual({});
+    });
+  });
+
+  // ─── Cited self-description (migration 012) ──────────────
+  //
+  // These guard the rule that replaced the Sift-assigned political_lean: a
+  // characterization of a real organization renders ONLY with the record it
+  // came from. An uncited quote is the same defect the lean field was, so the
+  // parser must null the pair rather than let the component decide.
+  describe("self-description citation rule", () => {
+    it("keeps the quote when a valid source URL is present", () => {
+      const profile = parseDbOrgProfile(fullRow);
+      expect(profile?.selfDescription).toContain("nonpartisan research");
+      expect(profile?.selfDescriptionSource).toBe("https://www.brookings.edu/about-us/");
+      expect(profile?.selfDescriptionChecked).toBe("2026-07-27");
+    });
+
+    it("drops the quote when the source URL is missing", () => {
+      const profile = parseDbOrgProfile({
+        ...fullRow,
+        self_description_source: null,
+      });
+      expect(profile?.selfDescription).toBeNull();
+      expect(profile?.selfDescriptionSource).toBeNull();
+      expect(profile?.selfDescriptionChecked).toBeNull();
+    });
+
+    it("drops the quote when the source is not an http(s) URL", () => {
+      const profile = parseDbOrgProfile({
+        ...fullRow,
+        self_description_source: "their website",
+      });
+      expect(profile?.selfDescription).toBeNull();
+      expect(profile?.selfDescriptionSource).toBeNull();
+    });
+
+    it("drops a blank-but-present quote", () => {
+      const profile = parseDbOrgProfile({ ...fullRow, self_description: "   " });
+      expect(profile?.selfDescription).toBeNull();
+      expect(profile?.selfDescriptionSource).toBeNull();
+    });
+
+    it("normalizes a Date from pg to a YYYY-MM-DD string", () => {
+      const profile = parseDbOrgProfile({
+        ...fullRow,
+        self_description_checked: new Date("2026-07-27T00:00:00Z"),
+      });
+      expect(profile?.selfDescriptionChecked).toBe("2026-07-27");
+    });
+
+    it("applies the same rule to agency governance text", () => {
+      const withGov = parseDbOrgProfile({
+        ...fullRow,
+        governance_structure: "Independent regulatory commission.",
+        governance_source: "https://www.law.cornell.edu/uscode/text/15/41",
+      });
+      expect(withGov?.governanceStructure).toBe("Independent regulatory commission.");
+
+      const uncited = parseDbOrgProfile({
+        ...fullRow,
+        governance_structure: "Independent regulatory commission.",
+        governance_source: null,
+      });
+      expect(uncited?.governanceStructure).toBeNull();
+    });
+
+    it("still parses rows where both new fields are absent", () => {
+      const profile = parseDbOrgProfile({
+        ...fullRow,
+        self_description: null,
+        self_description_source: null,
+        self_description_checked: null,
+      });
+      expect(profile?.name).toBe("Brookings Institution");
+      expect(profile?.selfDescription).toBeNull();
     });
   });
 });
