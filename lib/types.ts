@@ -217,6 +217,28 @@ export interface OrgProfile {
   notes: string | null;
 }
 
+/**
+ * An agency whose governance is documented and cited. Powers /agencies.
+ *
+ * Only rows with BOTH `governance_structure` and `governance_source` are ever
+ * built into this shape — an uncited claim about how a federal agency is
+ * controlled is the same defect the Sift-assigned `political_lean` was
+ * (migration 012). The query enforces it; the type has no nullable variant on
+ * purpose, so a caller cannot render one without a source.
+ */
+export interface AgencyGovernance {
+  slug: string;
+  name: string;
+  governanceStructure: string;
+  governanceSource: string;
+  /**
+   * True when the citing statute caps how many members may share a political
+   * party. Derived from the statutory text, not asserted by Sift — see
+   * lib/agencies.ts for why this is read off the prose rather than stored.
+   */
+  hasPartisanBalanceCap: boolean;
+}
+
 // ─── Entity Links (Phase 3.H) ──────────────────────────
 
 /**

@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 
 import { parseDbOrgProfile, type DbOrgProfileRow } from "./org";
+import { hasPartisanBalanceCap } from "./agencies";
 import { parseDbBillProfile, type DbBillProfileRow } from "./bill";
 import { parseDbOutletProfile, type DbOutletProfileRow } from "./outlet";
 import {
@@ -13,6 +14,7 @@ import {
   type OutletStats,
 } from "./outletStats";
 import type {
+  AgencyGovernance,
   BillListItem,
   BillProfile,
   OrgListItem,
@@ -798,6 +800,45 @@ export async function listAllPoliticiansLite(): Promise<PoliticianListItem[]> {
  * Lite list of every curated org for the civic index page. Sorted by type
  * then name so the index can group by type without re-sorting client-side.
  */
+/**
+ * Agencies whose governance is documented AND cited. Powers /agencies.
+ *
+ * The WHERE clause is the load-bearing part: both the text and its source URL
+ * must be present, so a row can never reach the page as an uncited assertion
+ * about how a federal agency is controlled. As of migration 012 that is 15 of
+ * 93 agency rows — the rest render nothing rather than something unsourced.
+ */
+export async function listCitedAgencies(): Promise<AgencyGovernance[]> {
+  try {
+    const result = await pool.query<{
+      slug: string;
+      name: string;
+      governance_structure: string;
+      governance_source: string;
+    }>(
+      `SELECT slug, name, governance_structure, governance_source
+       FROM org_profiles
+       WHERE type = 'agency'
+         AND governance_structure IS NOT NULL
+         AND governance_source IS NOT NULL
+       ORDER BY name ASC`,
+    );
+    return result.rows.map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      governanceStructure: r.governance_structure,
+      governanceSource: r.governance_source,
+      hasPartisanBalanceCap: hasPartisanBalanceCap(r.governance_structure),
+    }));
+  } catch (err) {
+    // Pre-012 databases lack the columns; degrade to an empty page rather
+    // than a 500. The page renders its own empty state.
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
 export async function listAllOrgsLite(): Promise<OrgListItem[]> {
   try {
     const result = await pool.query<{

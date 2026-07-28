@@ -563,6 +563,36 @@ export const COPY = {
       tagline: "Every story links to the original.",
     },
   },
+  // /agencies — the cited-governance page. Every string here describes a
+  // statutory fact or the provenance of one. Nothing on this page is
+  // AI-generated and nothing is Sift's own characterization, which is the
+  // whole point of it: it is the one surface with no Cohere/Meltwater
+  // exposure, no Art. 50(4) disclosure obligation, and no ratings licence
+  // dependency. Keep it that way.
+  agencies: {
+    eyebrow: "Public records",
+    headline: "Who controls a federal agency",
+    dek: "Appointment, terms, and the partisan-balance limits Congress wrote into statute \u2014 for the agencies whose governing law Sift has read and cited. Every line links to the section it came from.",
+    capLabel: "Statutory partisan-balance limit",
+    capExplainerHeading: "Why this matters",
+    // The finding, stated plainly. Counts are computed from live data.
+    capExplainer: (capped: number, total: number) =>
+      `${capped} of these ${total} agencies operate under a limit, written into their authorizing statute, on how many members may belong to one political party. That constraint \u2014 not personality, and not the current administration \u2014 is why some of them deadlock. Where a statute sets no such limit, that absence is a fact about the agency too.`,
+    countLine: (total: number) =>
+      `${total} ${total === 1 ? "agency" : "agencies"} with cited governing law`,
+    sourcePrefix: "Source:",
+    dossierLink: "Full dossier",
+    provenanceHeading: "How this page was made",
+    provenance:
+      "Each entry states only what the cited section says. Facts that change with an administration \u2014 who currently chairs an agency, its present composition, which president appointed the sitting majority \u2014 are deliberately absent: they go stale and there is no process here to refresh them. What remains is structural and durable.",
+    notAiNote:
+      "No part of this page is AI-generated. These are statutory facts, quoted or summarized from the sections linked beside each one.",
+    incompleteHeading: "What is missing",
+    incomplete: (shown: number, totalAgencies: number) =>
+      `Sift holds dossiers on ${totalAgencies} federal agencies. ${shown} appear here \u2014 the ones whose governing law has been read and cited. The rest are omitted rather than summarized from memory.`,
+    empty: "No agency governance has been cited yet.",
+    backLink: "Back to Sift",
+  },
   civicIndex: {
     eyebrow: "Civic dossiers",
     headline: "Civic dossiers",
