@@ -28,6 +28,25 @@ const siftBlurb = (n = 0): string =>
   `surfaces the civic context the news assumes you already know, and shows you ` +
   `who's behind every story. Every link goes to the original.`;
 
+/**
+ * Monitored address for corrections. EMPTY UNTIL THE MAILBOX EXISTS.
+ *
+ * CorrectionPath renders nothing while this is empty, on purpose: an address
+ * that does not receive mail is a correction path that silently fails, which
+ * is worse than none and is precisely the defect class the org dossiers spent
+ * 2026-07-28 removing (a ProPublica citation that 404'd, a FARA claim with no
+ * filing behind it).
+ *
+ * Set it to a real, monitored mailbox — e.g. corrections@siftnews.io once
+ * forwarding is configured on the domain — and it appears on /agencies,
+ * /think-tanks and every org dossier at once.
+ *
+ * standards-counsel's rule (LAUNCH_DECISION_MEMO.md §5 B4): the window has to
+ * be one that can actually be kept. 48 hours for a factual correction about a
+ * named person; 7 days for everything else. Do not promise 24.
+ */
+export const CORRECTIONS_EMAIL = "";
+
 export const COPY = {
   header: {
     tagline: "The news, with footnotes",
@@ -642,6 +661,17 @@ export const COPY = {
       "No part of this page is AI-generated. Every quotation was read from the organization's own site on the date shown.",
     empty: "No self-descriptions have been cited yet.",
     backLink: "Back to Sift",
+  },
+  // Correction path (LAUNCH_DECISION_MEMO.md §5, B4). Rendered by
+  // components/CorrectionPath.tsx, which no-ops while CORRECTIONS_EMAIL is
+  // empty. Phrased for the audience these pages are being sent to: people who
+  // check sources for a living and will find an error before anyone else does.
+  corrections: {
+    heading: "Found an error?",
+    body: "Every claim on this page is meant to match the record it cites. If one doesn\u2019t \u2014 a misread statute, a broken link, a figure that doesn\u2019t match the filing \u2014 tell me and I\u2019ll fix it or take it down:",
+    subject: "Correction \u2014 Sift",
+    window:
+      "Corrections about a named person are handled within 48 hours; everything else within a week. Corrections are noted, not silently overwritten.",
   },
   civicIndex: {
     eyebrow: "Civic dossiers",

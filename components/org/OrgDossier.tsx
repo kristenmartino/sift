@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import CorrectionPath from "@/components/CorrectionPath";
 import LandingMasthead from "@/components/landing/LandingMasthead";
 import { COPY } from "@/lib/copy";
 import {
@@ -281,6 +282,8 @@ export default function OrgDossier({ org }: OrgDossierProps) {
             {c.methodologyHint}
           </Link>
         </div>
+        <CorrectionPath />
+
       </main>
     </div>
   );
