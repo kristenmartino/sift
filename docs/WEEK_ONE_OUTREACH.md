@@ -5,17 +5,43 @@
 **Send target:** ~40 librarians, ~20 policy staffers
 **Artifact:** `/agencies` — 25 federal agencies with cited statutory governance
 
-> **These are not the interview-recruiting emails.** The memo's §3.4 recruiting email deliberately names no product, because it asks about behaviour before showing anything. These *send the link* — they are the test itself. Don't mix them up.
+> **This is recruiting, not a test.** Revised 2026-07-28 after a red-team review. These emails send the link, unlike the memo's §3.4 recruiting email — but what they produce is *access to named humans*, not data that closes a question. Read the next section before sending; the framing matters more than the wording.
 
 ---
 
-## The one question
+## ⚠️ What this can and cannot establish
 
-Everything else is scaffolding around this:
+The memo's §4.2 claimed this test answers Q1, Q2, Q3 and the dossier-value question **simultaneously**. That was an overclaim. Corrected:
 
-> **Is this useful to you or your patrons, and does your institution pay for anything like it?**
+| | Can it? | Why |
+|---|---|---|
+| **Q1 — wedge user** | **No** | The project's own wedge definition is *returns unprompted*. A reply is not a return, and `/agencies` is static with no email capture. This test is structurally incapable of producing one unit of the metric Q9 is denominated in. It also samples 2 of 4 candidate wedges. |
+| **Q2 — dossier vs comparison** | **No** | §6 pre-registers Q2 as a *within-person* comparison: ten people, paired first-clicks. This shows one arm and infers the other from spontaneous mention. Nobody asks for a feature they have never seen. |
+| **Q3 — willingness to pay** | **Partly**, once reworded | §6 retired *"do you pay for Quorum?"* in favour of *"could your institution buy from a sole proprietor with no VPAT?"* The first draft asked the version §6 rejected. Fixed below. |
+| **Recruiting for the ten conversations** | **Yes** | This is the real job. Ten to fifteen named professionals, a verbatim record of how they describe the problem, and the incumbent map. |
 
-The second clause is Q3 answered in writing, months earlier than the original plan reached it. It is the question that separates polite interest from a market.
+**Success is therefore: enough named humans to book five calls.** Not a reply count.
+
+### The gate was arithmetic nonsense
+
+At 60 sends, the pre-registered thresholds behave like this:
+
+| true reply rate | expected replies | P(≥10) | P(exactly 0) |
+|---|---|---|---|
+| 10% | 6.0 | **7.3%** | 0.18% |
+| 12% | 7.2 | 17.8% | 0.05% |
+| 15% | 9.0 | 41.2% | 0.01% |
+
+Two consequences:
+
+1. **"Nobody replies → Q9 fires in week one" is dead code.** P(0 of 60) is under 1% at any plausible rate. If it ever fired it would indict the list or the send, not the product.
+2. **There was no branch for the modal outcome.** The plan defined ≥10 and 0. The likely result is **six**. Pre-registration that omits the median outcome is not pre-registration.
+
+**The gate is unwired from Q9 and from Q1/Q2/Q3.** It is a recruiting funnel with a defined value at every outcome: ~6 replies is a success if five of them will take a call.
+
+### One confound to hold in mind
+
+You selected the one profession whose job description is answering polite, well-sourced questions from strangers about government information. **A good reply rate from librarians may measure professional courtesy, not demand.** Compare the two segments separately — the librarian-vs-staffer *gap* carries more signal than either number.
 
 ---
 
@@ -33,7 +59,12 @@ The second clause is Q3 answered in writing, months earlier than the original pl
 >
 > https://siftnews.io/agencies
 >
-> Two questions, if you have a minute: **is this useful to you or your patrons, and does your institution pay for anything like it?**
+> Two things, if you have a minute:
+>
+> 1. Is this useful to you or your patrons?
+> 2. If something like this were worth paying for, could your library actually buy it from one person, invoiced directly — or does that route not really exist?
+>
+> I'm working through the other 68 agencies. Want me to send you the next batch?
 >
 > Either answer helps. If it's not useful, that's the most useful thing you can tell me.
 >
@@ -59,7 +90,12 @@ Different reader, different opening. A legislative aide doesn't curate resources
 >
 > https://siftnews.io/agencies
 >
-> If you have a minute: **is this useful in your work, and does your office pay for anything that covers this?** A "no, we use X" is genuinely useful — I'd rather know.
+> Two things, if you have a minute:
+>
+> 1. Is this useful in your work? A "no, we use X" is genuinely useful — I'd rather know.
+> 2. If it were, could your office actually buy something like this from one person, invoiced directly — or does procurement not have a shape for that?
+>
+> I'm working through the other 68 agencies. Want the next batch when it's up?
 >
 > Kristen Martino
 
@@ -75,7 +111,13 @@ Different reader, different opening. A legislative aide doesn't curate resources
 
 **The last line licenses a no.** Without it, silence is uninterpretable. With it, *"not useful because X"* is a reply — and replies are the metric, not positive replies.
 
-**Neither asks for a call, a signup, or a share.** One ask. Adding a second halves the response rate and muddies what a reply means.
+**Neither asks for a call, a signup, or a share.** The asks are two questions plus one offer — deliberately short of a meeting request, which is the thing that makes a stranger defer replying.
+
+**The pay question is §6's falsifier, not the one §6 rejected.** *"Does your institution pay for anything like it"* returns a competitor map — CQ, ProQuest Congressional, Bloomberg Government — which is already known and doesn't touch the question that actually kills the institutional path. *"Could you buy it from one person, invoiced directly"* does. A librarian knows the answer instantly and it costs them nothing to say.
+
+**"Want the next batch?" is the only return mechanism in this plan.** `/agencies` is static, there is no email capture anywhere in the app, and Q9's kill criterion is denominated in *unprompted returns*. Without this sentence the test provably yields zero on the project's own metric. One sentence, zero build, converts a reply into permission to contact.
+
+⚠️ **This creates a tension worth naming.** The rule above is one ask; there are now three things in the email. That is a real risk to reply rate, and it is exactly what the five-send pilot exists to detect. If the first five answer only question 1, the rest are too much — cut the pay question from the remaining fifty-five and ask it on the call instead.
 
 ---
 
@@ -102,9 +144,53 @@ Keep the media-bias list for a later `/think-tanks` send. Don't spend it here.
 
 ## Before sending
 
-1. **Read the page cold**, as if you'd received this email. Only the badge has had an outside read, and it failed — "Why this matters" and the "What is missing" note are still unreviewed copy.
-2. **Decide the URL.** See the domain note below.
-3. **Set up the reply tracking** — `product-analyst`'s named-individuals sheet. Who replied, what they said verbatim, whether they asked for anything. Ten replies is the gate; the names matter more than the count.
+### 1. Send five, not sixty
+
+**Today. Then read what comes back before writing the other fifty-five.**
+
+Fifty-five personalized sends at ~2 minutes of research each is roughly five hours of irreversible, single-use list, spent on an email that has had zero contact with a real recipient. Five sends costs twenty-five minutes and tells you the *shape* of a reply:
+
+- Do they engage the pay question at all, or only the useful question? If only the first, the second is mis-worded — cut it from the remaining fifty-five and ask it on the call.
+- Does anyone take the "next batch" offer? That's the only return mechanism here.
+- Does anyone mention the page being part of a news site? That would say the `contextNote` fix didn't land.
+
+Pick five you're least worried about burning. A bad email costs one contact each; a bad email × 60 costs the list.
+
+### 2. ⚠️ Enable Vercel Web Analytics first — it is NOT currently collecting
+
+`@vercel/analytics` is installed and `<Analytics />` is mounted in `app/layout.tsx:112`, **but Web Analytics is not enabled on the project.** The API returns `404 Web Analytics not found`. The script fires and nothing is recorded.
+
+This matters more than it sounds. Without it, two very different futures look identical:
+
+- **0 replies, 30 pageviews** → they read it and didn't care. A *product* signal.
+- **0 replies, 2 pageviews** → the email failed. A *channel* signal.
+
+Enable it in the Vercel dashboard (Project → Analytics), then **record the `/agencies` pageview count immediately before the first send.** It's a two-click toggle and it's what makes a null result readable at all.
+
+### 3. Read the page cold
+
+Only the badge has had an outside read, and it failed. The headline and "Why this matters" are still unreviewed by anyone but their author.
+
+### 4. Set up reply tracking
+
+`product-analyst`'s named-individuals sheet: who replied, what they said **verbatim**, whether they took the next-batch offer, and which segment they came from. Track librarian and staffer reply rates **separately** — the gap between them is more informative than either number.
+
+### 5. Check the recess calendar
+
+It is late July. Congressional staff head into August recess, and in a midterm year it starts earlier and runs thinner. If the House is already gone, **hold the twenty staffer contacts until September.** Burning twenty personalized sends into an empty office is a one-shot loss.
+
+---
+
+## Decide this before any reply arrives
+
+**What happens if ten librarians say yes?**
+
+Write the answer down now. There are two, and they are different companies:
+
+- **"Cite the other 68 agencies."** A manual, non-scaling reference publication with free substitutes (Cornell LII, CRS), no AI, no news, no comparison — and no line item in `STATUS.md` or the memo. It is not what this repo contains.
+- **"Book ten calls about Sift."** The thing the memo actually planned.
+
+In three weeks the first will feel like progress and the second will feel like an imposition. That is exactly why the choice has to be made now, cold, rather than arrived at by momentum. **The tell to watch for: if warm replies produce more rows rather than more phone calls, the decision was made by drift.**
 
 ---
 
