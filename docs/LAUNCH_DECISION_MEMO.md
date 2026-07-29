@@ -195,14 +195,24 @@ The plan is re-denominated at **6 hrs/week, not 10–15** — the number now wri
 2. **Send it to ~40 librarians and ~20 policy staffers**, one question: *"Is this useful, and does your organization pay for anything like it?"* ~5 hrs.
 3. **Count replies.** ~1 hr.
 
-**Why this is the right test.** It answers Q1 (who responds), Q2 (they got a dossier and no comparison — if they ask for comparison, that is the answer), Q3 (they answer willingness-to-pay in writing), and the dossier-value question, **simultaneously, in week one**. And it sidesteps four structural problems the full sequence walks into:
+**Why this is the right test.** ⚠️ **Corrected 2026-07-28 after a red-team review — this paragraph originally overclaimed.** It said the test answers Q1, Q2, Q3 and the dossier-value question *simultaneously*. It does not:
+
+- **Q1 — no.** The wedge definition in Q9 is *returns unprompted*. A reply is not a return, and `/agencies` is static with no email capture, so the test is structurally incapable of producing one unit of that metric.
+- **Q2 — no.** §6 pre-registers Q2 as a within-person comparison over ten paired first-clicks. This shows one arm and infers the other from spontaneous mention; nobody asks for a feature they have never seen.
+- **Q3 — partly**, and only once the email asks §6's actual falsifier rather than the version §6 retired. Fixed in `WEEK_ONE_OUTREACH.md`.
+
+**What it actually is: recruiting for the ten conversations.** Success is enough named humans to book five calls. That is a real and necessary job — the conversations were always the instrument, and this is the funnel that feeds them. See `WEEK_ONE_OUTREACH.md` for the corrected framing. And it sidesteps four structural problems the full sequence walks into:
 
 - **No Art. 50(4) exposure** — public records, not AI text. No disclosure obligation, no Q7 hours.
 - **No AllSides/MBFC licensing dependency** — no ratings on the page.
 - **No signup wall, no 504, no cost exposure, no `/compare/[slug]` build.**
 - **No news-avoidance problem** — and nobody else on the panel named this. Every channel in the §3 sequence points at a front door that is *reading AI summaries of the news*, in a market where §7 of the operating context records 42% actively avoiding news and usage down 12pp since 2020. **The org dossiers are not news. They are reference** — no avoidance problem, no freshness problem, no *Cohere*/*Meltwater* problem.
 
-**Gate.** If nobody replies, that is the day-90 answer arriving in week one, and Q9 triggers cheap and early — which is exactly what Q9 is for. If ten people reply, there is a list, a wedge, and an evidence-backed reason to build the rest.
+**Gate.** ⚠️ **Rewritten 2026-07-28 — the original was arithmetic nonsense.** It read: *"If nobody replies, that is the day-90 answer arriving in week one, and Q9 triggers cheap and early."*
+
+At 60 sends, P(exactly 0 replies) is **under 1%** at any plausible reply rate, and P(≥10) is only **7.3%** at a 10% rate. So the celebrated early kill switch was dead code, and the plan defined outcomes at 0 and ≥10 while the *modal* result is about six — for which there was no branch at all. Pre-registration that omits the median outcome is not pre-registration.
+
+**The gate is unwired from Q9.** Zero replies would indict the list or the send, not the product. Roughly six replies is a success if five of them will take a call. Q9's day-90 trigger stands on its own terms and is not fed by this test.
 
 **Weeks 2–3, only if the gate passes.** Ten conversations in two rounds, using `user-researcher`'s script and pre-registered decision rules — now with respondents rather than cold strangers. Email capture form. AllSides/MBFC letters. Analytics identity (~1 hr).
 
@@ -275,7 +285,7 @@ Blocking = ships before the first external link points a stranger at the site. F
 | **Q6** | Android | **CLOSED 2026-07-27 — paused.** §9 supersedes `STATUS.md`. `sift-android` Phase 2 work is preserved. `acquirer`: sale-neutral (a Phase-2 repo with zero users was never a transferable asset); interview-negative **unless** the conversations happen. |
 | **Q7** | The human-review step | **REOPENED by `red-team`, then closed on a different answer.** The §3 design (Tier A gate + **daily** 15-min sample + weekly diff + a review count **published monthly on `/about`**, ≈1.75 hrs/wk) was rejected on a specific and correct argument: today `colophon:70` is an *accurate statement of a bad fact*, fixable in 15 minutes. A published compliance metric on the Art. 50(4) page that lapses in month two — and a daily obligation with no reader and no deadline will lapse — becomes an *inaccurate statement of a good fact*, in writing, on the page a plaintiff or regulator reads first. That trades a 15-minute fix for a durable liability. The coverage was also aimed wrong: §3.5's hard gate protects 15 static pages while the summarizer firehose (§2.2b) runs unreviewed.<br><br>**Adopted instead: Tier A only — deterministic, automated, zero recurring human hours.** Hold anything matching legal-process vocabulary or naming a person not matchable to `politician_profiles.bioguide_id`. Keep the **shadow-mode week** before committing (the best-designed element of the original). **Publish no review count on `/about` until the process has survived four consecutive unassisted weeks.** `/about` describes the policy; it does not report a metric. If the gate fires >~30/day, shrink the corpus — the sports and entertainment feeds are the obvious cut and are also the lowest civic value. |
 | **Q8** | US-only or global | **Deferred to week 12.** Everything in this memo assumes a US-only posture; that assumption is now explicit. |
-| **Q9** | The walk-away | **CLOSED — and pulled earlier.** Original: <100 weekly actives and <$100 MRR at day 180. Adopted trigger, from `product-analyst`: **if day 90 shows fewer than 5 named humans who returned unprompted, trigger Q9 then, not at day 180.** Five in 90 days at this hour budget does not reach 100 weekly actives before the job search ends. Also triggered early if ten conversations produce "no wedge identified." |
+| **Q9** | The walk-away | **CLOSED — and pulled earlier.** Original: <100 weekly actives and <$100 MRR at day 180. Adopted trigger, from `product-analyst`: **if day 90 shows fewer than 5 named humans who returned unprompted, trigger Q9 then, not at day 180.** Five in 90 days at this hour budget does not reach 100 weekly actives before the job search ends. Also triggered early if ten conversations produce "no wedge identified." ⚠️ **Corrected 2026-07-28:** an earlier revision wired the week-one email test into this trigger. That was wrong — P(0 replies from 60 sends) is under 1%, so it could never fire, and `/agencies` cannot produce an unprompted return in any case. Q9 stands on the day-90 named-humans count alone. |
 
 ---
 
