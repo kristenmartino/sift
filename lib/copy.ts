@@ -45,7 +45,7 @@ const siftBlurb = (n = 0): string =>
  * be one that can actually be kept. 48 hours for a factual correction about a
  * named person; 7 days for everything else. Do not promise 24.
  */
-export const CORRECTIONS_EMAIL = "";
+export const CORRECTIONS_EMAIL = "corrections@siftnews.io";
 
 export const COPY = {
   header: {
