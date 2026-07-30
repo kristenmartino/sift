@@ -11,8 +11,10 @@
 ```
 Browser --> Vercel (Next.js) --reads--> Neon Postgres (pgvector)
                 |
-                +----- refresh /30min --> Railway (FastAPI + LangGraph) --writes--> Neon Postgres
-                +----- /api/compare ---> Railway
+                +----- /api/compare ---> Railway (FastAPI + LangGraph)
+
+Railway runs its own 30-min asyncio scheduler --> pipeline --writes--> Neon Postgres
+(no Vercel cron is configured; /api/cron/refresh is a manual/backstop trigger)
 ```
 
 - **sift** (this repo): Next.js 15 frontend on Vercel — reads from Postgres, serves UI. *(One grandfathered exception being migrated out: the topic-search AI fallback still runs AI + writes here — see [`docs/DECISIONS.md`](docs/DECISIONS.md) D35.)*
@@ -22,7 +24,7 @@ Browser --> Vercel (Next.js) --reads--> Neon Postgres (pgvector)
 ## Foundation (the reader surface)
 
 - **10 categories**: Top, Technology, Business, Science, Energy, World, Health, Politics, Sports, Entertainment.
-- **AI summaries**: every article summarized by Claude Haiku 4.5 in the background pipeline — user requests never touch Claude.
+- **AI summaries**: every article summarized by Claude Haiku 4.5 in the background pipeline — the browse path never touches Claude (live compare + topic-search fallback do call Claude; see "AI split by SLA" below).
 - **Topic search**: vector similarity (Voyage AI embeddings + pgvector), SSE streaming, Claude web-search fallback for niche queries.
 - **Multi-source comparison**: LangGraph workflow — fan-out search across outlets, extract claims, compare framings. Described, not labeled.
 - **Bookmarks**: localStorage + Clerk server sync.
@@ -103,6 +105,8 @@ sift/
 | `DATABASE_URL` | Yes | Neon Postgres pooled connection string |
 | `ANTHROPIC_API_KEY` | Yes | Claude API key (topic search fallback) |
 | `VOYAGE_API_KEY` | Yes | Voyage AI key (topic search embeddings) |
+| `AI_COST_GUARD_ENABLED` | No | Enable the interim daily cost ceiling on the topic-search fallback (default: `false`) |
+| `DAILY_AI_COST_LIMIT_USD` | No | Daily AI spend ceiling, USD, shared with sift-api's `ai_usage_daily` ledger (default: `10`) |
 | `SIFT_API_URL` | Yes | Railway sift-api URL |
 | `SIFT_API_KEY` | Yes | Shared secret for pipeline trigger |
 | `CRON_SECRET` | Yes | Cron endpoint auth |
@@ -121,7 +125,7 @@ npm run test:coverage
 
 ## Deployment
 
-Auto-deploys to Vercel on push to `main`. CI runs on every PR via GitHub Actions (`tsc --noEmit`).
+Auto-deploys to Vercel on push to `main`. CI runs on every PR via GitHub Actions: `npm audit`, `tsc --noEmit`, a production `next build` against a throwaway pgvector Postgres, and Jest with coverage.
 
 ## Tech stack
 

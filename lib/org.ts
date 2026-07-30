@@ -6,7 +6,6 @@
 
 import type {
   OrgExternalLinks,
-  OrgPoliticalLean,
   OrgProfile,
   OrgType,
 } from "./types";
@@ -23,16 +22,6 @@ const ORG_TYPES: ReadonlySet<string> = new Set([
   "industry-group",
   "agency",
   "other",
-]);
-
-const ORG_LEAN_VALUES: ReadonlySet<string> = new Set([
-  "left",
-  "lean-left",
-  "center",
-  "lean-right",
-  "right",
-  "mixed",
-  "nonpartisan",
 ]);
 
 // ─── Display labels ───────────────────────────────────────────────────
@@ -57,24 +46,7 @@ export function formatOrgTypeLabel(
   return ORG_TYPE_LABELS[type] ?? null;
 }
 
-const ORG_LEAN_LABELS: Record<OrgPoliticalLean, string> = {
-  left: "Left",
-  "lean-left": "Lean Left",
-  center: "Center",
-  "lean-right": "Lean Right",
-  right: "Right",
-  mixed: "Mixed",
-  nonpartisan: "Nonpartisan",
-};
-
 /** Human label for an org political-lean enum, e.g. `"lean-left"` → `"Lean Left"`. */
-export function formatOrgLeanLabel(
-  lean: OrgPoliticalLean | null | undefined,
-): string | null {
-  if (!lean) return null;
-  return ORG_LEAN_LABELS[lean] ?? null;
-}
-
 /**
  * Compact USD formatter for org budgets.
  *   1_200_000_000 → "$1.2B"
@@ -116,26 +88,42 @@ export interface DbOrgProfileRow {
   slug: string;
   name: string;
   type: string | null;
-  political_lean: string | null;
   founded_year: number | null;
   annual_budget_usd: number | string | null;  // pg returns NUMERIC as string sometimes
+  annual_budget_fy: string | null;
+  annual_budget_source: string | null;
   major_funders: unknown;  // expected: string[]
   fara_registered: boolean | null;
   fara_countries: unknown;  // expected: string[]
   external_links: unknown;  // expected: OrgExternalLinks
   notes: string | null;
+  self_description: string | null;
+  self_description_source: string | null;
+  self_description_checked: string | Date | null;
+  governance_structure: string | null;
+  governance_source: string | null;
+}
+
+/**
+ * A quote is only publishable with the record it came from. Returns the pair
+ * or nulls — never a bare characterization of a real organization.
+ * (LAUNCH_DECISION_MEMO.md §5 B6; D37.)
+ */
+function asCitedText(
+  text: string | null,
+  source: string | null
+): { text: string | null; source: string | null } {
+  const t = text?.trim() || null;
+  const s = source?.trim() || null;
+  if (!t || !s) return { text: null, source: null };
+  if (!/^https?:\/\//i.test(s)) return { text: null, source: null };
+  return { text: t, source: s };
 }
 
 function asOrgType(v: string | null): OrgType | null {
   if (!v) return null;
   const lower = v.toLowerCase();
   return ORG_TYPES.has(lower) ? (lower as OrgType) : null;
-}
-
-function asOrgLean(v: string | null): OrgPoliticalLean | null {
-  if (!v) return null;
-  const lower = v.toLowerCase();
-  return ORG_LEAN_VALUES.has(lower) ? (lower as OrgPoliticalLean) : null;
 }
 
 /**
@@ -190,16 +178,42 @@ export function parseDbOrgProfile(
     slug,
     name,
     type: asOrgType(row.type),
-    politicalLean: asOrgLean(row.political_lean),
     foundedYear:
       typeof row.founded_year === "number" && Number.isFinite(row.founded_year)
         ? row.founded_year
         : null,
-    annualBudgetUsd: asNumeric(row.annual_budget_usd),
+    // Budget renders only with its fiscal year AND source — same rule as
+    // self_description. An unsourced figure is what migration 013 removed.
+    ...(() => {
+      const usd = asNumeric(row.annual_budget_usd);
+      const fy = row.annual_budget_fy?.trim() || null;
+      const src = row.annual_budget_source?.trim() || null;
+      const cited = usd !== null && fy !== null && !!src && /^https?:\/\//i.test(src);
+      return {
+        annualBudgetUsd: cited ? usd : null,
+        annualBudgetFy: cited ? fy : null,
+        annualBudgetSource: cited ? src : null,
+      };
+    })(),
     majorFunders: asStringArray(row.major_funders),
     faraRegistered: row.fara_registered === true,
     faraCountries: asStringArray(row.fara_countries),
     externalLinks: asExternalLinks(row.external_links),
     notes: row.notes?.trim() || null,
+    ...(() => {
+      const self = asCitedText(row.self_description, row.self_description_source);
+      const gov = asCitedText(row.governance_structure, row.governance_source);
+      const checked =
+        row.self_description_checked instanceof Date
+          ? row.self_description_checked.toISOString().slice(0, 10)
+          : row.self_description_checked?.trim() || null;
+      return {
+        selfDescription: self.text,
+        selfDescriptionSource: self.source,
+        selfDescriptionChecked: self.text ? checked : null,
+        governanceStructure: gov.text,
+        governanceSource: gov.source,
+      };
+    })(),
   };
 }

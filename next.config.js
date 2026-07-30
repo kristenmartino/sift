@@ -7,7 +7,7 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 const nextConfig = {
   images: {
     // Allow news article images from any HTTPS domain.
-    // Sift aggregates from 100+ RSS sources with diverse CDN domains,
+    // Sift aggregates from ~58 RSS sources with diverse CDN domains,
     // making a strict allowlist impractical. Images are only loaded from
     // URLs stored in the database via trusted RSS feed ingestion.
     remotePatterns: [{ protocol: "https", hostname: "**" }],
@@ -20,7 +20,7 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // font-src: Google Fonts CDN
       "font-src 'self' https://fonts.gstatic.com data:",
-      // img-src: self + any HTTPS (news article images from 100+ sources)
+      // img-src: self + any HTTPS (news article images from ~58 sources)
       "img-src 'self' https: data:",
       // connect-src: API calls to self, Clerk, server-side proxied services,
       // and the Sentry ingest endpoint (only used when NEXT_PUBLIC_SENTRY_DSN is set)

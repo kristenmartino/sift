@@ -1,36 +1,136 @@
 # Sift — STATUS
 
-**Updated:** 2026-06-02
-**Tier:** v1.5 (civic-literacy pivot + agentic surfaces in Android v1)
-**Velocity:** High (10+ PRs / week)
+**Updated:** 2026-07-27
+**Tier:** v1.5 (civic-literacy pivot) — **feature work paused; evidence-gathering only**
+**Velocity:** **Zero.** Last commit 2026-06-17 in both `sift` and `sift-api` — six weeks. By month: Mar 44 · Apr 39 · May 51 · Jun 13 · Jul 0. This line previously read "High (10+ PRs / week)" and had been wrong for eight weeks; see [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) §2.5.
 
 ## Active focus
 
-Civic-literacy pivot rollout (web). Android v1 build entering Phase 0 (per [`docs/ANDROID_APP_v1.md`](./docs/ANDROID_APP_v1.md) — decisions locked, scaffold pending). Sift-mcp merge into sift-api in flight (tracked at [`sift-api#62`](https://github.com/kristenmartino/sift-api/issues/62)). Ask Sift + Refined Compare agentic surfaces approved for Android v1 scope (tracked at [`sift-api#63`](https://github.com/kristenmartino/sift-api/issues/63)). Recently shipped: 170 new dossier entries seeded (via `sift-api`); entity linker fix gated A/B-able in production; `docs/PRODUCT_STORY.md` refreshed; portfolio-v2 case study deployed. App-wide editorial theme migration in flight: Phase 2A/2B (global semantic tokens + `/news` reader + neutral §3 rating primitives) shipped via [#144](https://github.com/kristenmartino/sift/pull/144) + [#145](https://github.com/kristenmartino/sift/pull/145) (2A–2C); 2D (legacy-token retirement + methodology/colophon/legal/masthead) in review; 2E QA remaining.
+**Launch evidence, not features.** Per [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) — the output of running `docs/GROWTH_STRATEGY.md` through the six role agents in `.claude/agents/` — the next action is a **~10-hour week-one test**: publish the 25 org dossiers as one static page, send it to ~40 librarians and ~20 policy staffers with one question ("is this useful, and does your organization pay for anything like it?"), and count replies. That test answers Q1, Q2, and Q3 simultaneously. If nobody replies, Q9 triggers in week one instead of day 180.
+
+Budget is re-baselined to **6 hrs/week**, against an observed six weeks of zero. Cut by name: Bluesky, domain migration (deferred — buy the name, don't migrate yet), the dossier SEO pass, and Show HN.
+
+**Blocking and independent of all of the above — ~50 minutes, do today:** remove *"Edited by Claude"* from the `/colophon` masthead (`app/colophon/page.tsx:70` — the live site currently states that no human holds editorial responsibility, six days before EU AI Act Art. 50(4) applies); add the living-persons / legal-outcome constraint block to the three generation prompts in `sift-api/services/` (they currently contain none); and set `SEARCH_LOGGING_ENABLED=false` in `.env.local` (local dev against the prod `DATABASE_URL` is writing rows into the analytics tables now). Then B6 — the org-dossier citation fix — which is a prerequisite for the week-one test, not a parallel task.
+
+Paused, preserved, not deleted: Android v1 (see Recent decisions), the sift-mcp→sift-api merge ([`sift-api#62`](https://github.com/kristenmartino/sift-api/issues/62)), Ask Sift + Refined Compare ([`sift-api#63`](https://github.com/kristenmartino/sift-api/issues/63)), theme migration 2E QA.
 
 ## Open strategic question
 
+**Is there enough product here to launch?** Raised by the panel and not settled. The strategic thesis (`OPERATING_CONTEXT.md` §2) is that the dossier dataset is the sellable asset. Verified composition: `interest_group_ratings` empty on all 536 politician rows, PAC figures from the 2022 cycle (OpenSecrets API discontinued Apr 2025), 25 orgs against a planned ~200, **one** bill, no refresh job. The honest inventory is one real dataset (the 25 org dossiers — genuinely good, real synthesis), one public directory with two bookmarks per row (536 politicians), one placeholder (1 bill), and one commodity not yet licensed (72 outlet ratings). The week-one test is designed so this question gets answered by strangers rather than argued internally.
+
+**"What changed" on a developing story — candidate feature, not committed.**
+
+Surfaced 2026-07-27 while checking whether Sift already had one. **It does not, and the current architecture forecloses it** — recording the mechanics here so this isn't re-investigated later:
+
+- [`workflows/story_workflow.py:210`](https://github.com/kristenmartino/sift-api/blob/main/workflows/story_workflow.py) derives `story_id = sha256(sorted article IDs)[:16]`. Identity is a hash of **the article set**, so a story that gains a fourth outlet becomes a *different* story, not an updated one.
+- Lines 166–173 NULL `story_id` for every article in the category inside the window each run, then re-cluster from scratch ("articles may have been re-clustered differently").
+- The `ON CONFLICT (id) DO UPDATE` upsert therefore rarely fires; the prior story row is orphaned once its articles repoint.
+- `RECENCY_WINDOW_HOURS = 48` — older coverage leaves threading entirely.
+- **No prior version is retained anywhere.** `stories` has single `headline`/`summary` columns, `articles` a single `summary`; no history table, no revision column. Every re-synthesis overwrites and discards. A three-day story is re-synthesized ~144 times and leaves no record of what it used to say.
+
+**Why it's worth keeping on the list:** it is the natural companion to "the news, with footnotes," it is commentary *on* coverage rather than a substitute for the article (a better legal posture than the summarizer per `LAUNCH_DECISION_MEMO.md` §2.2b/§3.6), and one hard part already exists — [`workflows/compare_workflow.py:225–228`](https://github.com/kristenmartino/sift-api/blob/main/workflows/compare_workflow.py) already extracts claims tagged `unanimous | majority | disputed | unique`.
+
+**Why it is NOT next:** it fails the test set in D46 — *does this add a row to the asset the strategy says is being sold?* It doesn't. Building it now would be the third consecutive quarter of shipping product instead of finding out whether anyone wants it, and the memo's pre-mortem sentence that is already true is *"the dossier dataset ended the quarter exactly as it began."*
+
+**How it gets decided for free:** add one line to the week-one test email — *"would 'what changed since yesterday' on a developing story be useful to you?"* Evidence at zero build cost. Real scope if it ever proceeds: a thread identity independent of the article set (centroid- or entity-based, not a content hash), retained prior syntheses, and a diff surface — schema + workflow + UI, not a feature flag.
+
 **Geographic scope of civic content + monetization timeline.**
 
-Native platform direction resolved 2026-05-20 as **Android-first** (Path A from [`docs/IOS_VS_ANDROID.md`](./docs/IOS_VS_ANDROID.md)). What remains open: v1 content scope (U.S.-only vs global from launch) and monetization timeline (free indefinitely vs subscription exploration in 2027). Both shape whether Android-first holds longer-term or eventually pairs with iOS-as-second-platform. See [`docs/IOS_VS_ANDROID.md`](./docs/IOS_VS_ANDROID.md) §Decision queue.
+Both are still open, but the frame around them changed on 2026-07-27 and the old framing is no longer the right one to reason from.
+
+**What's superseded:** native platform direction was resolved 2026-05-20 as **Android-first** (Path A from [`docs/IOS_VS_ANDROID.md`](./docs/IOS_VS_ANDROID.md)), and this section previously asked whether Android-first "holds longer-term or eventually pairs with iOS-as-second-platform." **D46 paused Android entirely**, so that question is not live — there is no native platform direction to hold or pair while both clients are paused. The 2026-05-20 reasoning stands on its own terms and is preserved in [`docs/IOS_VS_ANDROID.md`](./docs/IOS_VS_ANDROID.md) and [`DECISIONS.md` D32](./docs/DECISIONS.md); it simply isn't what's being decided now. Re-open it only if the un-pause condition in [`sift-android/STATUS.md`](https://github.com/kristenmartino/sift-android/blob/main/STATUS.md) is met — a wedge whose behavior is mobile-shaped, *and* real replies to the week-one test.
+
+**What's actually still open, re-framed as web questions:**
+
+- **Q8 — US-only or global civic content** (`OPERATING_CONTEXT.md` §6, week 12). Everything in `LAUNCH_DECISION_MEMO.md` assumes a US-only posture, now explicit rather than tacit. US-only makes the dossier moat deeper and the compliance surface smaller.
+- **Q3 — monetization.** No longer "free indefinitely vs subscription exploration in 2027." The memo's target is **one paid pilot at $2,000–5,000 once** (a journalism school or public library, invoiced directly — no procurement, no VPAT), not a consumer subscription. The $5/mo consumer path was shown not to reach $1,500/mo net before ~2029. Willingness-to-pay gets asked in writing in the week-one test, months earlier than this section assumed.
+
+Both are now answered by the same evidence the wedge question is waiting on, not by platform strategy.
 
 **Rating system + entity coverage — how far past AllSides bias + MBFC factual?**
 
-Surfaced 2026-06-01 while refining the outlet-provenance UI. Sift cites two ratings today — AllSides political-bias + MBFC factual-reporting (the only rating data in `outlet_profiles`). MBFC also publishes a **credibility** score, its own **bias** scale (Extreme Left → Extreme Right / "Least Biased" / "Questionable"), **country + press-freedom** ratings, and profiles for journalists / public figures + a genre taxonomy. Calls made:
-- **Won't do (breaks §3 neutrality):** MBFC **credibility** (folds political lean into the score — 30% weight — penalizing left/right outlets, plus traffic + country) and MBFC's **bias** scale + **"Questionable"** flag ("Extreme" / "Least Biased" / a one-sided negative badge). All re-introduce the good-bad, lean-as-value framing §3 was built to remove. Keep **AllSides** for bias.
-- **Pursue when prioritized** (`sift-api` data; likely a paid MBFC license + ToS review): **country + press-freedom** per outlet (RSF + Freedom House via MBFC; Excellent Freedom → Total Oppression). The §3-clean option — environmental, symmetric across the spectrum, cited — and most valuable for international sources. Lives on the outlet dossier, never folded into a composite score.
-- **Roadmap idea:** extend the dossier system to journalists / world leaders / more legislators + a genre taxonomy (overlaps existing politician/org/bill/outlet dossiers).
-- **Shipping now** (no new data): plain-language `Bias rating:` / `Factual Reporting:` labels with the source named in hover + link (#147); a `/methodology` "how we rate sources" section is filed as an issue.
+Surfaced 2026-06-01. The **neutrality rule**, the **"won't do" calls** (MBFC credibility, MBFC's bias scale, the "Questionable" flag — all re-introduce lean-as-value), and the plain-language `Bias rating:` / `Factual Reporting:` labels (#147) are settled in [`docs/DECISIONS.md` D37](./docs/DECISIONS.md). Still open: **MBFC country + press-freedom** (RSF / Freedom House) — the §3-clean expansion, "pursue when prioritized" (paid license + ToS) — and extending the dossier system to journalists / world leaders / a genre taxonomy. See OQ5 + D37 in [`docs/DECISIONS.md`](./docs/DECISIONS.md).
 
 ## Next 3
 
-1. **[committed]** [#56 — SSR / streaming for `/news` first-paint](https://github.com/kristenmartino/sift/issues/56) — architectural fix to break the 5.5s mobile LCP floor. LCP element after PR #55 is hydrated text inside `NewsAggregator`, not image. Tier `v1.5` · `effort-week`.
-2. **[committed]** [#98 — Civic-literacy pivot final-mile checklist](https://github.com/kristenmartino/sift/issues/98) — entity-linker promotion to default-on, dossier coverage parity per category, primer-expand instrumentation rollout. Depends on `sift-api` #53 + #54. Tier `v1.5` · `effort-weeks`.
-3. **[committed]** Android v1 build (per [`docs/ANDROID_APP_v1.md`](./docs/ANDROID_APP_v1.md)) — Phase 0 (decisions locked, scaffold pending). **Scope now includes Ask Sift chat + Compare button (deterministic + Refined).** Pre-week-1 design sprint → ~12 weeks to production. New repo `kristenmartino/sift-android` to be created. Tier `v1.5` · `effort-weeks`.
+1. **[do today, ~50 min]** B1 + B2 + B7 from [`LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) §5 — masthead fix, generation-prompt constraints, dev-writes-to-prod analytics kill switch. Independent of everything else; nothing blocks them. `effort-hours`.
+2. **[week 1]** B6 (org-dossier citations, §5.1) → publish the 25 org dossiers as one static page → ~60 emails → count replies. **This is the launch.** `effort-days`.
+3. **[gated on #2]** Ten conversations in two rounds, per the pre-registered decision rules in the memo §6 (Q1/Q2). Only happens if replies arrive. `effort-week`.
 
-Web-side in flight alongside the Android build:
-- **Web `/ask` chat UI** for Ask Sift (Phase 4 of `sift-api` [#63](https://github.com/kristenmartino/sift-api/issues/63)). Ships parallel to Android weeks 6-8. Tier `v1.5` · `effort-week`.
-- **Web Compare button gains "Focus on…" input** for Refined Compare (Phase 5 of `sift-api` [#63](https://github.com/kristenmartino/sift-api/issues/63)).
+**Deliberately not next:** SSR/streaming ([#56](https://github.com/kristenmartino/sift/issues/56)), the civic-literacy final mile ([#98](https://github.com/kristenmartino/sift/issues/98)), the web `/ask` chat UI, Refined Compare's "Focus on…" input, Android. All are building; none can be justified until the week-one test returns. The failure mode this plan exists to correct is shipping more product instead of finding out whether anyone wants the product that exists.
+
+## The 10 think-tank rows are demo fixtures — scoped cleanup, 2026-07-28
+
+**Root cause, from our own commit message.** `data/org_profiles.csv` was created in [`100789a`](https://github.com/kristenmartino/sift-api/commit/100789a) (2026-05-06, sift-api#26), which describes its contents as *"a handful of **example rows** … so downstream sub-phases have something to render against **during local development**"* and *"**starter rows to exercise the seed pipeline**."* The same commit planned *"Phase 3.B replaces the politician CSV with all 535 sitting Congress members"* — and it did. **The org CSV had no equivalent replacement phase, so the fixtures shipped to production and stayed.**
+
+The data confirms it. Two populations, two signatures:
+
+| | 10 think tanks | 93 agencies |
+|---|---|---|
+| Budget precision | 1–2 significant figures, all round millions | precise to $1,000 (incl. a negative for GSA) |
+| Duplicates | $9M twice, $55M twice | none |
+| ProPublica EINs | **5 of 10 return 404** | n/a |
+
+The five correct EINs belong to the best-known organizations; the five broken ones to the less famous. That is the signature of writing from recall rather than from records.
+
+**This revises a panel finding.** `red-team` called the org dossiers *"a real dataset — the only original research in the repo"* and the launch memo repeated it. That was assessed from the CSV without checking how the CSV came to exist. The **93 agency rows** look like real extraction; the **10 think-tank rows are fixtures**. Only the self-descriptions added 2026-07-27 are verified against a primary source.
+
+### ✅ Fixed 2026-07-28 — Brookings was flagged a registered foreign agent
+
+`fara_registered = true` with `["Qatar"]`, rendering as *"Registered as a foreign agent"* on the dossier and a badge on `/think-tanks`. **Nothing supports it.** Brookings' Qatari funding is real and documented (the Doha Center, launched 2007 with Qatar's Ministry of Foreign Affairs); FARA *registration* is a different fact. In Aug 2022 four senators [wrote to the Attorney General](https://www.grassley.senate.gov/news/news-releases/senators-push-doj-on-fara-compliance-of-brookings-institution) arguing Brookings *should be required* to register — which presupposes it had not — and no source shows it ever did. The row carried no `fara` link, so the claim rendered uncited.
+
+Cleared in prod and in the seed CSV. **Rule going forward: `fara_registered = true` requires an `external_links.fara` URL.** A legal-status claim about a named organization is the sharpest thing on these pages.
+
+### Field-by-field state
+
+| Field | State | Verifiable from | Disposition |
+|---|---|---|---|
+| `fara_registered` | ✅ fixed | FARA registry | Done |
+| `annual_budget_usd` | **All 10 wrong.** Errors both directions — Heritage understated ~$44M, Manhattan overstated ~3× | ProPublica 990s — **figures already gathered** | Replace with **total functional expenses + fiscal year** |
+| `external_links.propublica` | **5 of 10 are 404s** | Corrected EINs **already in hand** | Fix: EPI `521368964`, AEI `530218495`, ACS `522313694`, Manhattan `132912529`, Roosevelt `237213592` |
+| `major_funders` | 30 names, **zero sources**. ProPublica *cannot* support them — public 990s redact Schedule B | Grantmaker 990-PF Schedule I (the funder's filing, not the recipient's) | **Decision needed** — see below |
+| `notes` | Uncited prose; several are characterizations | Nothing — they are editorial | Drop characterizations, keep sourced facts |
+| `founded_year` | Plausible, unverified | Org's own site | Verify in passing |
+| `political_lean` | Deprecated (012), unrendered | — | Drop the column |
+
+### The two decisions
+
+**1. `major_funders`.** Naming Charles Koch Foundation as a funder of Cato, or Open Society as a funder of CAP, is a specific claim about a named organization's financial relationships — with the same fixture provenance as the budgets. Verification is structurally awkward: the recipient's 990 legally cannot show donors, so each pair must be checked against the *funder's* filing. Note also that **DonorsTrust / Donors Capital Fund appear in 4 of the 10 lists and exist specifically to anonymize donors** — confirming a grant from them is possible but tells a reader nothing about ultimate source.
+Options: **(a)** drop the section; **(b)** verify all 30; **(c)** verify the top 1–2 per org and drop the rest.
+
+**2. `notes`.** Brookings' reads *"Centrist policy think tank"* — the political lean D37 removed, surviving in prose. CAP: *"Founded by John Podesta. Closely associated with the Democratic establishment."* Cato: *"Long-running Koch family backing."* ACS: *"Progressive counterpart to the Federalist Society."* `standards-counsel` flagged these during the panel and they are still live. Heritage's *"Authored Project 2025 policy framework"* is the one checkable fact among them.
+
+### ✅ Minimum scope completed 2026-07-28
+
+Budgets replaced with total functional expenses read to the dollar from each Form 990, each carrying a fiscal year and a source; the 5 dead ProPublica links corrected; `major_funders`, `notes` and `political_lean` removed. `sift-api`#110 + `sift`#178.
+
+**`founded_year` also dropped, after attempting to verify it.** Only **2 of 10** could be confirmed from the organization's own site — Cato (*"Since 1977…"*) and the Federalist Society (*"Founded in 1982…"*) — and **both matched the stored value**. The other eight do not state a founding year on their About or History pages; Heritage and EPI block automated fetches.
+
+That is a materially better result than the budgets (10/10 wrong), and suggests the fixture author got stable well-known facts right while fabricating the specific ones. But the available fallbacks fall below the standard now applied to every other field here: Wikipedia is secondary, and ProPublica's **"Ruling year" is the IRS determination year — a different fact.** Labelling it "Founded" would repeat the funders-citation error, where the cited record could not support the claim attached to it.
+
+Dropped rather than keeping the two confirmable: **one unsourced field on an otherwise fully-sourced page is the field a reader spot-checks precisely because everything else is cited.**
+
+**Every rendered field on those 10 dossiers now carries a source or is absent.** Verified row by row.
+
+### ⚠️ Still open: `founded_year` on the 93 agency rows
+
+All 93 have it, and it is still rendered and still unsourced. Not dropped, because that population has different provenance — its budget figures are precise to the dollar and include a negative, so it looks like real extraction rather than fixtures. **It has not been verified.** Note also that founding is often already stated, with a citation, inside `governance_structure` (EPA: *"began operations on December 2, 1970"*), so the separate field may be redundant as well as unsourced.
+
+### Original recommended scope — minimum, then stop
+
+Fix budgets to cited expenses, fix the 5 dead links, drop `major_funders` and the editorial `notes`, drop `political_lean`. Result: 10 dossiers where every rendered field is sourced — thinner, and defensible to a librarian.
+
+The funder map is the more interesting artifact and probably the best original research available here, but it fails D46's test: it adds no evidence about whether anyone wants this. **Ship the thin correct version, send the emails, let replies decide whether the funder work is worth it.**
+
+**Does not block the week-one test if `/agencies` is the send** — different rows, real provenance, no budgets or funders rendered.
+
+## Data integrity — open, surfaced 2026-07-27
+
+Both found while applying migration 012 to prod. Neither blocks the week-one test; both should be resolved before the org dossiers go in front of people who read 990s and statutes for a living.
+
+1. **`org_profiles` has the D40 divergence — prod 103 rows, seed CSV 25.** The CSV's 15 agencies used short slugs (`fcc`, `epa`, `cdc`); prod uses full ones (`federal-communications-commission`). Running `scripts/seed_org_profiles.py` unmodified would have inserted **15 duplicate agency dossiers** and written every sourced citation onto the duplicates — the same failure D40 records for `outlet_profiles` (`bbc` → `bbc-news`), on a second table. Slugs are now remapped in the CSV and citations were written by targeted UPDATE instead of a full upsert. **Still open:** the seeder remains upsert-only and never prunes, so nothing prevents this recurring; and the CSV still doesn't describe the other 78 prod agency rows. Prod backup at `sift-api/data/org_profiles.prod-backup-2026-07-27.csv`.
+
+2. **Budget figures are unverified and at least one is wrong.** EPI's `annual_budget_usd` reads **$9,000,000**; EPI's own About page states a **2024 operating budget of $13.3M**. Not corrected — the budget column is cited on-page to ProPublica 990 data, and substituting a self-reported fundraising figure would break that provenance without resolving which is right. The same doubt applies to the other nine think-tank budgets, and to agency budgets, where prod and CSV disagree outright (EPA: prod **$36.97B** vs CSV **$10B**, neither verified). **Do a single pass against ProPublica/990s and decide what the column means** — filing-year figure vs self-reported operating budget — before publishing. Deliberately excluded from the 012 write for this reason.
 
 ## Blocked-on
 
@@ -39,20 +139,21 @@ Web-side in flight alongside the Android build:
 
 ## Recent decisions
 
-- **2026-06-02** — **"Every word is gold" audits done ([#150](https://github.com/kristenmartino/sift/issues/150)) — empirical, not vibes.** Tested the AI card copy against the 2026-06-01 content bar by pulling 500 live articles and measuring how much `whyItMatters` / `contextPrimer.background` restate vs. add to the title+summary (lexical-novelty proxy). `whyItMatters` is inconsistent but NOT wholesale-trite (~3/5 land a real stake; ~20% restate, ~17% lean on vague-significance clichés) and fails in two directions — restating AND editorializing — so the planned frontend overlap-suppressor was **rejected on the evidence** (lexical overlap misses the dominant editorial-fluff failure + paraphrased restatement). Decision: **keep `whyItMatters` + `contextPrimer`** (background validated — 93% add real context; `terms` kept), **fix quality at generation time** via a two-sided rubric + LLM-judge eval → [`sift-api#90`](https://github.com/kristenmartino/sift-api/issues/90). Coverage-spread cue kept on all cards. **Static-copy pass:** removed the dead `landing.*` block (superseded by `landingReskin`); found **"~50 outlets" is stale** (real set ~73–77, growing toward ~200 per #151) → going dynamic via [#153](https://github.com/kristenmartino/sift/issues/153); outlet-table dups (`bbc`/`bbc-news`, `bloomberg`/`bloomberg-news`) + a Yahoo-News exclusion contradiction → [`sift-api#91`](https://github.com/kristenmartino/sift-api/issues/91).
-- **2026-06-01** — **Product direction from an AllSides app-store review teardown + the provenance work.** (a) **"Every word is gold"** content bar — every AI line (summary / "why it matters" / "What you should know first") and every static string must be specific, verifiable, neutral, and mission-aligned; never trite or a headline restatement. Enforce via a generation rubric + eval (`sift-api`) and a static-copy audit (web). (b) **Expand sources deliberately toward ~200 curated** (from ~50) — selection by spectrum balance, category + international coverage, an MBFC factual floor, and an ops gate: each source ships with AllSides + MBFC ratings, correct `source_name_aliases`, and a reliable feed (see the NYT non-resolution bug — top outlets currently show no ratings when the feed's source-name isn't an alias). "Curated AND rated," not AllSides-scale breadth. (c) **In-feed keyword/tag filtering** — client-side, deterministic, zero-LLM — to be spec'd in [#149](https://github.com/kristenmartino/sift/issues/149); complements topic search (which isn't trusted), doesn't replace it. (d) **Rank by civic impact, not coverage volume** — evaluate empirically with a human importance gold-set (rank↔importance correlation + a high-importance/low-volume "burial" rate), depth-engagement signals (compare / dossier / bookmark opens — NOT raw clicks, which would re-create the "magnifies mainstream bias" trap), and a Sift-native impact proxy (stories tied to a bill / policy / dossier). Most of (a), (b), (d) is `sift-api`.
-- **2026-06-01** — **App-wide editorial theme migration — Phase 2A/2B shipped ([#144](https://github.com/kristenmartino/sift/pull/144)).** Promoted the `.sift-landing` editorial tokens to a GLOBAL semantic layer (surfaces / text / borders / accent + states / status / ring, both themes); the `/news` reader migrated off the stone/indigo palette. Introduced neutral, sourced **rating primitives** — `OutletChip`, `LeanGlyph`, `FactualChip`, `PartyTag` — per [`SIFT_THEME_MIGRATION.md`](./SIFT_THEME_MIGRATION.md) §3: lean is encoded by POSITION (not hue), party by a neutral letter chip, and — per sign-off — the **factual tier is a neutral fill-level meter, not green-good / red-bad**. No partisan red/blue/green on any lean/party/factual treatment. Legacy stone/indigo tokens were retained through 2A–2C, then removed in 2D. **Status:** 2C (civic + dossiers) shipped ([#145](https://github.com/kristenmartino/sift/pull/145)); 2D — retire ALL legacy stone/indigo tokens (the global semantic layer is now the single source of truth) + migrate methodology/colophon/legal + the shared masthead — in review (#146); 2E QA (AA contrast both themes, neutrality, reduced-motion, responsive) remaining.
-- **2026-06-01** — **Tailwind v4 cascade-layer compatibility fix (in #144).** The v3→v4 migration (#142) left the app's universal reset `* { margin:0; padding:0 }` UNLAYERED; under v4 native cascade layers an unlayered rule beats every layered utility regardless of specificity, silently killing all `p-*` / `m-*` / `mt-auto` / `space-y-*` / `mx-auto` utilities (collapsed `/news` + dossier spacing/centering; the homepage was spared because it's hand-written `.sl-*` CSS). Fix: move the reset into `@layer base` (so it loses to `@layer utilities`) + add the documented v4 button-cursor compat rule.
-- **2026-05-31** — **Homepage (`/`) reskinned to the editorial "news, with footnotes" identity.** Site-wide font swap → Fraunces (display) / Hanken Grotesk (body) / DM Mono. Homepage-scoped recolor (warm-paper light + dark, vermillion accent) scoped under `.sift-landing` so `/news` and other surfaces keep the stone/indigo palette and inherit fonts only. Preserved: live Postgres lead story + data path, the existing dark-mode toggle, and the shared `LandingMasthead` (untouched). Hero chips resolve real AllSides/MBFC via the canonical `getOutletProfilesMap`/`resolveOutletForSourceName` path; omitted when unresolved (never fabricated). The manifesto / CTA / footer accent bands are pinned dark in both themes (they don't invert — fixes a dark-mode CTA-button contrast bug). Open: "How outlets framed it" is static — `TODO(live-compare)`.
-- **2026-05-20** — **Android v1 scope expanded to include Ask Sift + Compare button.** Previously: reader + share extension only. Now: reader + share extension + Ask Sift agentic chat + Compare button (deterministic + Refined). Reasoning: without Ask Sift, native mobile is a polished reader competing with Apple News / Artifact. WITH Ask Sift, it's a civic-literacy agent on the phone. That's the wedge that justifies native. Timeline impact: ~10 weeks → ~12 weeks.
-- **2026-05-20** — **Refined Compare added to v1 scope.** Lens-driven agentic comparison via `lens` parameter on `/api/compare`. Same endpoint as the deterministic compare; backend routes based on lens presence. Plan in `sift-api/docs/REFINED_COMPARE_PLAN.md`.
-- **2026-05-20** — **Mobile is REST-only.** Even the agentic surfaces (Ask Sift, Refined Compare) call REST/SSE — the agent loop runs server-side; MCP is internal plumbing. `sift-mcp` #4 (hosted HTTP/SSE) deferred indefinitely. Rationale in `sift-api/docs/MOBILE_PROTOCOL_DECISION.md`.
-- **2026-05-20** — **`sift-mcp` merges into `sift-api`.** Architecture spec at `sift-api/docs/MERGE_MCP_INTO_API.md`. Tracked at `sift-api` [#62](https://github.com/kristenmartino/sift-api/issues/62) with 4 phases. Driver: duplication between web's compare path (`app/api/compare/route.ts:55` → `sift-api` `/analyze/compare`) and `sift-mcp` `compare_outlets` is already real. Merge consolidates handlers and unblocks the agentic surfaces.
-- **2026-05-20** — iOS plan v1 marked **under review**. Cross-functional assessment surfaced parity-shaped scope, premature canonical-API, and missing KPIs. See [`docs/IOS_APP_ASSESSMENT.md`](./docs/IOS_APP_ASSESSMENT.md). Plan retained as reference; **Android-first** active direction.
-- **2026-05-20** — Canonical `/v1/*` API for mobile **deferred**. Android uses Next.js routes + 4 net-new endpoints in sift-api (`/v1/share/sift-this`, `/v1/devices/register`, `/api/ask`, `/api/compare` with `lens`).
-- **2026-05-20** — **Android-first leaning** (Path A) for native. Civic-literacy mission aligns with reach, not premium audience. Active.
-- **2026-05-20** — DMCA audit: Sift's Railway footprint is **low-risk** under Railway's fair-use clause; real exposure is publisher-direct cease-and-desists, not host-mediated. Methodology page update queued in sift-api side.
-- *(sift-mcp side, separately committed in that repo: hybrid index+web architecture; 26-outlet pool with smart DB-exclusion selection; `load_dotenv(override=True)`; `compare_outlets` unified-claims-array return shape.)*
+Cross-repo architecture decisions now live in [`docs/DECISIONS.md`](./docs/DECISIONS.md) (the canonical register); entries below keep their dates + links and point there instead of duplicating.
+
+- **2026-07-27** — **Android v1 paused for 90 days; launch re-planned around evidence** → [`DECISIONS.md` D46](./docs/DECISIONS.md). `docs/GROWTH_STRATEGY.md` §9 supersedes this file's previous committed Next-3. `sift-android` had reached Phase 2 (nav host, feed, article detail, Custom Tabs) — that work is **preserved, not deleted**; the repo gets a paused banner. Rationale: 12 weeks of build against zero validated demand was the largest resource question on the board, and the buyer's read is that a Phase-2 Android repo with zero users was never a transferable asset. The interview cost is real and is recovered only if the user conversations actually happen — without them the pause reads as abandonment, with them it reads as judgment. Full reasoning, the panel's disagreements, and the disposition of Q1–Q9 in [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md).
+- **2026-07-27** — **Q7 (human review) closed on Tier A only**, after the red-team reopened a richer design. Automated deterministic gate, zero recurring human hours, shadow-mode week first, and **no review count published on `/about`** until the process survives four unassisted weeks. Reason: a lapsed compliance metric on the Art. 50(4) page is worse than the masthead bug it was meant to replace. → memo §6.
+- **2026-07-27** — **Q9 (walk-away) closed and pulled forward** from day 180 to **day 90**: fewer than 5 named humans who returned unprompted triggers it. Also triggered if ten conversations produce "no wedge identified." → memo §6.
+
+- **2026-06-03** — **Reader accessibility (paywall) as a ranking signal** → [`DECISIONS.md` D45](./docs/DECISIONS.md). Prefer surfacing freely-reachable sources for high-impact stories so readers don't hit a paywall at every turn; needs a per-outlet access field (free / metered / hard). Tracked at [#160](https://github.com/kristenmartino/sift/issues/160).
+- **2026-06-02** — **"Every word is gold" audit ([#150](https://github.com/kristenmartino/sift/issues/150)) — empirical, not vibes** → [`DECISIONS.md` D38](./docs/DECISIONS.md). 500-article lexical-novelty test; the frontend overlap-suppressor was rejected on the evidence; quality fixed at generation ([`sift-api#90`](https://github.com/kristenmartino/sift-api/issues/90)); dead `landing.*` copy dropped ([#154](https://github.com/kristenmartino/sift/pull/154)). Stale "~50 outlets" → live count ([D39](./docs/DECISIONS.md); [#153](https://github.com/kristenmartino/sift/issues/153) / [#155](https://github.com/kristenmartino/sift/pull/155)); outlet-table drift ([D40](./docs/DECISIONS.md); [`sift-api#91`](https://github.com/kristenmartino/sift-api/issues/91)).
+- **2026-06-01** — **Product direction from the AllSides teardown + provenance work.** (a) "Every word is gold" content bar → [D38](./docs/DECISIONS.md). (b) Expand sources toward ~200 "curated AND rated" → [D44](./docs/DECISIONS.md) ([#151](https://github.com/kristenmartino/sift/issues/151)). (c) In-feed keyword/tag filtering — client-side, deterministic, zero-LLM — spec'd in [#149](https://github.com/kristenmartino/sift/issues/149) (not yet a D-entry). (d) Rank by civic impact, not volume → [D45](./docs/DECISIONS.md).
+- **2026-06-01** — **App-wide editorial theme migration + neutral rating primitives** → [`DECISIONS.md` D36](./docs/DECISIONS.md) (theme un-scope) + [D37](./docs/DECISIONS.md) (§3 neutrality). 2A–2D shipped ([#144](https://github.com/kristenmartino/sift/pull/144) / [#145](https://github.com/kristenmartino/sift/pull/145) / [#146](https://github.com/kristenmartino/sift/pull/146)); 2E QA remaining. Includes the Tailwind v4 unlayered-reset fix.
+- **2026-05-31** — **Homepage (`/`) reskinned to the editorial "news, with footnotes" identity** (Phase 1; scoped under `.sift-landing`, then un-scoped app-wide in [D36](./docs/DECISIONS.md)). Fraunces / Hanken Grotesk / DM Mono site-wide; warm-paper + vermillion, accent bands pinned dark in both themes. Open: "How outlets framed it" is static — `TODO(live-compare)`.
+- **2026-05-20** — **Native + agentic architecture calls** → `docs/DECISIONS.md`: `sift-mcp` merges into `sift-api` ([D41](./docs/DECISIONS.md)); mobile is REST-only ([D42](./docs/DECISIONS.md)); Refined Compare (`lens`) + Ask Sift in v1.5 scope, web + Android ([D43](./docs/DECISIONS.md)); iOS under review ([D32](./docs/DECISIONS.md)); canonical `/v1/*` deferred ([D33](./docs/DECISIONS.md)). Tracked at [`sift-api#62`](https://github.com/kristenmartino/sift-api/issues/62) (merge) + [`#63`](https://github.com/kristenmartino/sift-api/issues/63) (agentic).
+- **2026-05-20** — **Android-first leaning** (Path A) for native; civic-literacy mission aligns with reach, not premium audience. *(Was "Open — see OQ1 + [D32](./docs/DECISIONS.md)". **Superseded 2026-07-27 by D46** — Android paused, so there is no live native-platform question. Retained as the historical record of why Android-first was chosen.)*
+- **2026-05-20** — DMCA audit: Railway footprint **low-risk** under the fair-use clause; real exposure is publisher-direct, not host-mediated. Methodology update queued (sift-api#54 / OQ2).
+- *(sift-mcp side, in that repo's STATUS: hybrid index+web; 26-outlet smart-exclusion pool; `load_dotenv(override=True)`; `compare_outlets` unified-claims-array shape — folds into `sift-api` when [`#62`](https://github.com/kristenmartino/sift-api/issues/62) merges.)*
 
 ---
 

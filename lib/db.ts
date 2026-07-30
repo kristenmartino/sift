@@ -1,6 +1,8 @@
 import { Pool } from "pg";
 
 import { parseDbOrgProfile, type DbOrgProfileRow } from "./org";
+import { hasPartisanBalanceCap } from "./agencies";
+import { claimsNonPartisanship } from "./thinkTanks";
 import { parseDbBillProfile, type DbBillProfileRow } from "./bill";
 import { parseDbOutletProfile, type DbOutletProfileRow } from "./outlet";
 import {
@@ -13,6 +15,8 @@ import {
   type OutletStats,
 } from "./outletStats";
 import type {
+  AgencyGovernance,
+  SelfDescribedOrg,
   BillListItem,
   BillProfile,
   OrgListItem,
@@ -59,6 +63,14 @@ export interface DbArticle {
   reading_levels: unknown;
 }
 
+// The category feed queries (here and the standalone query in
+// getStoriesWithArticles) carry a 30-day recency floor. The EXP() decay in
+// ORDER BY already zeroes out older rows (score × ~1e-13 at 30 days), so
+// they can never rank — but without the floor Postgres still fetches and
+// sorts every feed-quality row in the category (29k for business, 73k for
+// sports as of 2026-07; sift-api#16). Written as an OR rather than
+// COALESCE(published_date, created_at) so both branches stay servable by
+// idx_articles_feed (category, published_date DESC).
 export async function getArticlesByCategory(
   category: string,
   limit = 30
@@ -70,6 +82,8 @@ export async function getArticlesByCategory(
      WHERE category = $1 AND from_search = false
        AND summary IS NOT NULL AND summary != ''
        AND LOWER(summary) NOT LIKE 'unable to provide%'
+       AND (published_date > NOW() - INTERVAL '30 days'
+            OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
      ORDER BY
        COALESCE(importance_score, 3)::float *
        EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
@@ -185,6 +199,8 @@ export async function getStoriesWithArticles(
          AND (story_id IS NULL OR story_id <> ALL($2::text[]))
          AND summary IS NOT NULL AND summary != ''
          AND LOWER(summary) NOT LIKE 'unable to provide%'
+         AND (published_date > NOW() - INTERVAL '30 days'
+              OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
        ORDER BY
          COALESCE(importance_score, 3)::float *
          EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
@@ -203,6 +219,8 @@ export async function getStoriesWithArticles(
        WHERE category = $1 AND from_search = false
          AND summary IS NOT NULL AND summary != ''
          AND LOWER(summary) NOT LIKE 'unable to provide%'
+         AND (published_date > NOW() - INTERVAL '30 days'
+              OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
        ORDER BY
          COALESCE(importance_score, 3)::float *
          EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
@@ -367,6 +385,42 @@ export async function insertArticle(article: {
       vectorStr,
       article.read_time || 1,
     ]
+  );
+}
+
+// ─── AI cost ledger (interim cost-guard for topic search, sift-api#79) ──
+// The topic-search route runs paid Claude/Voyage calls on the user path but,
+// unlike sift-api, those calls were never recorded in ai_usage_daily or checked
+// against the daily ceiling (init.sql flags this as a temporary D35 gap). Until
+// the fallback moves into sift-api (#79), the route meters its spend into the
+// SAME shared ledger the backend guard reads, so the daily ceiling stays global.
+
+/** Today's combined estimated AI spend (USD) across backend + frontend. */
+export async function getTodayAiSpendUsd(): Promise<number> {
+  const result = await pool.query<{ total: number | null }>(
+    `SELECT COALESCE(SUM(estimated_cost_usd), 0) AS total
+       FROM ai_usage_daily
+      WHERE usage_date = CURRENT_DATE`
+  );
+  return Number(result.rows[0]?.total ?? 0);
+}
+
+/** Add one paid call's estimated cost to today's ledger (idempotent upsert). */
+export async function recordAiUsage(entry: {
+  provider: string;
+  model: string;
+  operation: string;
+  costUsd: number;
+}): Promise<void> {
+  await pool.query(
+    `INSERT INTO ai_usage_daily
+        (usage_date, provider, model, operation, estimated_cost_usd, call_count)
+     VALUES (CURRENT_DATE, $1, $2, $3, $4, 1)
+     ON CONFLICT (usage_date, provider, model, operation) DO UPDATE SET
+        estimated_cost_usd = ai_usage_daily.estimated_cost_usd + EXCLUDED.estimated_cost_usd,
+        call_count = ai_usage_daily.call_count + 1,
+        updated_at = NOW()`,
+    [entry.provider, entry.model, entry.operation, entry.costUsd]
   );
 }
 
@@ -653,9 +707,13 @@ export async function getOrgBySlug(slug: string): Promise<OrgProfile | null> {
 
   try {
     const result = await pool.query<DbOrgProfileRow>(
-      `SELECT slug, name, type, political_lean, founded_year,
-              annual_budget_usd, major_funders, fara_registered,
-              fara_countries, external_links, notes
+      `SELECT slug, name, type, founded_year,
+              annual_budget_usd, annual_budget_fy, annual_budget_source,
+              major_funders, fara_registered,
+              fara_countries, external_links, notes,
+              self_description, self_description_source,
+              self_description_checked, governance_structure,
+              governance_source
        FROM org_profiles
        WHERE slug = $1
        LIMIT 1`,
@@ -745,15 +803,106 @@ export async function listAllPoliticiansLite(): Promise<PoliticianListItem[]> {
  * Lite list of every curated org for the civic index page. Sorted by type
  * then name so the index can group by type without re-sorting client-side.
  */
+/**
+ * Agencies whose governance is documented AND cited. Powers /agencies.
+ *
+ * The WHERE clause is the load-bearing part: both the text and its source URL
+ * must be present, so a row can never reach the page as an uncited assertion
+ * about how a federal agency is controlled. As of migration 012 that is 15 of
+ * 93 agency rows — the rest render nothing rather than something unsourced.
+ */
+export async function listCitedAgencies(): Promise<AgencyGovernance[]> {
+  try {
+    const result = await pool.query<{
+      slug: string;
+      name: string;
+      governance_structure: string;
+      governance_source: string;
+    }>(
+      `SELECT slug, name, governance_structure, governance_source
+       FROM org_profiles
+       WHERE type = 'agency'
+         AND governance_structure IS NOT NULL
+         AND governance_source IS NOT NULL
+       ORDER BY name ASC`,
+    );
+    return result.rows.map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      governanceStructure: r.governance_structure,
+      governanceSource: r.governance_source,
+      hasPartisanBalanceCap: hasPartisanBalanceCap(r.governance_structure),
+    }));
+  } catch (err) {
+    // Pre-012 databases lack the columns; degrade to an empty page rather
+    // than a 500. The page renders its own empty state.
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
+/**
+ * Organizations that describe themselves, quoted and cited. Powers /think-tanks.
+ *
+ * Both the quote and its source must be present — same rule as
+ * listCitedAgencies. Excludes agencies: a federal agency does not "describe
+ * itself" in the sense this page means, and lumping them together would blur
+ * the distinction the page is built on.
+ */
+export async function listSelfDescribedOrgs(): Promise<SelfDescribedOrg[]> {
+  try {
+    const result = await pool.query<{
+      slug: string;
+      name: string;
+      type: string | null;
+      self_description: string;
+      self_description_source: string;
+      self_description_checked: Date | string | null;
+      fara_registered: boolean | null;
+      fara_countries: unknown;
+    }>(
+      `SELECT slug, name, type, self_description, self_description_source,
+              self_description_checked, fara_registered, fara_countries
+       FROM org_profiles
+       WHERE type <> 'agency'
+         AND self_description IS NOT NULL
+         AND self_description_source IS NOT NULL
+       ORDER BY name ASC`,
+    );
+    return result.rows.map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      type: (r.type as SelfDescribedOrg["type"]) ?? null,
+      selfDescription: r.self_description,
+      selfDescriptionSource: r.self_description_source,
+      selfDescriptionChecked:
+        r.self_description_checked instanceof Date
+          ? r.self_description_checked.toISOString().slice(0, 10)
+          : (r.self_description_checked?.trim() || null),
+      faraRegistered: r.fara_registered === true,
+      faraCountries: Array.isArray(r.fara_countries)
+        ? (r.fara_countries as unknown[]).filter(
+            (v): v is string => typeof v === "string",
+          )
+        : [],
+      claimsNonPartisanship: claimsNonPartisanship(r.self_description),
+    }));
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
 export async function listAllOrgsLite(): Promise<OrgListItem[]> {
   try {
     const result = await pool.query<{
       slug: string;
       name: string;
       type: string | null;
-      political_lean: string | null;
     }>(
-      `SELECT slug, name, type, political_lean
+      `SELECT slug, name, type
        FROM org_profiles
        ORDER BY type ASC NULLS LAST, name ASC`,
     );
@@ -761,7 +910,6 @@ export async function listAllOrgsLite(): Promise<OrgListItem[]> {
       slug: r.slug,
       name: r.name,
       type: (r.type as OrgListItem["type"]) ?? null,
-      politicalLean: (r.political_lean as OrgListItem["politicalLean"]) ?? null,
     }));
   } catch (err) {
     const msg = String(err);

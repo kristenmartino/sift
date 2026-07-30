@@ -1,10 +1,10 @@
 import Link from "next/link";
 
+import CorrectionPath from "@/components/CorrectionPath";
 import LandingMasthead from "@/components/landing/LandingMasthead";
 import { COPY } from "@/lib/copy";
 import {
   formatBudgetUsd,
-  formatOrgLeanLabel,
   formatOrgTypeLabel,
 } from "@/lib/org";
 import type { OrgProfile } from "@/lib/types";
@@ -28,7 +28,6 @@ interface OrgDossierProps {
 export default function OrgDossier({ org }: OrgDossierProps) {
   const c = COPY.orgDossier;
   const typeLabel = formatOrgTypeLabel(org.type);
-  const leanLabel = formatOrgLeanLabel(org.politicalLean);
   const budgetLabel = formatBudgetUsd(org.annualBudgetUsd);
 
   // Lede bits: "{type} · Founded {year} · Annual budget ~{budget}"
@@ -36,7 +35,8 @@ export default function OrgDossier({ org }: OrgDossierProps) {
   const ledeBits: string[] = [];
   if (typeLabel) ledeBits.push(typeLabel);
   if (org.foundedYear) ledeBits.push(c.foundedYearLabel(org.foundedYear));
-  if (budgetLabel) ledeBits.push(c.annualBudgetLabel(budgetLabel));
+  if (budgetLabel && org.annualBudgetFy)
+    ledeBits.push(c.annualBudgetLabel(budgetLabel, org.annualBudgetFy));
 
   // External links: stable order; forward-compat for unknown keys.
   const linkOrder: Array<keyof typeof c.externalLinkLabels> = [
@@ -87,18 +87,74 @@ export default function OrgDossier({ org }: OrgDossierProps) {
               {ledeBits.join(" · ")}
             </p>
           )}
+          {/* The budget figure is only meaningful with the filing it came
+              from — lib/org.ts refuses to surface one without a source. */}
+          {org.annualBudgetUsd !== null && org.annualBudgetSource && (
+            <p className="font-body text-meta text-(--text-tertiary) mt-2">
+              <a
+                href={org.annualBudgetSource}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
+              >
+                {c.budgetSourceLabel} <span aria-hidden>↗</span>
+              </a>
+            </p>
+          )}
         </header>
 
         <hr className="border-0 border-t border-(--border) my-10" />
 
-        {/* Political lean — Fraunces display, citation muted below */}
-        {leanLabel && (
+        {/* In its own words — replaces the Sift-assigned political_lean
+            (migration 012). The quote is the organization's, not Sift's, and
+            it renders only with the source it came from: lib/org.ts nulls the
+            pair otherwise, so an uncited characterization cannot reach the
+            page. The label does the load-bearing work — a reader must not
+            mistake a self-description for an independent assessment. */}
+        {org.selfDescription && org.selfDescriptionSource && (
           <section className="mb-12">
             <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
-              {c.sections.politicalLean}
+              {c.sections.selfDescription}
             </p>
-            <p className="font-heading text-[26px] font-semibold text-(--text-primary) leading-tight">
-              {leanLabel}
+            <blockquote className="font-heading text-[22px] text-(--text-primary) leading-snug max-w-[60ch] border-l-2 border-(--accent) pl-4">
+              &ldquo;{org.selfDescription}&rdquo;
+            </blockquote>
+            <p className="font-body text-meta text-(--text-tertiary) mt-3">
+              <a
+                href={org.selfDescriptionSource}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
+              >
+                {c.selfDescriptionCitation(org.selfDescriptionChecked)}{" "}
+                <span aria-hidden>↗</span>
+              </a>
+            </p>
+            <p className="font-body text-meta text-(--text-tertiary) mt-2 max-w-[60ch] leading-relaxed">
+              {c.selfDescriptionCaveat}
+            </p>
+          </section>
+        )}
+
+        {/* Agencies: statutory governance facts instead of a lean. Same
+            citation rule. */}
+        {org.governanceStructure && org.governanceSource && (
+          <section className="mb-12">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
+              {c.sections.governance}
+            </p>
+            <p className="font-body text-[16px] text-(--text-secondary) leading-relaxed max-w-[60ch]">
+              {org.governanceStructure}
+            </p>
+            <p className="font-body text-meta text-(--text-tertiary) mt-3">
+              <a
+                href={org.governanceSource}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
+              >
+                Source: statute / agency record <span aria-hidden>↗</span>
+              </a>
             </p>
           </section>
         )}
@@ -146,15 +202,19 @@ export default function OrgDossier({ org }: OrgDossierProps) {
                 </li>
               ))}
             </ul>
+            <p className="font-body text-meta text-(--text-tertiary) mt-3 max-w-[60ch] leading-relaxed">
+              {c.fundersProvenance}
+            </p>
             {org.externalLinks.propublica && (
-              <p className="font-body text-meta text-(--text-tertiary) mt-3">
+              <p className="font-body text-meta text-(--text-tertiary) mt-2">
+                {c.fundersFinancialsNote}{" "}
                 <a
                   href={org.externalLinks.propublica}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
                 >
-                  Source: ProPublica Nonprofit Explorer (latest 990){" "}
+                  ProPublica Nonprofit Explorer (latest 990){" "}
                   <span aria-hidden>↗</span>
                 </a>
               </p>
@@ -222,6 +282,8 @@ export default function OrgDossier({ org }: OrgDossierProps) {
             {c.methodologyHint}
           </Link>
         </div>
+        <CorrectionPath />
+
       </main>
     </div>
   );

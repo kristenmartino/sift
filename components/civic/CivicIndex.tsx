@@ -6,7 +6,6 @@ import {
   groupByState,
   groupByType,
   filterByChamber,
-  orgLeanLabel,
   orgTypeLabel,
   stateName,
 } from "@/lib/civic";
@@ -34,7 +33,7 @@ interface CivicIndexProps {
  *
  * Three sections:
  *   1. Politicians — grouped by state, chamber-filterable via URL.
- *   2. Organizations — grouped by type, lean shown inline.
+ *   2. Organizations — grouped by type. No lean: D37 / migration 012.
  *   3. Bills — flat list with congress + status.
  *
  * No search, no sortable tables, no pagination — the political surface is
@@ -182,6 +181,40 @@ export default function CivicIndex({
             <h2 className="font-heading text-[26px] md:text-[28px] font-semibold leading-[1.15] tracking-tight text-(--text-primary)">
               {c.orgsHeading}
             </h2>
+            {/* Composition, from live counts — a reader should know the set is
+                mostly agencies before clicking into it. */}
+            {(() => {
+              const sub = c.orgsSubhead(
+                orgs.filter((o) => o.type === "think-tank").length,
+                orgs.filter((o) => o.type === "advocacy").length,
+                orgs.filter((o) => o.type === "agency").length
+              );
+              return sub ? (
+                <p className="font-body text-[14px] text-(--text-tertiary) mt-2 leading-relaxed">
+                  {sub}
+                </p>
+              ) : null;
+            })()}
+            {/* Cross-link to /agencies. Placed here rather than in the nav
+                because it is a cut of this section, not a separate area of the
+                site — and the agencies are the majority of these rows, so a
+                reader scanning the org list is exactly who wants it. */}
+            <p className="font-body text-[14px] mt-3 leading-relaxed">
+              <Link
+                href="/agencies"
+                className="text-(--accent) no-underline hover:underline"
+              >
+                {c.agenciesCrossLink}
+              </Link>
+            </p>
+            <p className="font-body text-[14px] mt-2 leading-relaxed">
+              <Link
+                href="/think-tanks"
+                className="text-(--accent) no-underline hover:underline"
+              >
+                {c.thinkTanksCrossLink}
+              </Link>
+            </p>
           </header>
 
           {orgTypeGroups.length === 0 ? (
@@ -207,12 +240,15 @@ export default function CivicIndex({
                         >
                           {o.name}
                         </Link>
-                        {o.politicalLean && (
-                          <span className="text-(--text-tertiary)">
-                            {" "}
-                            ({orgLeanLabel(o.politicalLean)})
-                          </span>
-                        )}
+                        {/* The Sift-assigned political_lean used to render
+                            here as "(Left)" / "(Right)" / "(Nonpartisan)".
+                            Removed: it is Sift computing its own political
+                            rating, which D37 forbids, and it was uncited.
+                            Migration 012 replaced it on the dossier pages with
+                            cited self-descriptions; this index was missed in
+                            that pass and kept publishing the label for every
+                            one of the 103 orgs. See /think-tanks for what the
+                            organizations say about themselves instead. */}
                       </li>
                     ))}
                   </ul>

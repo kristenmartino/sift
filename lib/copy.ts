@@ -28,6 +28,25 @@ const siftBlurb = (n = 0): string =>
   `surfaces the civic context the news assumes you already know, and shows you ` +
   `who's behind every story. Every link goes to the original.`;
 
+/**
+ * Monitored address for corrections. EMPTY UNTIL THE MAILBOX EXISTS.
+ *
+ * CorrectionPath renders nothing while this is empty, on purpose: an address
+ * that does not receive mail is a correction path that silently fails, which
+ * is worse than none and is precisely the defect class the org dossiers spent
+ * 2026-07-28 removing (a ProPublica citation that 404'd, a FARA claim with no
+ * filing behind it).
+ *
+ * Set it to a real, monitored mailbox — e.g. corrections@siftnews.io once
+ * forwarding is configured on the domain — and it appears on /agencies,
+ * /think-tanks and every org dossier at once.
+ *
+ * standards-counsel's rule (LAUNCH_DECISION_MEMO.md §5 B4): the window has to
+ * be one that can actually be kept. 48 hours for a factual correction about a
+ * named person; 7 days for everything else. Do not promise 24.
+ */
+export const CORRECTIONS_EMAIL = "corrections@siftnews.io";
+
 export const COPY = {
   header: {
     tagline: "The news, with footnotes",
@@ -270,13 +289,25 @@ export const COPY = {
   orgDossier: {
     eyebrow: "Org dossier",
     sections: {
+      /** @deprecated migration 012 — Sift-assigned lean is no longer rendered. */
       politicalLean: "Political lean",
+      selfDescription: "In its own words",
+      governance: "Structure and appointment",
       finances: "Finances",
       majorFunders: "Major funders",
       fara: "Foreign-agent registration (FARA)",
       links: "Where to read more",
       notes: "Notes",
     },
+    // The caveat is not boilerplate — it is the whole reason this replaced a
+    // Sift-assigned lean. A reader must not read a self-description as an
+    // independent assessment, and organizations describe themselves favorably.
+    selfDescriptionCaveat:
+      "This is how the organization describes itself, quoted from its own site — not an assessment by Sift. Sift does not rate organizations.",
+    selfDescriptionCitation: (checked: string | null) =>
+      checked
+        ? `Source: the organization's own site · last verified ${checked}`
+        : "Source: the organization's own site",
     // External-link labels in stable display order.
     externalLinkLabels: {
       propublica: "ProPublica Nonprofit Explorer",
@@ -285,6 +316,16 @@ export const COPY = {
       official: "Official site",
       wikipedia: "Wikipedia",
     } as Record<string, string>,
+    // Funders provenance. The previous caption read "Source: ProPublica
+    // Nonprofit Explorer (latest 990)" directly under the named-funders list,
+    // which the cited record does not support: public Form 990s redact
+    // Schedule B, so the copies ProPublica hosts do NOT disclose individual
+    // donors. A citation that invites a check and fails it is worse than none.
+    // The 990 supports the *financial* figures; the donor names come from the
+    // organizations' own disclosures and public reporting.
+    fundersProvenance:
+      "Compiled from the organizations' own disclosures (annual reports, donor listings) and public reporting. Public Form 990s do not disclose individual donors — Schedule B is redacted in the copies available to the public.",
+    fundersFinancialsNote: "Financial figures:",
     // FARA disclosure copy. Symmetric — same wording regardless of which
     // country the org is registered to represent.
     faraRegisteredHeader: "Registered as a foreign agent",
@@ -296,7 +337,12 @@ export const COPY = {
           : `This organization is registered with the U.S. Department of Justice under FARA on behalf of: ${countries.join(", ")}.`,
     // Single-line lede builder bits.
     foundedYearLabel: (year: number) => `Founded ${year}`,
-    annualBudgetLabel: (budget: string) => `Annual budget ~${budget}`,
+    // Was `Annual budget ~${budget}` against an unsourced fixture figure.
+    // "Annual budget" was never a checkable claim; total expenses from a named
+    // filing is. The tilde is gone too — the figure is now exact.
+    annualBudgetLabel: (budget: string, fy: string) =>
+      `Total expenses ${budget} · ${fy}`,
+    budgetSourceLabel: "Per the Form 990 on ProPublica Nonprofit Explorer",
     methodologyHint: "Funding data comes from IRS 990s and FARA. Read the methodology.",
   },
   billDossier: {
@@ -541,6 +587,92 @@ export const COPY = {
       tagline: "Every story links to the original.",
     },
   },
+  // /agencies — the cited-governance page. Every string here describes a
+  // statutory fact or the provenance of one. Nothing on this page is
+  // AI-generated and nothing is Sift's own characterization, which is the
+  // whole point of it: it is the one surface with no Cohere/Meltwater
+  // exposure, no Art. 50(4) disclosure obligation, and no ratings licence
+  // dependency. Keep it that way.
+  agencies: {
+    eyebrow: "Public records",
+    headline: "Who controls a federal agency",
+    dek: "Appointment, terms, and the partisan-balance limits Congress wrote into statute, for 25 federal agencies \u2014 each cited to the section of the U.S. Code it came from.",
+    // #1 from the cold read: the masthead above this page says "the news, with
+    // footnotes" and the nav shows a Sports tab. A government-information
+    // librarian arriving from a cold email sees a news aggregator and has to
+    // reconcile that with "no AI-generated text" before reading a word. Owning
+    // the mismatch in one line beats letting them find it.
+    contextNote:
+      "Part of Sift, a news-context project \u2014 but this page is public-records reference, and contains no AI-generated text. 25 of the 93 agencies Sift holds appear here: the ones whose governing law has been read and cited.",
+    // Per-agency and concrete. The first reader of this page asked what
+    // "statutory partisan-balance limit" meant — naming a category made a
+    // reader decode it; the numbers state the constraint outright. They
+    // genuinely differ (FEC 3 of 6, NCUA 2 of 3), so this is computed.
+    capLabel: (cap: number, total: number) =>
+      `Max ${cap} of ${total} from one party`,
+    // Used only when the numbers can't be read out of the statute with
+    // confidence. A vaguer label beats a wrong number sitting next to a
+    // source link that contradicts it.
+    capLabelFallback: "Party balance required by law",
+    capExplainerHeading: "Why this matters",
+    // The finding, stated plainly. Counts are computed from live data.
+    capExplainer: (capped: number, total: number) =>
+      `${capped} of these ${total} agencies operate under a limit, written into their authorizing statute, on how many members may belong to one political party. The Federal Election Commission is the clearest case: six voting members, no more than three from either party, and no tie-breaking seat \u2014 so a party-line split is 3\u20133 and nothing carries. That is structural, not a matter of personality or of who is currently in office. Where a statute sets no such limit \u2014 the National Labor Relations Board, for instance \u2014 that absence is a fact about the agency too.`,
+    countLine: (total: number) =>
+      `${total} ${total === 1 ? "agency" : "agencies"} with cited governing law`,
+    sourcePrefix: "Source:",
+    dossierLink: "Full dossier",
+    provenanceHeading: "How this page was made",
+    provenance:
+      "Each entry states only what the cited section says. Facts that change with an administration \u2014 who currently chairs an agency, its present composition, which president appointed the sitting majority \u2014 are deliberately absent: they go stale and there is no process here to refresh them. What remains is structural and durable.",
+    notAiNote:
+      "No part of this page is AI-generated. These are statutory facts, quoted or summarized from the sections linked beside each one.",
+    incompleteHeading: "What is missing",
+    incomplete: (shown: number, totalAgencies: number) =>
+      `The other ${totalAgencies - shown} agencies Sift holds are omitted rather than summarized from memory. Each one appears here only once its governing statute has been read and cited \u2014 which is slower than filling the gaps from general knowledge, and is the point.`,
+    empty: "No agency governance has been cited yet.",
+    backLink: "Back to Sift",
+  },
+  // /think-tanks — the self-description page. Every rendered claim is the
+  // organization's own wording, quoted and linked. Sift does not characterize
+  // these organizations; that is the whole reason this replaced the
+  // Sift-assigned political_lean (D37, migration 012).
+  thinkTanks: {
+    eyebrow: "In their own words",
+    headline: "How policy organizations describe themselves",
+    dek: "Each of these organizations, quoted from its own site \u2014 not summarized, not rated, not characterized by Sift. Every quote links to the page it came from.",
+    countLine: (n: number) =>
+      `${n} ${n === 1 ? "organization" : "organizations"}, quoted and cited`,
+    nonPartisanBadge: "Also calls itself nonpartisan",
+    faraBadge: (countries: string[]) =>
+      countries.length > 0
+        ? `Registered foreign agent \u00b7 ${countries.join(", ")}`
+        : "Registered foreign agent",
+    findingHeading: "What to notice",
+    finding: (claiming: number, total: number) =>
+      `${claiming} of these ${total} state an ideology and a claim of non-partisanship in the same breath \u2014 conservative, libertarian, progressive or liberal, alongside "nonpartisan" or a disclaimer of taking positions. Both halves are quoted below. Party and ideology are not the same thing, and an organization can honestly claim one while holding the other; a one-word label would have hidden the distinction entirely.`,
+    sourcePrefix: "Their words, from",
+    checkedPrefix: "last verified",
+    dossierLink: "Full dossier",
+    provenanceHeading: "How this page was made",
+    provenance:
+      "These are self-descriptions: what each organization says about itself, not an independent assessment. Organizations describe themselves favorably \u2014 that is exactly why the wording is quoted rather than paraphrased, and why the source sits beside every one. Sift assigns no rating to any organization on this page.",
+    notAiNote:
+      "No part of this page is AI-generated. Every quotation was read from the organization's own site on the date shown.",
+    empty: "No self-descriptions have been cited yet.",
+    backLink: "Back to Sift",
+  },
+  // Correction path (LAUNCH_DECISION_MEMO.md §5, B4). Rendered by
+  // components/CorrectionPath.tsx, which no-ops while CORRECTIONS_EMAIL is
+  // empty. Phrased for the audience these pages are being sent to: people who
+  // check sources for a living and will find an error before anyone else does.
+  corrections: {
+    heading: "Found an error?",
+    body: "Every claim on this page is meant to match the record it cites. If one doesn\u2019t \u2014 a misread statute, a broken link, a figure that doesn\u2019t match the filing \u2014 tell me and I\u2019ll fix it or take it down:",
+    subject: "Correction \u2014 Sift",
+    window:
+      "Corrections about a named person are handled within 48 hours; everything else within a week. Corrections are noted, not silently overwritten.",
+  },
   civicIndex: {
     eyebrow: "Civic dossiers",
     headline: "Civic dossiers",
@@ -548,7 +680,21 @@ export const COPY = {
     politiciansEyebrow: (count: number) => `Politicians \u00b7 ${count}`,
     politiciansHeading: "Sitting members of Congress",
     orgsEyebrow: (count: number) => `Organizations \u00b7 ${count}`,
-    orgsHeading: "Think tanks, advocacy groups, and PACs",
+    // Was "Think tanks, advocacy groups, and PACs" \u2014 wrong twice over: there
+    // are no PACs in the set, and it silently omitted the federal agencies,
+    // which are the majority of it. The heading now names what's actually
+    // there; orgsSubhead carries the split, derived from live counts rather
+    // than hardcoded so it can't drift the way the old string did.
+    orgsHeading: "Think tanks, advocacy groups, and federal agencies",
+    orgsSubhead: (thinkTanks: number, advocacy: number, agencies: number) => {
+      const parts: string[] = [];
+      if (thinkTanks) parts.push(`${thinkTanks} think tank${thinkTanks === 1 ? "" : "s"}`);
+      if (advocacy) parts.push(`${advocacy} advocacy organization${advocacy === 1 ? "" : "s"}`);
+      if (agencies) parts.push(`${agencies} federal agenc${agencies === 1 ? "y" : "ies"}`);
+      if (parts.length === 0) return "";
+      const last = parts.pop() as string;
+      return parts.length ? `${parts.join(", ")} and ${last}.` : `${last}.`;
+    },
     billsEyebrow: (count: number) => `Bills \u00b7 ${count}`,
     billsHeading: "Landmark legislation",
     filterAll: "All",
@@ -560,6 +706,13 @@ export const COPY = {
     emptyPoliticians:
       "No politicians match this filter. Try Senate, House, or All.",
     emptyOrgs: "No organizations curated yet.",
+    // Cross-link into /agencies. States the payoff rather than the
+    // destination — "see the agencies page" gives a reader no reason to
+    // click; the partisan-balance fact does.
+    agenciesCrossLink:
+      "Who controls a federal agency \u2014 appointment, terms, and the party-balance limits written into statute \u2192",
+    thinkTanksCrossLink:
+      "How these organizations describe themselves \u2014 in their own words, quoted and linked \u2192",
     emptyBills: "No bills curated yet.",
     billsMoreSoon: "More bills as they're curated.",
     backLink: "Back to Sift",
