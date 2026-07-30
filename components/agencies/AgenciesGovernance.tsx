@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import CorrectionPath from "@/components/CorrectionPath";
 import LandingMasthead from "@/components/landing/LandingMasthead";
 import { partisanCap, sortAgencies, sourceLabel } from "@/lib/agencies";
 import { COPY } from "@/lib/copy";
@@ -165,6 +166,8 @@ export default function AgenciesGovernance({
             </p>
           </section>
         )}
+
+        <CorrectionPath />
 
         <Link
           href="/"
