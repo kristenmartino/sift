@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import CorrectionPath from "@/components/CorrectionPath";
 import LandingMasthead from "@/components/landing/LandingMasthead";
 import { sourceLabel } from "@/lib/agencies";
 import { COPY } from "@/lib/copy";
@@ -142,6 +143,8 @@ export default function SelfDescriptions({ orgs }: SelfDescriptionsProps) {
             {c.notAiNote}
           </p>
         </section>
+
+        <CorrectionPath />
 
         <Link
           href="/"
