@@ -495,17 +495,22 @@ Each category has 8-11 RSS feeds. Expanded total from ~56 feeds to 100+ feeds. C
 
 We considered three approaches:
 
-1. **Simple embedding cosine similarity** (~90% accuracy distinguishing same-event vs same-topic). Low cost, but fails on cases like "EU AI Act vote" vs "US AI executive order" which embed similarly but are different events.
+1. **Simple embedding cosine similarity** (~90% accuracy distinguishing same-event vs same-topic — ⚠️ unmeasured estimate, see the retraction in D27). Low cost, but fails on cases like "EU AI Act vote" vs "US AI executive order" which embed similarly but are different events.
 
 2. **Full 5-node LangGraph workflow** with a separate ranking node. The ranking node would sort stories by importance — but this is just SQL `ORDER BY article_count DESC, published_date DESC`. An LLM call for ranking is over-engineering.
 
 3. **4-node workflow** (chosen). Drops the ranking node. Each remaining node earns its place:
    - Node 1 (Fetch): DB query, not an LLM call — pulls 48h articles per category
    - Node 2 (Entity Extract): Extracts people/orgs/locations. **Only justified because entities are visible in the UI** as tags on StoryCard
-   - Node 3 (LLM Cluster): The core differentiator — LLM-as-judge distinguishes same-event from same-topic (~97% accuracy)
+   - Node 3 (LLM Cluster): The core differentiator — LLM-as-judge distinguishes same-event from same-topic (accuracy **unmeasured**, see D27)
    - Node 4 (Synthesize+Store): Unified headline, merged summary, per-source framing analysis with tone
 
-**Cost:** All prompts batched (one call per category per node, not per article). ~$0.012 per pipeline run, ~$1.73/day, ~$52/month. vs $345/month if we made per-article calls.
+**Cost:** ⚠️ **Corrected 2026-07-30.** This section previously claimed "all prompts batched (one call per category per node, not per article), ~$0.012 per pipeline run, ~$1.73/day, ~$52/month." Both halves were wrong:
+
+- **Not everything is batched.** `sift-api/services/entity_linker_llm.py:390` `link_articles_llm` makes **one realtime call per article**, re-sending a ~6,500-token entity catalog as a cached system block each time. That is the per-article pattern this entry claims to have avoided.
+- **Actual spend is ~$10/day (~$300/mo)**, roughly 6x the figure above, on a Sift-dedicated API key.
+
+The per-operation breakdown is not yet known: `services/usage_tracker.py:111` `_record_to_ledger` short-circuits unless `ai_cost_guard_enabled` is true, and it defaults to `False` — so the `ai_usage_daily` ledger has never been populated. Attribution is the prerequisite for any cost work.
 
 **Why this matters for a portfolio:** Good judgment > raw complexity. A hiring manager who sees a 5-node workflow where one node is a SQL ORDER BY will question your engineering taste. Four nodes where each earns its place shows you know when to reach for an LLM and when not to.
 
@@ -519,9 +524,17 @@ We considered three approaches:
 **LLM-as-judge approach:** The prompt explicitly instructs Claude to distinguish same-event from same-topic:
 > "same event" means the same specific occurrence -- not just the same broad topic. "EU votes on AI Act" and "US issues AI executive order" are DIFFERENT events.
 
-This achieves ~97% accuracy on event-level clustering. The enrichment from entity extraction (Node 2) further helps — shared people, organizations, and locations are strong signals.
+⚠️ **Accuracy claim retracted 2026-07-30.** This entry previously stated "This achieves ~97% accuracy on event-level clustering," and the ~90% figure for embedding similarity above carries the same caveat. **Both were estimates with no backing eval set.** There was no labeled corpus, no metric, and until 2026-07-30 no test of `services/story_clusterer.py` at all. Neither number should be cited.
 
-**Alternative considered:** Two-pass hybrid (embedding pre-filter + LLM refinement). Rejected because the article volume per category (max 50) is small enough that a single LLM call handles it. The two-pass approach adds complexity without benefit at this scale.
+A real measurement is in progress: a labeled corpus at `sift-api/data/eval/clustering_corpus.jsonl` scored by `sift-api/services/cluster_metrics.py` on chance-corrected Adjusted Rand Index, V-measure, and pairwise precision/recall, with a free deterministic replay gate in CI. This entry will be updated with the measured values and a link to the baseline artifact.
+
+The enrichment from entity extraction (Node 2) helps in principle — shared people, organizations, and locations are strong signals — but that too is unmeasured.
+
+**Alternative considered:** Two-pass hybrid (embedding pre-filter + LLM refinement). Rejected on the grounds that "the article volume per category (max 50) is small enough that a single LLM call handles it."
+
+⚠️ **That premise turned out to rest on a bug.** The "max 50" is `LIMIT 50` in `sift-api/workflows/story_workflow.py:54`, applied to an already-filtered 48h window. It is not a natural ceiling — in a busy category, articles beyond rank 50 are **never candidates for threading at all**, silently and invisibly in logs. A second, related bug compounded it: `story_clusterer.py` sent up to 50 articles with a fixed `max_tokens=1024`, so an overflowing response truncated to invalid JSON and the category produced **zero stories with no error logged** (fixed 2026-07-30).
+
+The hybrid is therefore being reconsidered — but on **correctness and scale** grounds (it is what makes raising the 50-article cap tractable), not on the cost grounds usually cited for it. Note that clustering here is a *single listwise call per category*, not pairwise, so vector pre-filtering does not eliminate an O(n²) call pattern; splitting a window into many small pools re-pays the fixed prompt per pool and can cost *more*. Embeddings would serve as a candidate **generator**, with the LLM retained as the **decider** — a refinement of this decision, not a reversal of it.
 
 ---
 
