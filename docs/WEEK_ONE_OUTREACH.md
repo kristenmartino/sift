@@ -19,6 +19,7 @@ The memo's §4.2 claimed this test answers Q1, Q2, Q3 and the dossier-value ques
 | **Q2 — dossier vs comparison** | **No** | §6 pre-registers Q2 as a *within-person* comparison: ten people, paired first-clicks. This shows one arm and infers the other from spontaneous mention. Nobody asks for a feature they have never seen. |
 | **Q3 — willingness to pay** | **Partly**, once reworded | §6 retired *"do you pay for Quorum?"* in favour of *"could your institution buy from a sole proprietor with no VPAT?"* The first draft asked the version §6 rejected. Fixed below. |
 | **Recruiting for the ten conversations** | **Yes** | This is the real job. Ten to fifteen named professionals, a verbatim record of how they describe the problem, and the incumbent map. |
+| **"What changed" — is anyone missing it?** | **Weakly** | Added 2026-07-30 as a P.S. It asks what they *already use*, not whether they'd want it, so a named incumbent is genuine signal. But *"no, nothing"* stays ambiguous between **nobody needs this** and **nobody has seen it** — the same failure mode that disqualifies this test for Q2. It buys an incumbent map, not a demand answer. |
 
 **Success is therefore: enough named humans to book five calls.** Not a reply count.
 
@@ -69,8 +70,10 @@ You selected the one profession whose job description is answering polite, well-
 > Either answer helps. If it's not useful, that's the most useful thing you can tell me.
 >
 > Kristen Martino
+>
+> P.S. Unrelated, if you have a second: when a story develops over several days, is there anything you use — or point patrons to — that shows *what changed*? Which facts are new, which got corrected, which outlets came late. I can't find one, and I'd like to know whether that's because nobody needs it.
 
-~150 words.
+~205 words, of which ~55 are the P.S.
 
 ---
 
@@ -121,6 +124,20 @@ Different reader, different opening. A legislative aide doesn't curate resources
 
 ---
 
+### The "what changed" P.S. — added 2026-07-30
+
+**Why it exists.** A strategy pass on 2026-07-29 put *"what changed"* — showing how a developing story moved, which facts are new, which were corrected, which outlets came late — as the strongest remaining differentiation in the product, and the only one no competitor was found to do. It is **not built**, and it is architecturally foreclosed today: `story_workflow.py:210` derives `story_id` from a hash of the sorted article IDs, so a story that gains an outlet becomes a *different* story, and no prior version is retained anywhere. Before paying to unblock that, it is worth one sentence to a stranger.
+
+**Why a P.S. and not question 3.** The section above already flags that three asks is one too many. A P.S. sits after the signature, is read independently of the numbered list, and reads as an aside rather than a fourth demand. If it costs replies, it costs them last.
+
+**Why it asks what they *use*, not what they'd *want*.** The table above disqualifies this test for Q2 precisely because *nobody asks for a feature they have never seen*. Asking *"would this be useful?"* would inherit that flaw and return politeness. Asking *"is there anything you already use"* returns a name or nothing — and a name is checkable. If a librarian answers *"NewsDiffs"* or *"the Wayback Machine"* or *"we just re-read the article,"* that is a real answer to a real question.
+
+**What it cannot do.** A "no, nothing" does not mean there is demand. Absence is not need — sometimes nobody builds a thing because nobody wants it. **Treat this as a hypothesis probe, not a decision input.** If it comes back interesting, the follow-up is the phone call, not a build.
+
+**Not added to the staffer version.** A legislative aide tracking a bill across a news cycle is arguably the *better* respondent for this question — but those twenty sends are held until September for recess (§5 below), and the librarian batch will have already reported by then. Add it to the staffer draft once the librarian replies show whether the phrasing lands.
+
+---
+
 ## Personalization is not optional
 
 The bracketed first line carries the email. `user-researcher` was explicit: a librarian answers a specific reference to their own published work and ignores everything else. **Forty personalized sends beat four hundred generic ones**, and it is ~2 minutes each to find what they actually link.
@@ -153,19 +170,22 @@ Fifty-five personalized sends at ~2 minutes of research each is roughly five hou
 - Do they engage the pay question at all, or only the useful question? If only the first, the second is mis-worded — cut it from the remaining fifty-five and ask it on the call.
 - Does anyone take the "next batch" offer? That's the only return mechanism here.
 - Does anyone mention the page being part of a news site? That would say the `contextNote` fix didn't land.
+- **Does anyone answer the P.S. at all?** It is the cheapest thing in the email to cut. If five people answer the numbered questions and skip it, drop it from the remaining fifty-five — a P.S. nobody engages is pure length. If even one names a tool, keep it and write the name down verbatim.
 
 Pick five you're least worried about burning. A bad email costs one contact each; a bad email × 60 costs the list.
 
-### 2. ⚠️ Enable Vercel Web Analytics first — it is NOT currently collecting
+### 2. ✅ Web Analytics is collecting — record the baseline before you send
 
-`@vercel/analytics` is installed and `<Analytics />` is mounted in `app/layout.tsx:112`, **but Web Analytics is not enabled on the project.** The API returns `404 Web Analytics not found`. The script fires and nothing is recorded.
+`@vercel/analytics` is installed, `<Analytics />` is mounted in `app/layout.tsx:112`, and Web Analytics **is enabled** on the project: `https://siftnews.io/_vercel/insights/script.js` returns 200 (re-verified 2026-07-30).
 
-This matters more than it sounds. Without it, two very different futures look identical:
+> An earlier revision of this section said it was not collecting, citing a `404 Web Analytics not found`. That 404 came from a tooling call, not from the project, and the claim was wrong.
+
+Enablement was never the point, though — **the baseline is.** Without it, two very different futures look identical:
 
 - **0 replies, 30 pageviews** → they read it and didn't care. A *product* signal.
 - **0 replies, 2 pageviews** → the email failed. A *channel* signal.
 
-Enable it in the Vercel dashboard (Project → Analytics), then **record the `/agencies` pageview count immediately before the first send.** It's a two-click toggle and it's what makes a null result readable at all.
+**Record the `/agencies` pageview count immediately before the first send, and write the number in this doc.** Post-hoc, a total is uninterpretable — you cannot subtract traffic you never counted. That one number is what makes a null result readable at all.
 
 ### 3. Read the page cold
 
