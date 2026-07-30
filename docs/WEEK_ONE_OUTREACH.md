@@ -174,18 +174,18 @@ Fifty-five personalized sends at ~2 minutes of research each is roughly five hou
 
 Pick five you're least worried about burning. A bad email costs one contact each; a bad email × 60 costs the list.
 
-### 2. ✅ Web Analytics is collecting — record the baseline before you send
+### 2. Record the `/agencies` pageview baseline
 
-`@vercel/analytics` is installed, `<Analytics />` is mounted in `app/layout.tsx:112`, and Web Analytics **is enabled** on the project: `https://siftnews.io/_vercel/insights/script.js` returns 200 (re-verified 2026-07-30).
-
-> An earlier revision of this section said it was not collecting, citing a `404 Web Analytics not found`. That 404 came from a tooling call, not from the project, and the claim was wrong.
-
-Enablement was never the point, though — **the baseline is.** Without it, two very different futures look identical:
+Without it, two very different futures look identical:
 
 - **0 replies, 30 pageviews** → they read it and didn't care. A *product* signal.
 - **0 replies, 2 pageviews** → the email failed. A *channel* signal.
 
-**Record the `/agencies` pageview count immediately before the first send, and write the number in this doc.** Post-hoc, a total is uninterpretable — you cannot subtract traffic you never counted. That one number is what makes a null result readable at all.
+**Take the number from the Vercel dashboard (Project → Analytics, filtered to `/agencies`) immediately before the first send, and write it into this doc.** Post-hoc you cannot subtract traffic you never counted. Your own visits count too, so a handful at baseline is expected — the delta is what matters.
+
+> ⚠️ **Correction, 2026-07-29.** An earlier version of this section asserted Web Analytics was *not enabled*, on the basis that the Vercel analytics API returned `404 Web Analytics not found`. That was reading a tool error as a fact about the project. The stronger evidence says it **is** enabled: `/_vercel/insights/script.js` serves `200`, which Vercel only does for provisioned projects, and `@vercel/analytics/react` injects its tag client-side so its absence from server HTML proves nothing. Verify in the dashboard, not through the API. (Re-verified 2026-07-30: still `200`.)
+
+**One real caveat, independent of all that:** this audience sits on institutional networks that block third-party scripts at above-average rates. Treat the pageview count as a **floor**, not a measurement.
 
 ### 3. Read the page cold
 
@@ -195,9 +195,39 @@ Only the badge has had an outside read, and it failed. The headline and "Why thi
 
 `product-analyst`'s named-individuals sheet: who replied, what they said **verbatim**, whether they took the next-batch offer, and which segment they came from. Track librarian and staffer reply rates **separately** — the gap between them is more informative than either number.
 
-### 5. Check the recess calendar
+### 5. Timing — checked 2026-07-29, and it splits the two lists
 
-It is late July. Congressional staff head into August recess, and in a midterm year it starts earlier and runs thinner. If the House is already gone, **hold the twenty staffer contacts until September.** Burning twenty personalized sends into an empty office is a one-shot loss.
+**Congress is about to disappear for six weeks.**
+
+| | Dates |
+|---|---|
+| **Senate** | State work period **Aug 10 → Sep 11**. In session the first week of August. Returns **Sep 14**. |
+| **House** | In districts for *"nearly all of August and October"* ahead of the midterms. One session week **Aug 31 → Sep 3**, then the Labor Day week off. |
+
+Sources: [Roll Call — Senate](https://rollcall.com/2025/11/19/senate-calendar-2026-midterm-election/), [Roll Call — House](https://rollcall.com/2025/11/18/house-2026-calendar-midterm-elections/), [Bloomberg Government](https://news.bgov.com/bloomberg-government-news/house-releases-2026-calendar-with-august-october-recesses), [senate.gov](https://www.senate.gov/legislative/2026_schedule.htm). The exact first day of the House district period is **not pinned** — pressgallery.house.gov blocks automated fetches; the [official PDF](https://www.majorityleader.gov/uploadedfiles/119_legislative_schedule_2026_houseofrepresentatives.pdf) has it.
+
+**As of 29 July, the staffer window is roughly one week — now through ~Aug 7.**
+
+#### This conflicts with the five-send pilot, and the conflict is real
+
+The pilot says send five, wait for replies, refine, send the rest. Waiting costs several days — which is the entire remaining staffer window. You cannot do both for staffers.
+
+- **(a) Send the twenty this week, unpiloted.** Uses the window. Spends your only staffer list on copy no recipient has seen, from a domain with zero sending history, in the last week before recess when inboxes are at their worst.
+- **(b) Hold all twenty until Sep 14.** Costs six weeks. Buys a piloted, refined email and a domain with real sending history.
+
+**Recommendation: hold.** Twenty unpiloted emails into the pre-recess crush is the worst available combination, and staffer contacts are the harder list to rebuild.
+
+#### The librarians are not on this calendar
+
+Academic librarians answer to the semester, not to Congress — and fall-semester prep argues for *sooner*, not later. So the two lists separate cleanly:
+
+| When | Who | Why |
+|---|---|---|
+| **Now** | 5 librarians (the pilot) | Learn the reply shape while timing is flexible |
+| **This week** | the rest of the librarians | Once the pilot returns and the copy is adjusted |
+| **Sep 14+** | all 20 staffers | Copy tested on real recipients; domain has six weeks of sending history |
+
+The delay makes the staffer emails **better**, not just later. That is the reason to accept it rather than a consolation for it.
 
 ---
 
