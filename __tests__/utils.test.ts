@@ -133,7 +133,40 @@ describe("extractSourceDomain", () => {
 
 // ─── stableHash ─────────────────────────────────────────
 
+// Pinned goldens. `stableHash` is reimplemented in Python as `stable_hash` in
+// sift-api/services/rss.py, and these EXACT values are asserted in
+// sift-api/tests/test_rss.py too. The two must never diverge:
+//
+//   sift-api/workflows/pipeline_workflow.py:337 derives
+//     article_id = stable_hash(source_url + title)
+//   — the PRIMARY KEY of every `articles` row —
+//   and app/api/news/topic/route.ts:578 computes the SAME id here in TS.
+//
+// Deliberately duplicated literals rather than a shared fixture: sift and
+// sift-api are independent git repos, so sharing would need a submodule or a
+// sync step for zero extra signal. If either side drifts, exactly one of the
+// two suites goes red.
+const GOLDEN_STABLE_HASH: Record<string, string> = {
+  hello: "1n1e4y",
+  world: "1vgtci",
+  "": "0",
+  "test article url": "p4glh3",
+  "https://www.npr.org/2026/06/04/x": "c9vv14",
+};
+
 describe("stableHash", () => {
+  it("matches the golden values shared with sift-api", () => {
+    for (const [input, expected] of Object.entries(GOLDEN_STABLE_HASH)) {
+      expect(stableHash(input)).toBe(expected);
+    }
+  });
+
+  it("renders abs(INT32_MIN) identically to Python", () => {
+    // The one boundary where JS's double-based Math.abs and Python's
+    // ctypes.c_int32 wrap could part ways.
+    expect(Math.abs(-2147483648).toString(36)).toBe("zik0zk");
+  });
+
   it("returns same hash for same input", () => {
     const url = "https://reuters.com/article/123";
     expect(stableHash(url)).toBe(stableHash(url));
