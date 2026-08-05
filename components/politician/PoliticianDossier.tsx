@@ -12,6 +12,74 @@ interface PoliticianDossierProps {
 }
 
 /**
+ * One fact from a public record, printed next to a link to that record.
+ *
+ * Renders nothing without `sourceUrl`. `OutletDossier.tsx:120` is the pattern
+ * ("Source: AllSides · last verified <date>") and the reason it exists is
+ * `LAUNCH_DECISION_MEMO.md` §5(e): the two dossier surfaces that rendered
+ * claims with a citation *promised in a code comment* and no citation element
+ * present. A component that cannot render the value without the link cannot
+ * regress into that.
+ */
+function OfficeRow({
+  label,
+  value,
+  sourceLabel,
+  sourceUrl,
+}: {
+  label: string;
+  value: string | null;
+  sourceLabel: string;
+  sourceUrl: string | null;
+}) {
+  if (!value || !sourceUrl) return null;
+  return (
+    <div className="flex flex-col gap-y-1 md:grid md:grid-cols-[190px_1fr] md:gap-y-0 md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5">
+      <dt className="font-body text-outlet uppercase tracking-wider text-(--text-tertiary)">
+        {label}
+      </dt>
+      <dd className="font-body text-[15px] text-(--text-secondary) leading-relaxed">
+        {value}
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block font-body text-meta text-(--text-tertiary) no-underline hover:underline hover:text-(--accent) mt-0.5"
+        >
+          {sourceLabel} <span aria-hidden>↗</span>
+        </a>
+      </dd>
+    </div>
+  );
+}
+
+/**
+ * "2021-01-22 — 2025-01-24" / "2025-01-27 — present".
+ *
+ * When the end date came from a successor's roll-call (`viaConfirmation`) it
+ * is the date the Senate confirmed the next officeholder, which is not
+ * necessarily the incumbent's last day — so the range is annotated rather
+ * than printed as a bare term. Overstating it by one hop is exactly the kind
+ * of small unsourced embellishment migration 015 exists to remove.
+ */
+function formatHeldRange(
+  start: string | null,
+  end: string | null,
+  viaConfirmation: boolean,
+): string | null {
+  if (!start && !end) return null;
+  if (start && end) {
+    return viaConfirmation
+      ? `${start} — ${end} (${COPY.politicianDossier.officeSuccessorNote})`
+      : `${start} — ${end}`;
+  }
+  if (start) return `${start} — present`;
+  return viaConfirmation
+    ? `${COPY.politicianDossier.officeSuccessorNote} ${end}`
+    : `until ${end}`;
+}
+
+/**
  * Server-rendered politician dossier — civic-literacy MVP Phase 3.C.
  *
  * Mirrors the editorial visual register of `OutletDossier` and
@@ -30,15 +98,29 @@ export default function PoliticianDossier({
   politician,
 }: PoliticianDossierProps) {
   const c = COPY.politicianDossier;
-  const lede = formatPoliticianLede(
-    politician.chamber,
-    politician.party,
-    politician.state,
-  );
+  const role = politician.role;
+  // `role.roleTitle` is only non-null when its source came with it
+  // (`lib/politician.ts` drops the pair otherwise), so this whole section is
+  // gated on being citable.
+  const hasOffice = Boolean(role.roleTitle);
+  // For an executive, "Executive branch official (R-US)" is noise next to the
+  // statutory title, and for a foreign head of state `state` holds a country
+  // code and `party` a national party abbreviation — "(UR-RU)" reads as
+  // gibberish. Prefer the sourced title whenever there is one.
+  const lede = hasOffice
+    ? role.roleTitle
+    : formatPoliticianLede(
+        politician.chamber,
+        politician.party,
+        politician.state,
+      );
+  const showPartyTag =
+    politician.party !== null && !hasOffice;
 
-  // Stable display order for external links. Govt records first
-  // (GovTrack, OpenSecrets, Vote Smart), then encyclopedia refs.
+  // Stable display order for external links. Official record first, then
+  // govt records (GovTrack, OpenSecrets, Vote Smart), then encyclopedia refs.
   const linkOrder: Array<keyof typeof c.externalLinkLabels> = [
+    "official",
     "govtrack",
     "opensecrets",
     "votesmart",
@@ -65,7 +147,11 @@ export default function PoliticianDossier({
   const ratingsEntries = Object.entries(politician.interestGroupRatings);
   const industriesEmpty = politician.topIndustriesCurrentCycle.length === 0;
   const ratingsEmpty = ratingsEntries.length === 0;
-  const showNotYetEnriched = industriesEmpty && ratingsEmpty;
+  // The "not yet enriched" caption is about OpenSecrets/Vote Smart data for
+  // members of Congress. An executive official has no PAC industries or
+  // interest-group ratings to be missing, so showing it there would invent a
+  // gap that doesn't exist.
+  const showNotYetEnriched = industriesEmpty && ratingsEmpty && !hasOffice;
 
   return (
     <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
@@ -87,9 +173,9 @@ export default function PoliticianDossier({
           <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text-primary)">
             {politician.name}
           </h1>
-          {(lede || politician.party) && (
+          {(lede || showPartyTag) && (
             <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
-              {politician.party && (
+              {showPartyTag && politician.party && (
                 <PartyTag party={politician.party} className="mr-2 align-middle" />
               )}
               {lede}
@@ -98,6 +184,76 @@ export default function PoliticianDossier({
         </header>
 
         <hr className="border-0 border-t border-(--border) my-10" />
+
+        {/* Office of record — executive / foreign-executive rows (015).
+            Replaces the uncited `notes` prose these pages used to carry.
+            Every row is a fact from a public record, printed beside a link
+            to that record; nothing here is Sift's characterization. */}
+        {hasOffice && (
+          <section className="mb-10">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
+              {c.sections.office}
+            </p>
+            <dl className="space-y-2.5">
+              <OfficeRow
+                label={c.officeLabels.roleTitle}
+                value={role.roleTitle}
+                sourceLabel={c.officeSourceLabels.statute}
+                sourceUrl={role.roleTitleSource}
+              />
+              {(role.roleStartDate || role.roleEndDate) && (
+                <OfficeRow
+                  label={c.officeLabels.held}
+                  value={formatHeldRange(
+                    role.roleStartDate,
+                    role.roleEndDate,
+                    Boolean(role.confirmationVoteUrl),
+                  )}
+                  sourceLabel={c.officeSourceLabels.dates}
+                  sourceUrl={role.roleDatesSource}
+                />
+              )}
+              {role.nominationDate && (
+                <OfficeRow
+                  label={c.officeLabels.nomination}
+                  value={role.nominationDate}
+                  sourceLabel={c.officeSourceLabels.nomination}
+                  sourceUrl={role.nominationUrl}
+                />
+              )}
+              {role.confirmationDate && (
+                <OfficeRow
+                  label={c.officeLabels.confirmation}
+                  value={[role.confirmationDate, role.confirmationVoteResult]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  sourceLabel={c.officeSourceLabels.vote}
+                  sourceUrl={role.confirmationVoteUrl}
+                />
+              )}
+              {role.predecessorName && (
+                // The label tracks which record backs the name. A congress.gov
+                // PN states the predecessor outright; a prior roll-call only
+                // shows the last person the Senate confirmed to the office,
+                // which says nothing about acting officials in between.
+                <OfficeRow
+                  label={
+                    role.predecessorSource?.includes("congress.gov")
+                      ? c.officeLabels.predecessor
+                      : c.officeLabels.predecessorConfirmed
+                  }
+                  value={role.predecessorName}
+                  sourceLabel={
+                    role.predecessorSource?.includes("congress.gov")
+                      ? c.officeSourceLabels.nomination
+                      : c.officeSourceLabels.vote
+                  }
+                  sourceUrl={role.predecessorSource}
+                />
+              )}
+            </dl>
+          </section>
+        )}
 
         {/* Committees */}
         {politician.committees.length > 0 && (

@@ -139,6 +139,23 @@ describe("parseDbPoliticianProfile", () => {
           wikipedia: "https://en.wikipedia.org/wiki/Chuck_Schumer",
         },
         notes: "Senate Majority Leader (119th Congress).",
+        // Migration 015 columns are absent on a sitting-Congress row, so the
+        // whole provenance block parses to nulls rather than being omitted.
+        role: {
+          idSource: null,
+          roleTitle: null,
+          roleTitleSource: null,
+          roleStartDate: null,
+          roleEndDate: null,
+          roleDatesSource: null,
+          nominationDate: null,
+          nominationUrl: null,
+          confirmationDate: null,
+          confirmationVoteUrl: null,
+          confirmationVoteResult: null,
+          predecessorName: null,
+          predecessorSource: null,
+        },
       });
     });
 
@@ -347,5 +364,136 @@ describe("parseDbPoliticianProfile", () => {
       });
       expect(profile?.externalLinks).toEqual({});
     });
+  });
+});
+
+// ─── Role provenance (migration 015) ─────────────────────
+
+/**
+ * The executive rows are the reason migration 015 exists: all 102 carried
+ * uncited biographical prose about living people in `notes`, which
+ * `docs/OPERATING_CONTEXT.md` §5 forbids. The replacement is only an
+ * improvement if a claim cannot outlive the record that backs it — so these
+ * pin the drop-the-pair behaviour, not just the happy path.
+ */
+describe("parseDbPoliticianProfile — role provenance", () => {
+  const execRow = {
+    bioguide_id: "EXEC-AUSTIN-L",
+    name: "Lloyd Austin",
+    party: "D",
+    state: "US",
+    chamber: "executive",
+    committees: [],
+    top_industries_current_cycle: [],
+    interest_group_ratings: {},
+    external_links: { official: "https://www.defense.gov" },
+    notes: null,
+    id_source: "executive",
+    role_title: "Secretary of Defense",
+    role_title_source:
+      "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title10-section113",
+    role_start_date: null,
+    role_end_date: "2025-01-24",
+    role_dates_source:
+      "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1191/vote_119_1_00011.htm",
+    nomination_date: "2021-01-20",
+    nomination_url: "https://www.congress.gov/nomination/117th-congress/78",
+    confirmation_date: "2021-01-22",
+    confirmation_vote_url:
+      "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1171/vote_117_1_00005.htm",
+    confirmation_vote_result: "Confirmed 93-2",
+    predecessor_name: "Mark T. Esper",
+    predecessor_source: "https://www.congress.gov/nomination/117th-congress/78",
+  };
+
+  it("maps a fully sourced executive row", () => {
+    const role = parseDbPoliticianProfile(execRow)!.role;
+    expect(role.roleTitle).toBe("Secretary of Defense");
+    expect(role.confirmationDate).toBe("2021-01-22");
+    expect(role.confirmationVoteResult).toBe("Confirmed 93-2");
+    expect(role.predecessorName).toBe("Mark T. Esper");
+    expect(role.roleEndDate).toBe("2025-01-24");
+  });
+
+  it("recognises foreign-executive as a chamber", () => {
+    // 46 prod rows carry it; it used to null out here, so every foreign head
+    // of state rendered with no chamber label.
+    expect(
+      parseDbPoliticianProfile({ ...execRow, chamber: "foreign-executive" })!
+        .chamber,
+    ).toBe("foreign-executive");
+  });
+
+  it("drops the office title when its source is missing", () => {
+    const role = parseDbPoliticianProfile({
+      ...execRow,
+      role_title_source: null,
+    })!.role;
+    expect(role.roleTitle).toBeNull();
+    expect(role.roleTitleSource).toBeNull();
+  });
+
+  it("drops the source when the title is missing", () => {
+    const role = parseDbPoliticianProfile({ ...execRow, role_title: "  " })!.role;
+    expect(role.roleTitle).toBeNull();
+    expect(role.roleTitleSource).toBeNull();
+  });
+
+  it("drops the confirmation date and tally without the roll-call URL", () => {
+    const role = parseDbPoliticianProfile({
+      ...execRow,
+      confirmation_vote_url: null,
+    })!.role;
+    expect(role.confirmationDate).toBeNull();
+    expect(role.confirmationVoteResult).toBeNull();
+  });
+
+  it("drops the nomination date without the PN record", () => {
+    const role = parseDbPoliticianProfile({
+      ...execRow,
+      nomination_url: "",
+    })!.role;
+    expect(role.nominationDate).toBeNull();
+  });
+
+  it("drops the predecessor without its own source", () => {
+    // predecessor_source, not nomination_url: an incoming administration's
+    // en-bloc nominations carry no "vice <name>" clause, so most predecessors
+    // are sourced to the prior roll-call instead.
+    const role = parseDbPoliticianProfile({
+      ...execRow,
+      predecessor_source: null,
+    })!.role;
+    expect(role.predecessorName).toBeNull();
+    // The nomination date is a separate fact with a separate record.
+    expect(role.nominationDate).toBe("2021-01-20");
+  });
+
+  it("keeps a predecessor sourced to a roll-call rather than a PN record", () => {
+    const role = parseDbPoliticianProfile({
+      ...execRow,
+      predecessor_name: "Mark T. Esper",
+      predecessor_source:
+        "https://www.senate.gov/legislative/LIS/roll_call_votes/vote1161/vote_116_1_00229.htm",
+    })!.role;
+    expect(role.predecessorName).toBe("Mark T. Esper");
+    expect(role.predecessorSource).toContain("senate.gov");
+  });
+
+  it("drops role dates without their source", () => {
+    const role = parseDbPoliticianProfile({
+      ...execRow,
+      role_dates_source: null,
+    })!.role;
+    expect(role.roleStartDate).toBeNull();
+    expect(role.roleEndDate).toBeNull();
+  });
+
+  it("normalises Date objects from pg to YYYY-MM-DD", () => {
+    const role = parseDbPoliticianProfile({
+      ...execRow,
+      confirmation_date: new Date("2021-01-22T00:00:00Z"),
+    })!.role;
+    expect(role.confirmationDate).toBe("2021-01-22");
   });
 });

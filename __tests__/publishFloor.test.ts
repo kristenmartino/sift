@@ -29,6 +29,21 @@ const politician: PoliticianProfile = {
   interestGroupRatings: {},
   externalLinks: {},
   notes: null,
+  role: {
+    idSource: null,
+    roleTitle: null,
+    roleTitleSource: null,
+    roleStartDate: null,
+    roleEndDate: null,
+    roleDatesSource: null,
+    nominationDate: null,
+    nominationUrl: null,
+    confirmationDate: null,
+    confirmationVoteUrl: null,
+    confirmationVoteResult: null,
+    predecessorName: null,
+    predecessorSource: null,
+  },
 };
 
 const org = {
@@ -106,16 +121,71 @@ describe("isPublishablePolitician", () => {
     ).toBe(false);
   });
 
-  it("withholds executive and foreign-executive regardless of content", () => {
-    // Their only substantive content is uncited notes plus a Wikipedia link.
-    for (const chamber of ["executive", "former", null] as const) {
+  it("withholds an executive row with no sourced role (migration 015)", () => {
+    // Pre-015 state: uncited `notes` prose plus a Wikipedia link. Also covers
+    // the 46 foreign heads of state, which have no primary-record substitute.
+    for (const chamber of [
+      "executive",
+      "foreign-executive",
+      "former",
+      null,
+    ] as const) {
       expect(
         isPublishablePolitician({
           ...politician,
           chamber: chamber as PoliticianProfile["chamber"],
+          committees: [],
+          topIndustriesCurrentCycle: [],
         }),
       ).toBe(false);
     }
+  });
+
+  it("publishes an executive row once the office title carries its source", () => {
+    expect(
+      isPublishablePolitician({
+        ...politician,
+        chamber: "executive",
+        committees: [],
+        topIndustriesCurrentCycle: [],
+        role: {
+          ...politician.role,
+          roleTitle: "Secretary of Defense",
+          roleTitleSource:
+            "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title10-section113",
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("withholds an executive role title that lost its source", () => {
+    // parseDbPoliticianProfile should never produce this pair, but the floor
+    // is the last line of defence for a claim about a living person.
+    expect(
+      isPublishablePolitician({
+        ...politician,
+        chamber: "executive",
+        committees: [],
+        topIndustriesCurrentCycle: [],
+        role: {
+          ...politician.role,
+          roleTitle: "Secretary of Defense",
+          roleTitleSource: null,
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it("does not let committees rescue an unsourced executive row", () => {
+    // Executive rows have no committee assignments; if one ever appeared it
+    // must not become a back door around the sourcing requirement.
+    expect(
+      isPublishablePolitician({
+        ...politician,
+        chamber: "executive",
+        committees: ["Appropriations"],
+      }),
+    ).toBe(false);
   });
 });
 

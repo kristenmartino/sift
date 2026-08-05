@@ -26,6 +26,21 @@ const politician: PoliticianProfile = {
     wikipedia: "https://en.wikipedia.org/wiki/Lisa_Murkowski",
   },
   notes: "Uncited prose that must never reach structured data.",
+  role: {
+    idSource: null,
+    roleTitle: null,
+    roleTitleSource: null,
+    roleStartDate: null,
+    roleEndDate: null,
+    roleDatesSource: null,
+    nominationDate: null,
+    nominationUrl: null,
+    confirmationDate: null,
+    confirmationVoteUrl: null,
+    confirmationVoteResult: null,
+    predecessorName: null,
+    predecessorSource: null,
+  },
 };
 
 const org: OrgProfile = {
