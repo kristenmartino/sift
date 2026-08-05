@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import OutletDossier from "@/components/outlet/OutletDossier";
 import { getOutletBySlug, getRecentArticlesByOutletSlug } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
+import { dossierRobotsMeta, isPublishableOutlet } from "@/lib/publishFloor";
+import { jsonLdString, outletJsonLd } from "@/lib/structuredData";
 import type { Article, CategoryId } from "@/lib/types";
 
 // ISR — same heartbeat as the landing page (10 minutes). The dossier reads
@@ -29,6 +31,10 @@ export async function generateMetadata({
   return {
     title: `${outlet.name} — Outlet dossier`,
     description,
+    // Below-floor dossiers are not advertised. Spread, not assign: a
+    // `robots` key present here would override the root config even when
+    // undefined, dropping max-image-preview. See lib/publishFloor.ts.
+    ...dossierRobotsMeta(isPublishableOutlet(outlet)),
     openGraph: {
       title: fullTitle,
       description,
@@ -77,5 +83,13 @@ export default async function OutletDossierPage({ params }: DossierRouteProps) {
     };
   });
 
-  return <OutletDossier outlet={outlet} recentArticles={recentArticles} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdString(outletJsonLd(outlet)) }}
+      />
+      <OutletDossier outlet={outlet} recentArticles={recentArticles} />
+    </>
+  );
 }

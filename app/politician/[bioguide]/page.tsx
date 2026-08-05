@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 
 import PoliticianDossier from "@/components/politician/PoliticianDossier";
 import { getPoliticianByBioguide } from "@/lib/db";
+import { dossierRobotsMeta, isPublishablePolitician } from "@/lib/publishFloor";
+import { jsonLdString, politicianJsonLd } from "@/lib/structuredData";
 
 // ISR — same heartbeat as the landing + outlet dossier (10 minutes).
 // Politician metadata changes slowly (committees shift quarterly,
@@ -33,6 +35,10 @@ export async function generateMetadata({
   return {
     title: `${politician.name} — Politician dossier`,
     description,
+    // Below-floor dossiers are not advertised. Spread, not assign: a
+    // `robots` key present here would override the root config even when
+    // undefined, dropping max-image-preview. See lib/publishFloor.ts.
+    ...dossierRobotsMeta(isPublishablePolitician(politician)),
     openGraph: {
       title: fullTitle,
       description,
@@ -52,5 +58,17 @@ export default async function PoliticianDossierPage({
   const { bioguide } = await params;
   const politician = await getPoliticianByBioguide(bioguide);
   if (!politician) notFound();
-  return <PoliticianDossier politician={politician} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        // Serialized by lib/structuredData.ts, which escapes `<`. Emits only
+        // fields the page itself renders — notably not `notes`.
+        dangerouslySetInnerHTML={{
+          __html: jsonLdString(politicianJsonLd(politician)),
+        }}
+      />
+      <PoliticianDossier politician={politician} />
+    </>
+  );
 }

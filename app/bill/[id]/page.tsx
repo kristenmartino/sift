@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import BillDossier from "@/components/bill/BillDossier";
 import { getBillById, getPoliticianByBioguide } from "@/lib/db";
 import { formatBillIdDisplay } from "@/lib/bill";
+import { dossierRobotsMeta, isPublishableBill } from "@/lib/publishFloor";
+import { billJsonLd, jsonLdString } from "@/lib/structuredData";
 
 // ISR — same heartbeat as the other dossier routes.
 export const revalidate = 600;
@@ -29,6 +31,10 @@ export async function generateMetadata({
   return {
     title: `${display} — Bill dossier`,
     description,
+    // Below-floor dossiers are not advertised. Spread, not assign: a
+    // `robots` key present here would override the root config even when
+    // undefined, dropping max-image-preview. See lib/publishFloor.ts.
+    ...dossierRobotsMeta(isPublishableBill(bill)),
     openGraph: {
       title: fullTitle,
       description,
@@ -55,5 +61,13 @@ export default async function BillDossierPage({ params }: BillRouteProps) {
     ? await getPoliticianByBioguide(bill.sponsorBioguide)
     : null;
 
-  return <BillDossier bill={bill} sponsor={sponsor} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdString(billJsonLd(bill)) }}
+      />
+      <BillDossier bill={bill} sponsor={sponsor} />
+    </>
+  );
 }
