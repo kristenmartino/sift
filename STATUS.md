@@ -142,9 +142,25 @@ Only `/outlet/*` renders an article list, so these pages are profile-only: **the
 - **The nomination's verbatim *"vice \<name\>"* clause covers only 2 of 37 rows.** An incoming administration files its Cabinet en bloc and those records carry no clause — PN11-1 is just *"Scott Bessent, of South Carolina, to be Secretary of the Treasury"*, because the office falls vacant at the transition rather than "vice" a named person. The other 35 come from the Senate's previous confirmation to the same office, which is a **narrower** claim: it is silent about acting officials, who are never confirmed. `predecessor_source` records which of the two it was and the UI labels them differently — *"Preceded by"* vs *"Previous Senate-confirmed holder"*. Collapsing them into one label would have been the small unsourced embellishment this whole migration exists to remove.
 - **Inferring a former official's end date from the successor's confirmation is only safe over a contiguous scrape.** A sparse range put Hillary Clinton in office until **2021** (Blinken) because Kerry's 2013 confirmation had never been fetched. The scrape is now contiguous and the inference refuses to cross an unread Congress.
 
-**Result: 47 rows published, 55 withheld, 102 cleaned.** The publish gate in `listSitemapEntries()` and `lib/publishFloor.ts` is no longer `chamber IN ('house','senate')` — it is the thing it always meant, sourcing. Sitemap **674 → 721 URLs**, no duplicates. Withheld rows still render and still resolve entity chips; they simply aren't advertised.
+**Result: 58 rows published, 44 withheld, 102 cleaned.** The publish gate in `listSitemapEntries()` and `lib/publishFloor.ts` is no longer `chamber IN ('house','senate')` — it is the thing it always meant, sourcing. Sitemap **674 → 732 URLs**, no duplicates. Withheld rows still render and still resolve entity chips; they simply aren't advertised.
 
-**Still open — the 46 foreign-executive rows.** Their notes are cleared, but none is published: a foreign head of government has no U.S. Code section, no Senate roll-call and no .gov site, and the citation substrate that makes the U.S. rows defensible has no equivalent. Sourcing them to 46 national government sites is a real project, and it is the same work **Q8** (US-only vs. global) gates. Nine U.S. rows are also withheld — White House staff, DOGE, and Fauci hold or held posts with no statutory record naming them.
+### The 46 foreign-executive rows: 11 sourced, 35 withheld
+
+Attempted 2026-08-05. Each was probed against its own government's official site, requiring the page to name **both** the office and the person — a U.S. statute establishes an office without naming anyone and the officeholder is evidenced separately by a roll-call, but a foreign government's page is the only record here, so it has to carry the whole claim. `verify_role_sources.py` enforces that via a `verify_name` column.
+
+**11 verify and now publish**: Starmer and Sunak (gov.uk person pages), Macron (elysee.fr), Putin (kremlin.ru biography), Carney (pm.gc.ca), Albanese (pm.gov.au), von der Leyen (commission.europa.eu), Wong (pmo.gov.sg), Guterres (un.org/sg), Meloni (governo.it), Sharif (pmo.gov.pk).
+
+**35 do not, for three reasons that are worth separating:**
+
+1. **Unreachable from CI** — Modi, Tusk, Ramaphosa, Zelensky, Netanyahu, Mitsotakis, Lee, Erdoğan, Khamenei and others return 403/404 or time out. These pages very likely exist and a human can open them; the rule is simply that we do not cite what we have not fetched. This is the fixable bucket.
+2. **The page is a news feed, not a record.** Several official homepages say "President Tinubu" today and will not next term. That satisfies "has a URL" while failing the actual standard — the same shape as the Wikipedia link this migration removed. What makes the U.S. rows work is that a U.S. Code section and a 2021 roll-call are *permanent and addressable*. Only a person-specific official biography page is the foreign equivalent, and most governments don't publish one.
+3. **Former officeholders have no archive.** Of 13 formers only Sunak had a durable official page. An office page names the incumbent, so publishing Merkel or Trudeau from one would assert they still hold the office — precisely the defect being fixed.
+
+**The check caught a live error.** `gov.uk` states Keir Starmer was Prime Minister **5 July 2024 to 20 July 2026**. He left office three weeks ago. Sift's uncited note still read *"Prime Minister of the United Kingdom (since July 2024)"*, and sourcing him to `gov.uk`'s office page rather than his person page would have published a false claim about a living person. **This population is stale in ways nothing currently detects** — there is no refresh job on any profile table, and for foreign rows no equivalent of the Senate roll-call that dates a U.S. handover. Treat the 35 withheld rows as unverified data, not merely unpublished.
+
+Nine U.S. rows are also withheld — White House staff, DOGE, and Fauci hold or held posts with no statutory record naming them.
+
+**Q8 is not settled by this.** Publishing 11 foreign dossiers is a smaller commitment than a global posture, but it is not zero; if Q8 closes "US-only", these 11 are what gets withdrawn.
 
 ## Data integrity — open, surfaced 2026-07-27
 
