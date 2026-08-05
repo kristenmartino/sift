@@ -348,7 +348,12 @@ export type PoliticianChamber =
   | "house"
   | "former"
   | "executive"
-  | "foreign-executive";
+  | "foreign-executive"
+  // Supreme Court Justices. sift-api migration 016 moved them out of the
+  // orphaned `judge_profiles` table into `politician_profiles` rather than
+  // adding a fifth entity type, which 015 had already reserved
+  // `id_source = 'scotus'` for.
+  | "scotus";
 
 /**
  * Structured role provenance for executive-branch and foreign officials
