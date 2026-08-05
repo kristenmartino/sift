@@ -40,9 +40,17 @@ interface CivicPageProps {
 
 export default async function CivicPage({ searchParams }: CivicPageProps) {
   const params = await searchParams;
+  // 'executive' and 'foreign-executive' were unreachable from this index
+  // until migration 015 gave those rows sourced content worth linking to.
+  const CHAMBER_FILTERS: readonly PoliticianChamber[] = [
+    "senate",
+    "house",
+    "executive",
+    "foreign-executive",
+  ];
   const chamberFilter: PoliticianChamber | null =
-    params.chamber === "senate" || params.chamber === "house"
-      ? params.chamber
+    CHAMBER_FILTERS.includes(params.chamber as PoliticianChamber)
+      ? (params.chamber as PoliticianChamber)
       : null;
 
   const [politicians, orgs, bills] = await Promise.all([

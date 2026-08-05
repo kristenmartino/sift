@@ -678,7 +678,12 @@ export async function getPoliticianByBioguide(
     const result = await pool.query<DbPoliticianProfileRow>(
       `SELECT bioguide_id, name, party, state, chamber,
               committees, top_industries_current_cycle, interest_group_ratings,
-              external_links, notes
+              external_links, notes,
+              id_source, role_title, role_title_source,
+              role_start_date, role_end_date, role_dates_source,
+              nomination_date, nomination_url,
+              confirmation_date, confirmation_vote_url,
+              confirmation_vote_result, predecessor_name
        FROM politician_profiles
        WHERE bioguide_id = $1
        LIMIT 1`,
@@ -976,13 +981,22 @@ export type SitemapEntry = { path: string; lastModified: Date };
  *
  * Per type, and why:
  *
- * - **politician** — sitting Congress with committees or PAC industries.
- *   `chamber IN ('house','senate')` deliberately excludes the 102
- *   executive/foreign-executive rows: their only substantive content is the
- *   uncited `notes` prose plus a Wikipedia link, and `founded_year` was
- *   dropped from orgs rather than sourced to Wikipedia (STATUS.md:109-113).
- *   Publishing uncited claims about living people is the sharper version of
- *   that same mistake. Source those rows and they qualify.
+ * - **politician** — sitting Congress with committees or PAC industries, OR
+ *   an executive/foreign-executive row carrying a sourced statutory role.
+ *   The `chamber IN ('house','senate')` restriction that previously excluded
+ *   all 102 executive rows was correct for the data as it stood: their only
+ *   substantive content was uncited `notes` prose about living people plus a
+ *   Wikipedia link, and `founded_year` was dropped from orgs rather than
+ *   sourced to Wikipedia (STATUS.md:109-113). Migration 015 removed that
+ *   prose and replaced it with primary-record fields, so the gate is now the
+ *   thing it always meant — sourcing, not chamber. `role_title_source` is a
+ *   statute on uscode.house.gov, a constitutional provision at the National
+ *   Archives, or the Senate roll-call that confirmed the appointment; every
+ *   one was refetched and asserted to name the office by
+ *   `sift-api/scripts/verify_role_sources.py`. Rows still lacking it — the
+ *   foreign heads of state, and U.S. staff posts with no statutory record —
+ *   keep rendering and keep resolving entity chips, they just aren't
+ *   advertised.
  * - **org** — at least one fully-sourced substantive field. Same rule
  *   `listCitedAgencies` applies to /agencies, widened past governance.
  * - **bill** — a status and at least one external link.
@@ -993,9 +1007,12 @@ export async function listSitemapEntries(): Promise<SitemapEntry[]> {
     const result = await pool.query<{ path: string; updated_at: Date | null }>(
       `SELECT '/politician/' || bioguide_id AS path, updated_at
          FROM politician_profiles
-        WHERE chamber IN ('house', 'senate')
-          AND (jsonb_array_length(COALESCE(committees, '[]'::jsonb)) > 0
-            OR jsonb_array_length(COALESCE(top_industries_current_cycle, '[]'::jsonb)) > 0)
+        WHERE (chamber IN ('house', 'senate')
+               AND (jsonb_array_length(COALESCE(committees, '[]'::jsonb)) > 0
+                 OR jsonb_array_length(COALESCE(top_industries_current_cycle, '[]'::jsonb)) > 0))
+           OR (chamber IN ('executive', 'foreign-executive')
+               AND role_title IS NOT NULL
+               AND role_title_source IS NOT NULL)
        UNION ALL
        SELECT '/org/' || slug, updated_at
          FROM org_profiles

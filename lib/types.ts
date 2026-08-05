@@ -343,7 +343,54 @@ export interface BillProfile {
  * Chambers a curated politician can sit in. Mirrors the values stored in
  * `politician_profiles.chamber`; the seed scripts validate against this set.
  */
-export type PoliticianChamber = "senate" | "house" | "former" | "executive";
+export type PoliticianChamber =
+  | "senate"
+  | "house"
+  | "former"
+  | "executive"
+  | "foreign-executive";
+
+/**
+ * Structured role provenance for executive-branch and foreign officials
+ * (migration 015). Every claim-bearing field is paired with the source that
+ * backs it, so the UI can refuse to render one without the other — the rule
+ * migration 013 established for org budgets, applied to living people, whom
+ * `docs/OPERATING_CONTEXT.md` §5 singles out.
+ *
+ * These rows carried freeform `notes` prose until 015 ("First African-American
+ * Secretary of Defense", "Former hedge-fund executive") with only a Wikipedia
+ * link behind it. Since politician pages render no article list, that prose
+ * WAS the page, which is why the rows were withheld from the sitemap.
+ */
+export interface PoliticianRoleProvenance {
+  /** Provenance of bioguideId: 'bioguide' means a real Congress.gov ID. */
+  idSource: string | null;
+  /** Office title exactly as the establishing record states it. */
+  roleTitle: string | null;
+  /** Statute, constitutional provision, or official record naming the office. */
+  roleTitleSource: string | null;
+  roleStartDate: string | null;
+  /** When a Senate-confirmed successor took the office, or a term ended. */
+  roleEndDate: string | null;
+  roleDatesSource: string | null;
+  nominationDate: string | null;
+  /** congress.gov PN record — sources nominationDate AND predecessorName. */
+  nominationUrl: string | null;
+  confirmationDate: string | null;
+  /** senate.gov roll-call — sources confirmationDate AND the result. */
+  confirmationVoteUrl: string | null;
+  /** Verbatim Senate outcome, e.g. "Confirmed 50-50". Never recomputed. */
+  confirmationVoteResult: string | null;
+  predecessorName: string | null;
+  /**
+   * Which record backs `predecessorName`, and therefore what it means. A
+   * congress.gov PN URL means the nomination's verbatim "vice <name>" clause
+   * named them. A senate.gov roll-call means it is the Senate's previous
+   * confirmation to the office — narrower, and silent about acting officials,
+   * who are never confirmed. The UI must say the narrower thing.
+   */
+  predecessorSource: string | null;
+}
 
 /**
  * Single donor-industry entry under
@@ -392,6 +439,12 @@ export interface PoliticianProfile {
   interestGroupRatings: Record<string, number | string>;
   externalLinks: PoliticianExternalLinks;
   notes: string | null;
+  /**
+   * Populated for executive / foreign-executive rows (migration 015); all
+   * fields null for sitting Congress, whose provenance is committees + PAC
+   * industries instead.
+   */
+  role: PoliticianRoleProvenance;
 }
 
 /**

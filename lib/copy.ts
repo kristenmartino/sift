@@ -263,9 +263,40 @@ export const COPY = {
       interestGroupRatings: "Interest-group ratings",
       links: "Where to read more",
       notes: "Notes",
+      // Migration 015. Committees / PAC industries / interest-group ratings
+      // are all N/A for an executive official, so without this section every
+      // conditional in PoliticianDossier collapses and the page is a name and
+      // a chamber label.
+      office: "Office of record",
     },
+    // Row labels in the executive "Office of record" section. Each value on
+    // the page is followed by the record it came from — no label here asserts
+    // anything the linked record doesn't state.
+    officeLabels: {
+      roleTitle: "Office",
+      held: "Held",
+      nomination: "Nominated",
+      confirmation: "Confirmed by the Senate",
+      // Two different claims, so two different labels. The nomination record
+      // naming a predecessor is a flat fact. A prior roll-call only shows whom
+      // the Senate last confirmed — acting officials are never confirmed, so
+      // "Preceded by" would overstate it.
+      predecessor: "Preceded by",
+      predecessorConfirmed: "Previous Senate-confirmed holder",
+    },
+    // Exact phrasing matters here. The Senate roll-call dates the successor's
+    // confirmation, not the day the incumbent walked out — so the page says
+    // what the record says and nothing more.
+    officeSourceLabels: {
+      statute: "Office established by",
+      dates: "Term record",
+      nomination: "Nomination record",
+      vote: "Roll-call vote",
+    },
+    officeSuccessorNote: "until a Senate-confirmed successor took the office",
     // External-link labels in stable display order.
     externalLinkLabels: {
+      official: "Official site",
       govtrack: "GovTrack",
       opensecrets: "OpenSecrets",
       votesmart: "Vote Smart",

@@ -110,7 +110,12 @@ export function politicianJsonLd(p: PoliticianProfile): Record<string, unknown> 
     name: p.name,
     // Congress.gov's canonical id. A stable public identifier, not a claim.
     identifier: p.bioguideId,
-    jobTitle: CHAMBER_ROLE[chamber] ?? undefined,
+    // Executive rows carry a statutory office title that was verified against
+    // the record establishing it (migration 015), which beats the generic
+    // chamber role. It survives parsing only when its source did, so emitting
+    // it here does not restate an uncited claim — the exception this file's
+    // header carves out for org `selfDescription`, on the same reasoning.
+    jobTitle: p.role.roleTitle ?? CHAMBER_ROLE[chamber] ?? undefined,
     // Committees are rendered on the page and come from the canonical
     // unitedstates/congress-legislators YAMLs via scripts/scrape_committees.py.
     memberOf: [

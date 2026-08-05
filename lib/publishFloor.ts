@@ -43,18 +43,29 @@ function present(s: string | null | undefined): boolean {
 }
 
 /**
- * Sitting Congress with committee assignments or PAC industry data.
+ * Sitting Congress with committee assignments or PAC industry data, OR an
+ * executive official whose office title carries its primary record.
  *
- * The chamber restriction excludes the 102 executive / foreign-executive
- * rows. Their only substantive content is the uncited `notes` prose plus a
- * Wikipedia link, and `founded_year` was dropped from orgs rather than
- * sourced to Wikipedia (STATUS.md:109-113) — publishing uncited claims about
- * a living person is the sharper version of that same mistake. Source those
- * rows with primary records and they qualify.
+ * The chamber restriction used to exclude all 102 executive /
+ * foreign-executive rows, and was right to: their only substantive content
+ * was uncited `notes` prose about a living person plus a Wikipedia link, and
+ * `founded_year` was dropped from orgs rather than sourced to Wikipedia
+ * (STATUS.md:109-113). Migration 015 replaced that prose with primary-record
+ * fields, so what gates these rows is now sourcing rather than chamber.
+ *
+ * `roleTitle` is only ever non-null when `roleTitleSource` came with it —
+ * `lib/politician.ts:asRoleProvenance` drops the pair otherwise — so the
+ * second clause is a sourcing test even though it reads like a presence test.
+ * The 46 foreign heads of state have no such record and stay below the floor.
  */
 export function isPublishablePolitician(p: PoliticianProfile): boolean {
-  if (p.chamber !== "house" && p.chamber !== "senate") return false;
-  return p.committees.length > 0 || p.topIndustriesCurrentCycle.length > 0;
+  if (p.chamber === "house" || p.chamber === "senate") {
+    return p.committees.length > 0 || p.topIndustriesCurrentCycle.length > 0;
+  }
+  if (p.chamber === "executive" || p.chamber === "foreign-executive") {
+    return present(p.role.roleTitle) && present(p.role.roleTitleSource);
+  }
+  return false;
 }
 
 /**
