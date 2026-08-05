@@ -948,6 +948,84 @@ export async function listAllBillsLite(): Promise<BillListItem[]> {
   }
 }
 
+// ─── Sitemap ───────────────────────────────────────────
+
+export type SitemapEntry = { path: string; lastModified: Date };
+
+/**
+ * Dossier URLs that are substantial enough to advertise to crawlers.
+ *
+ * ⚠️ INVARIANT: the WHERE clauses below and the predicates in
+ * `lib/publishFloor.ts` express the same rule and must agree. Two
+ * implementations exist because the sitemap needs a set-level query while the
+ * dossier routes need a check on a profile object already in hand — the
+ * routes use the predicates to emit `robots: { index: false }` for anything
+ * this query omits. Change one, change the other;
+ * `__tests__/publishFloor.test.ts` pins the rule in prose and examples.
+ *
+ * This is the publish floor, generalised from `listCitedAgencies` above: the
+ * catalog the linker knows about and the set we ask Google to index are two
+ * different things. A thin row still renders and still resolves a chip; it
+ * just isn't advertised. Google's scaled-content-abuse policy targets exactly
+ * "one row of data poured into a template", and 838 dossiers of wildly uneven
+ * depth is that shape if published wholesale.
+ *
+ * Only `/outlet/*` renders an article list; politician, org and bill pages are
+ * profile-only, so for those three the floor is entirely about how populated
+ * the row is.
+ *
+ * Per type, and why:
+ *
+ * - **politician** — sitting Congress with committees or PAC industries.
+ *   `chamber IN ('house','senate')` deliberately excludes the 102
+ *   executive/foreign-executive rows: their only substantive content is the
+ *   uncited `notes` prose plus a Wikipedia link, and `founded_year` was
+ *   dropped from orgs rather than sourced to Wikipedia (STATUS.md:109-113).
+ *   Publishing uncited claims about living people is the sharper version of
+ *   that same mistake. Source those rows and they qualify.
+ * - **org** — at least one fully-sourced substantive field. Same rule
+ *   `listCitedAgencies` applies to /agencies, widened past governance.
+ * - **bill** — a status and at least one external link.
+ * - **outlet** — at least one rating carrying its source URL.
+ */
+export async function listSitemapEntries(): Promise<SitemapEntry[]> {
+  try {
+    const result = await pool.query<{ path: string; updated_at: Date | null }>(
+      `SELECT '/politician/' || bioguide_id AS path, updated_at
+         FROM politician_profiles
+        WHERE chamber IN ('house', 'senate')
+          AND (jsonb_array_length(COALESCE(committees, '[]'::jsonb)) > 0
+            OR jsonb_array_length(COALESCE(top_industries_current_cycle, '[]'::jsonb)) > 0)
+       UNION ALL
+       SELECT '/org/' || slug, updated_at
+         FROM org_profiles
+        WHERE (governance_structure IS NOT NULL AND governance_source IS NOT NULL)
+           OR (self_description IS NOT NULL AND self_description_source IS NOT NULL)
+           OR (annual_budget_usd IS NOT NULL AND annual_budget_source IS NOT NULL)
+       UNION ALL
+       SELECT '/bill/' || bill_id, updated_at
+         FROM bill_profiles
+        WHERE status IS NOT NULL
+          AND external_links::text NOT IN ('{}', 'null')
+       UNION ALL
+       SELECT '/outlet/' || slug, updated_at
+         FROM outlet_profiles
+        WHERE (allsides_rating IS NOT NULL AND allsides_url IS NOT NULL)
+           OR (mbfc_factual IS NOT NULL AND mbfc_url IS NOT NULL)`,
+    );
+    return result.rows.map((r) => ({
+      path: r.path,
+      lastModified: r.updated_at ?? new Date(),
+    }));
+  } catch (err) {
+    // Same graceful degradation as the other profile queries: a pre-Phase-3
+    // database yields a static-routes-only sitemap rather than a 500.
+    const msg = String(err);
+    if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
 // ─── Outlet Dossier (Phase 2.C.1) ──────────────────────
 
 /**

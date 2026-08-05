@@ -68,6 +68,23 @@ export const metadata: Metadata = {
     description:
       "The civic context the news assumes. The framing across the political spectrum. The money behind every story.",
   },
+  // max-image-preview:large is a robots *meta* directive, not a robots.txt
+  // one — Google reads it from the meta tag or the X-Robots-Tag header and
+  // ignores it in robots.txt. Without it, dossier and article results get a
+  // thumbnail instead of a full-size image (GROWTH_STRATEGY.md:68).
+  // Set at the root so every route inherits it; a route that should not be
+  // indexed overrides `robots` in its own generateMetadata.
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 // Browser chrome (iOS Safari address bar, Android task switcher) follows the OS

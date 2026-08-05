@@ -35,7 +35,11 @@ export default function OrgDossier({ org }: OrgDossierProps) {
   const ledeBits: string[] = [];
   if (typeLabel) ledeBits.push(typeLabel);
   if (org.foundedYear) ledeBits.push(c.foundedYearLabel(org.foundedYear));
-  if (budgetLabel && org.annualBudgetFy)
+  // Source is required here as well as on the citation line below. lib/org.ts
+  // already nulls the whole triple unless usd + fy + source are all present,
+  // so this is defense in depth against a profile built by another path —
+  // the lede must never be the one place an uncited figure gets through.
+  if (budgetLabel && org.annualBudgetFy && org.annualBudgetSource)
     ledeBits.push(c.annualBudgetLabel(budgetLabel, org.annualBudgetFy));
 
   // External links: stable order; forward-compat for unknown keys.
