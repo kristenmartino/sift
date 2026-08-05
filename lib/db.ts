@@ -1010,7 +1010,7 @@ export async function listSitemapEntries(): Promise<SitemapEntry[]> {
         WHERE (chamber IN ('house', 'senate')
                AND (jsonb_array_length(COALESCE(committees, '[]'::jsonb)) > 0
                  OR jsonb_array_length(COALESCE(top_industries_current_cycle, '[]'::jsonb)) > 0))
-           OR (chamber IN ('executive', 'foreign-executive')
+           OR (chamber IN ('executive', 'foreign-executive', 'scotus')
                AND role_title IS NOT NULL
                AND role_title_source IS NOT NULL)
        UNION ALL

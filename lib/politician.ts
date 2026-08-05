@@ -24,6 +24,7 @@ const CHAMBER_VALUES: ReadonlySet<string> = new Set([
   // nulled out here, so every foreign head of state rendered with no chamber
   // label at all.
   "foreign-executive",
+  "scotus",
 ]);
 
 // ─── Display labels ───────────────────────────────────────────────────
@@ -53,6 +54,7 @@ const CHAMBER_LABELS: Record<PoliticianChamber, string> = {
   former: "Former member of Congress",
   executive: "Executive branch",
   "foreign-executive": "Head of state or government",
+  scotus: "Supreme Court of the United States",
 };
 
 /** Human label for a chamber enum, e.g. "senate" → "U.S. Senate". */
@@ -69,6 +71,10 @@ const ROLE_FROM_CHAMBER: Record<PoliticianChamber, string> = {
   former: "Former member of Congress",
   executive: "Executive branch official",
   "foreign-executive": "Head of state or government",
+  // Deliberately generic: the specific office (Chief vs Associate Justice) is
+  // in `role.roleTitle`, which carries its own source. This label must not
+  // assert which one a given row holds.
+  scotus: "Justice of the Supreme Court",
 };
 
 /**

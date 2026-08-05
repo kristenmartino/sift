@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<title>Sift — one article, end to end</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+/* ════════════════════════════════════════════════════════════════
+   TOKENS — inherited from sift-product-os.html, Sift's own identity.
+   One accent carries meaning: vermillion = this step costs money.
+   ════════════════════════════════════════════════════════════════ */
+:root{
+  --paper:#f7f3ec; --paper-2:#fffdf9; --paper-3:#f1ece2; --recess:#ede7db;
+  --ink:#1e1b17; --ink-2:#5c554c; --ink-3:#8e8578;
+  --rule:#ddd4c6; --rule-2:#eae3d7;
+  --vermillion:#c8452a; --vermillion-wash:rgba(200,69,42,.09);
+  --moss:#4a6b4f; --moss-wash:rgba(74,107,79,.10);
+  --slate:#3f5568;
+  --sh:0 1px 2px rgba(30,27,23,.05), 0 8px 24px -16px rgba(30,27,23,.28);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,ui-serif,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,"Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --col:66ch; --wide:1060px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#15130f; --paper-2:#1c1915; --paper-3:#221e18; --recess:#191510;
+    --ink:#ece5d9; --ink-2:#a89f92; --ink-3:#7d7568;
+    --rule:#3a342b; --rule-2:#2a251e;
+    --vermillion:#e8735a; --vermillion-wash:rgba(232,115,90,.13);
+    --moss:#8fb894; --moss-wash:rgba(143,184,148,.13);
+    --slate:#8fabc4;
+    --sh:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15130f; --paper-2:#1c1915; --paper-3:#221e18; --recess:#191510;
+  --ink:#ece5d9; --ink-2:#a89f92; --ink-3:#7d7568;
+  --rule:#3a342b; --rule-2:#2a251e;
+  --vermillion:#e8735a; --vermillion-wash:rgba(232,115,90,.13);
+  --moss:#8fb894; --moss-wash:rgba(143,184,148,.13);
+  --slate:#8fabc4;
+  --sh:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.7);
+}
+:root[data-theme="light"]{
+  --paper:#f7f3ec; --paper-2:#fffdf9; --paper-3:#f1ece2; --recess:#ede7db;
+  --ink:#1e1b17; --ink-2:#5c554c; --ink-3:#8e8578;
+  --rule:#ddd4c6; --rule-2:#eae3d7;
+  --vermillion:#c8452a; --vermillion-wash:rgba(200,69,42,.09);
+  --moss:#4a6b4f; --moss-wash:rgba(74,107,79,.10);
+  --slate:#3f5568;
+  --sh:0 1px 2px rgba(30,27,23,.05), 0 8px 24px -16px rgba(30,27,23,.28);
+}
+*{box-sizing:border-box}
+html{overflow-x:clip}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--serif); font-size:17px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--vermillion); outline-offset:2px; border-radius:2px}
+::selection{background:var(--vermillion-wash)}
+
+/* ═══ RAIL — the pipeline as a measured strip ═══ */
+.rail{position:sticky; top:0; z-index:50; background:var(--paper); border-bottom:1px solid var(--rule)}
+.rail-in{max-width:var(--wide); margin:0 auto; padding:12px clamp(16px,4vw,36px) 0;
+  display:flex; flex-direction:column; gap:9px}
+.rail-top{display:flex; align-items:center; gap:13px; flex-wrap:wrap}
+.diamond{width:12px; height:12px; background:var(--vermillion); transform:rotate(45deg); flex:none}
+.mark{font-family:var(--serif); font-size:20px; font-weight:600; letter-spacing:-.02em}
+.mark-sub{font-family:var(--mono); font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.rail-tools{margin-left:auto; display:flex; gap:6px}
+.btn{font-family:var(--mono); font-size:12px; color:var(--ink-2); background:var(--paper-2);
+  border:1px solid var(--rule); border-radius:2px; padding:5px 11px; cursor:pointer; white-space:nowrap}
+.btn:hover{color:var(--ink); border-color:var(--ink-3)}
+.btn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.btn-k{font-family:var(--mono); font-size:10px; opacity:.5; margin-left:5px}
+
+.axis{padding-bottom:10px}
+.acts,.ticks{display:grid; gap:2px}
+.acts{margin-bottom:5px}
+.act-span{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); border-top:1px solid var(--rule-2); padding:4px 10px 0 0; white-space:nowrap}
+.act-span.on{color:var(--vermillion); border-top-color:var(--vermillion)}
+.tick{position:relative; height:24px; padding:4px 0 0; cursor:pointer; background:none;
+  border:0; border-top:2px solid var(--rule); font-family:var(--mono); font-size:11px;
+  color:var(--ink-3); display:flex; align-items:flex-start; justify-content:center}
+.tick:hover{color:var(--ink); border-top-color:var(--ink-3)}
+.tick.seen{border-top-color:var(--ink-3); color:var(--ink-2)}
+.tick.on{border-top-color:var(--vermillion); color:var(--vermillion); font-weight:700}
+.tick.on::before{content:""; position:absolute; top:-5px; left:50%; transform:translateX(-50%);
+  width:8px; height:8px; border-radius:50%; background:var(--vermillion);
+  box-shadow:0 0 0 4px var(--vermillion-wash)}
+
+/* ═══ STAGE ═══ */
+.stage{max-width:var(--wide); margin:0 auto; padding:0 clamp(16px,4vw,36px) 90px}
+.view[hidden]{display:none}
+.step{padding-top:42px}
+@media (prefers-reduced-motion:no-preference){
+  .step.anim{animation:rise .3s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+}
+.head{display:grid; grid-template-columns:74px minmax(0,1fr); gap:0 20px; align-items:start}
+.num{font-family:var(--mono); font-size:40px; font-weight:500; line-height:.85;
+  letter-spacing:-.04em; color:var(--rule); font-variant-numeric:tabular-nums}
+.step.paid .num{color:var(--vermillion)}
+.eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 7px}
+h2.title{font-family:var(--serif); font-size:clamp(25px,3.4vw,34px); font-weight:600;
+  letter-spacing:-.022em; line-height:1.14; margin:0; text-wrap:balance}
+.lede{grid-column:2; max-width:var(--col); margin:15px 0 0; font-size:19.5px; line-height:1.5;
+  color:var(--ink-2); font-style:italic; text-wrap:pretty}
+.body{grid-column:2; max-width:var(--col); margin-top:20px; font-family:var(--sans); font-size:15.5px; line-height:1.62}
+/* Responsive overrides live at the end of this sheet — see RESPONSIVE. */
+.body>p{margin:0 0 14px; text-wrap:pretty}
+.body>p:last-child{margin-bottom:0}
+.body h3{font-family:var(--mono); font-size:11.5px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin:26px 0 10px; padding-bottom:5px; border-bottom:1px solid var(--rule-2)}
+.body ul{margin:0 0 14px; padding-left:0; list-style:none}
+.body li{position:relative; padding-left:19px; margin-bottom:8px; text-wrap:pretty}
+.body li::before{content:""; position:absolute; left:2px; top:.72em; width:7px; height:1.5px; background:var(--ink-3)}
+code,.k{font-family:var(--mono); font-size:.9em; background:var(--recess);
+  border:1px solid var(--rule-2); border-radius:2px; padding:1px 4.5px; word-break:break-word}
+.pull{margin:20px 0; padding:13px 0 13px 17px; border-left:2px solid var(--vermillion);
+  font-family:var(--serif); font-size:17px; font-style:italic; line-height:1.5; color:var(--ink)}
+.pull .src{display:block; margin-top:8px; font-family:var(--mono); font-size:10.5px; font-style:normal;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3)}
+
+/* ═══ THE SPINE — one article, tracked ═══ */
+.spine{grid-column:2; max-width:none; margin:26px 0 0}
+.spine-in{background:var(--paper-2); border:1px solid var(--rule); border-left:3px solid var(--moss);
+  border-radius:3px; padding:15px 18px 13px; box-shadow:var(--sh)}
+.spine-h{font-family:var(--mono); font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--moss); margin-bottom:11px; display:flex; gap:9px; align-items:baseline; flex-wrap:wrap}
+.spine-h em{font-style:normal; color:var(--ink-3); letter-spacing:.04em}
+.spine dl{margin:0; display:grid; grid-template-columns:132px minmax(0,1fr); gap:7px 14px}
+.spine dt{font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--ink-3); padding-top:2px}
+.spine dd{margin:0; font-family:var(--mono); font-size:12.5px; line-height:1.55; color:var(--ink-2); overflow-wrap:anywhere}
+.spine dd .v{color:var(--ink)}
+.spine dd .null{color:var(--ink-3); font-style:italic}
+.spine dd .new{color:var(--moss)}
+.spine-note{margin:11px 0 0; padding-top:9px; border-top:1px solid var(--rule-2);
+  font-family:var(--sans); font-size:12.5px; line-height:1.5; color:var(--ink-2)}
+@media(max-width:560px){.spine dl{grid-template-columns:1fr; gap:2px 0} .spine dt{margin-top:8px}}
+
+/* ═══ FIGURES ═══ */
+.fig{grid-column:2; max-width:none; margin:26px 0 0}
+.fig-in{background:var(--paper-2); border:1px solid var(--rule); border-radius:3px;
+  padding:16px 18px 13px; box-shadow:var(--sh)}
+.fig-t{font-family:var(--mono); font-size:13px; font-weight:700; margin:0 0 3px}
+.fig-s{font-family:var(--sans); font-size:12.5px; line-height:1.45; color:var(--ink-3); margin:0 0 13px; max-width:62ch}
+.fig-scroll{overflow-x:auto}
+.fig-note{font-family:var(--sans); font-size:12.5px; color:var(--ink-2); margin:11px 0 0;
+  padding-top:9px; border-top:1px solid var(--rule-2); line-height:1.45}
+table.data{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12.5px;
+  font-variant-numeric:tabular-nums; min-width:420px}
+table.data th{text-align:right; font-weight:500; color:var(--ink-3); font-size:10.5px;
+  letter-spacing:.08em; text-transform:uppercase; padding:0 0 6px 15px; border-bottom:1px solid var(--ink)}
+table.data th:first-child,table.data td:first-child{text-align:left; padding-left:0}
+table.data td{text-align:right; padding:6px 0 6px 15px; border-bottom:1px solid var(--rule-2); color:var(--ink-2)}
+table.data tr.hl td{color:var(--ink); background:var(--vermillion-wash)}
+table.data tr.hl td:first-child{color:var(--vermillion)}
+.up{color:var(--moss)}
+.map-svg{display:block; width:100%; min-width:520px; height:auto}
+.map-svg .bx{fill:var(--paper-2); stroke:var(--rule)}
+.map-svg .lb{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; fill:var(--ink-3)}
+.map-svg .tx{font-family:var(--sans); font-size:12px; fill:var(--ink)}
+.map-svg .role{font-family:var(--sans); font-size:11px; font-style:italic; fill:var(--ink-3)}
+.map-svg .ar{stroke:var(--ink-3); fill:none; stroke-width:1}
+.map-svg .an{fill:var(--ink-3)}
+.map-node{cursor:pointer}
+.map-node:hover .bx{stroke:var(--vermillion); stroke-width:1.8}
+.map-node:hover .tx{fill:var(--vermillion)}
+.map-node:focus-visible{outline:none}
+.map-node:focus-visible .bx{stroke:var(--vermillion); stroke-width:2.4}
+
+/* framing table */
+.framings{display:flex; flex-direction:column; gap:0}
+.fr{display:grid; grid-template-columns:150px minmax(0,1fr); gap:14px; padding:9px 0;
+  border-bottom:1px solid var(--rule-2); align-items:baseline}
+.fr:last-child{border-bottom:0}
+.fr-o{font-family:var(--mono); font-size:12px; color:var(--ink-3)}
+.fr-t{font-family:var(--sans); font-size:14px; color:var(--ink-2); line-height:1.45}
+.fr-t b{color:var(--vermillion); font-weight:600}
+@media(max-width:560px){.fr{grid-template-columns:1fr; gap:2px}}
+
+/* gate demo */
+.gl{width:100%; text-align:left; display:block; background:var(--paper-2); border:1px solid var(--rule);
+  border-left:2px solid var(--ink-3); padding:11px 13px; margin-bottom:8px; cursor:pointer;
+  font:inherit; color:inherit; border-radius:2px}
+.gl:hover{border-color:var(--ink-3); border-left-color:var(--vermillion)}
+.gl[aria-expanded="true"]{border-left-color:var(--vermillion)}
+.gl-t{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); margin-bottom:5px}
+.gl-l{font-family:var(--serif); font-size:15.5px; font-style:italic; line-height:1.4}
+.gl[aria-expanded="true"] .gl-l{text-decoration:line-through; text-decoration-color:var(--vermillion); color:var(--ink-2)}
+.gl-x{display:none; margin-top:10px; padding-top:9px; border-top:1px dashed var(--rule);
+  font-family:var(--sans); font-size:13.5px; color:var(--ink-2)}
+.gl[aria-expanded="true"] .gl-x{display:block}
+.gl-x code{color:var(--vermillion)}
+
+/* timeline */
+.tl-ctl{display:flex; gap:7px; align-items:center; margin-bottom:13px; flex-wrap:wrap}
+.tl-ctl button{font-family:var(--mono); font-size:11.5px; padding:6px 10px; border:1px solid var(--rule);
+  background:var(--paper-2); color:var(--ink-2); cursor:pointer; border-radius:2px}
+.tl-ctl button[aria-pressed="true"]{background:var(--vermillion); color:var(--paper); border-color:var(--vermillion)}
+.tl-when{font-family:var(--sans); font-size:12.5px; color:var(--ink-2)}
+td.nullv{color:var(--ink-3); font-style:italic}
+td.fill{background:var(--moss-wash); color:var(--ink)}
+
+/* ═══ DRAWERS ═══ */
+.drawers{grid-column:2; max-width:none; margin-top:28px; display:flex; flex-direction:column; gap:9px}
+details.d{border:1px solid var(--rule); background:var(--paper-2); border-radius:3px; overflow:hidden}
+details.d>summary{list-style:none; cursor:pointer; padding:11px 15px; display:flex; align-items:center;
+  gap:10px; font-family:var(--mono); font-size:13px; font-weight:700}
+details.d>summary::-webkit-details-marker{display:none}
+details.d>summary::after{content:"OPEN"; margin-left:auto; font-size:9px; letter-spacing:.1em;
+  color:var(--ink-3); font-weight:400; flex:none}
+details.d[open]>summary::after{content:"CLOSE"}
+.d-tag{font-family:var(--mono); font-size:10px; letter-spacing:.11em; padding:2.5px 6px; border-radius:2px; flex:none}
+.d-body{padding:0 15px 15px}
+.d-body>*:first-child{margin-top:0}
+details.war{border-left:3px solid var(--vermillion)}
+details.war>summary{color:var(--vermillion)}
+details.war .d-tag{background:var(--vermillion-wash); color:var(--vermillion)}
+.war .d-body{font-family:var(--sans); font-size:15px; line-height:1.58; color:var(--ink-2)}
+.war .d-body p{margin:0 0 12px; text-wrap:pretty}
+.war .d-body p:last-child{margin-bottom:0}
+.fixline{margin-top:13px; padding:10px 12px; background:var(--recess); border-radius:2px;
+  border-left:2px solid var(--moss); font-family:var(--mono); font-size:12.5px; line-height:1.5; color:var(--ink)}
+.fixline b{color:var(--moss); display:block; font-size:10.5px; letter-spacing:.11em; margin-bottom:4px}
+details.hood{border-left:3px solid var(--ink-3); background:var(--recess)}
+details.hood .d-tag{background:var(--rule-2); color:var(--ink-2)}
+.hood dl{margin:0; display:grid; grid-template-columns:96px minmax(0,1fr); gap:7px 14px}
+.hood dt{font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--ink-3); padding-top:2px}
+.hood dd{margin:0; font-family:var(--mono); font-size:12.5px; line-height:1.6; color:var(--ink-2); overflow-wrap:anywhere}
+.hood dd .p{color:var(--ink)}
+.hood dd span.c{display:inline-block; margin-right:12px; max-width:100%}
+@media(max-width:560px){.hood dl{grid-template-columns:1fr; gap:3px 0} .hood dt{margin-top:8px}}
+
+/* ═══ FOOT NAV ═══ */
+.foot{grid-column:1/-1; margin-top:40px; padding-top:17px; border-top:1px solid var(--rule);
+  display:flex; align-items:center; gap:12px}
+.nav-b{font-family:var(--mono); font-size:12.5px; font-weight:700; background:var(--paper-2);
+  border:1px solid var(--rule); color:var(--ink); border-radius:2px; padding:9px 15px; cursor:pointer;
+  display:flex; flex-direction:column; gap:2px; min-width:0; text-align:left}
+.nav-b:hover:not(:disabled){border-color:var(--vermillion); background:var(--vermillion-wash)}
+.nav-b:disabled{opacity:.3; cursor:default}
+.nav-b small{font-family:var(--mono); font-size:10px; letter-spacing:.11em; color:var(--ink-3);
+  font-weight:400; text-transform:uppercase}
+.nav-b .t{white-space:normal; max-width:30ch; line-height:1.3}
+.nav-b.next{margin-left:auto; text-align:right}
+.nav-count{font-family:var(--mono); font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums; flex:none}
+@media(max-width:560px){.nav-b .t{max-width:16ch; font-size:11.5px}}
+
+/* ═══ MAP VIEW ═══ */
+.map-head{padding-top:42px; max-width:var(--col)}
+.map-head h2{font-family:var(--serif); font-size:clamp(23px,3vw,30px); font-weight:600;
+  letter-spacing:-.02em; margin:8px 0 12px}
+.map-head p{margin:0; color:var(--ink-2); font-size:17px}
+.ledger{margin-top:42px}
+.ledger-h{font-family:var(--mono); font-size:11.5px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); padding-bottom:7px; border-bottom:1px solid var(--rule); margin-bottom:4px}
+.inc{width:100%; text-align:left; background:none; border:0; cursor:pointer; display:grid;
+  grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:baseline; padding:12px 8px;
+  border-bottom:1px solid var(--rule-2); border-radius:2px}
+.inc:hover{background:var(--vermillion-wash)}
+.inc-t{display:block; font-family:var(--mono); font-size:13.5px; font-weight:700; color:var(--vermillion)}
+.inc-d{display:block; font-family:var(--sans); font-size:13px; color:var(--ink-2); margin-top:4px; line-height:1.45}
+.inc-go{font-family:var(--mono); font-size:11px; color:var(--ink-3); flex:none}
+@media(max-width:560px){.inc{grid-template-columns:1fr} .inc-go{display:none}}
+.colophon{margin-top:52px; padding-top:20px; border-top:1px solid var(--rule);
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-3); line-height:1.75; max-width:76ch}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+/* ════════════════════════════════════════════════════════════════
+   RESPONSIVE — deliberately last in the sheet.
+   .spine/.fig/.drawers each set grid-column:2 in their own rules; at equal
+   specificity the later declaration wins, so an earlier media query was being
+   silently overridden and the head grid kept an implicit second column.
+   ════════════════════════════════════════════════════════════════ */
+@media(max-width:760px){
+  .head{grid-template-columns:minmax(0,1fr); gap:5px}
+  .num{font-size:28px}
+  .lede,.body,.fig,.drawers,.spine,.foot{grid-column:1}
+  .body,.lede{max-width:none}
+}
+@media(max-width:620px){
+  /* Six act labels cannot fit a phone-width axis without truncating. Drop the
+     row rather than clip it — every step's eyebrow already names its act. */
+  .acts{display:none}
+  .axis{padding-bottom:8px}
+}
+@media(max-width:560px){
+  .spine dl,.hood dl{grid-template-columns:minmax(0,1fr); gap:3px 0}
+  .spine dt,.hood dt{margin-top:9px}
+  .fr{grid-template-columns:minmax(0,1fr); gap:2px}
+  .inc{grid-template-columns:minmax(0,1fr)}
+  .inc-go{display:none}
+  .nav-b .t{max-width:16ch; font-size:11.5px}
+  .foot{gap:8px}
+}
+</style>
+
+<header class="rail">
+  <div class="rail-in">
+    <div class="rail-top">
+      <span class="diamond" aria-hidden="true"></span>
+      <div>
+        <div class="mark">Sift</div>
+        <div class="mark-sub">One article, end to end</div>
+      </div>
+      <div class="rail-tools">
+        <button class="btn" id="btn-steps" aria-pressed="true" type="button">Walkthrough</button>
+        <button class="btn" id="btn-map" aria-pressed="false" type="button">Map<span class="btn-k">M</span></button>
+      </div>
+    </div>
+    <div class="axis" id="axis">
+      <div class="acts" id="acts"></div>
+      <div class="ticks" id="ticks"></div>
+    </div>
+  </div>
+</header>
+
+<main class="stage">
+  <div class="view" id="view-steps"><div id="step-host"></div></div>
+  <div class="view" id="view-map" hidden></div>
+</main>
+
+<script>
+(function(){
+"use strict";
+
+/* ════════════════════════════════════════════════════════════════
+   THE SPINE
+   One real article, carried through every step. Source: the labeled
+   clustering corpus in sift-api/data/eval/clustering_corpus.jsonl —
+   real outlet, real title, real Haiku-written summary, real extracted
+   entities. Three sibling articles cover the same event, which is what
+   makes story threading demonstrable rather than asserted.
+   ════════════════════════════════════════════════════════════════ */
+var ART = {
+  outlet: "The Hill",
+  title: "Trump fires back at EU over Google&rsquo;s $1B fine, launches probe",
+  summary: "President Trump criticized the European Union for imposing a $1 billion fine on Google for digital competition violations and announced a trade investigation into the EU&rsquo;s practices. Trump characterized the fine as an illegal and discriminatory attack on American companies.",
+  entities: "{ people: [Trump], organizations: [The Hill, European Union, Google], locations: [EU] }"
+};
+
+function spine(when, rows, note){
+  var dl = rows.map(function(r){
+    return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>";
+  }).join("");
+  return '<div class="spine"><div class="spine-in">' +
+    '<div class="spine-h">The article, right now <em>' + when + '</em></div>' +
+    "<dl>" + dl + "</dl>" +
+    (note ? '<p class="spine-note">' + note + "</p>" : "") +
+    "</div></div>";
+}
+function fig(o){
+  return '<div class="fig"><div class="fig-in">' +
+    '<p class="fig-t">' + o.t + "</p>" +
+    (o.s ? '<p class="fig-s">' + o.s + "</p>" : "") +
+    '<div class="fig-scroll">' + o.body + "</div>" +
+    (o.note ? '<p class="fig-note">' + o.note + "</p>" : "") +
+    "</div></div>";
+}
+
+/* ── the system map, shared by step 1 and the Map view ── */
+var MAP_NODES = [
+  { id:"client", x:6,   y:104, w:120, h:46, l:"Browser / iPhone", r:"", lab:"Client",  step:15 },
+  { id:"vercel", x:158, y:86,  w:140, h:82, l:"Next.js 16",       r:"serves every page", lab:"Vercel", step:15 },
+  { id:"railway",x:346, y:14,  w:164, h:106,l:"FastAPI + LangGraph", r:"", lab:"Railway", step:2 },
+  { id:"rss",    x:560, y:14,  w:134, h:38, l:"59 RSS feeds",     r:"where articles start", lab:"", step:2 },
+  { id:"claude", x:560, y:56,  w:134, h:38, l:"Claude Haiku 4.5", r:"summarizes &amp; clusters", lab:"", step:4 },
+  { id:"voyage", x:560, y:98,  w:134, h:38, l:"Voyage 3-lite",    r:"turns text into vectors", lab:"", step:7 },
+  { id:"neon",   x:346, y:164, w:164, h:92, l:"articles + stories", r:"the only source of truth", lab:"Neon Postgres", step:9 },
+  { id:"mcp",    x:158, y:196, w:140, h:56, l:"5 tools, read-only", r:"for AI clients", lab:"MCP server", step:17 }
+];
+function mapSvg(interactive){
+  var s = "";
+  MAP_NODES.forEach(function(n){
+    var open = interactive
+      ? '<g class="map-node" role="button" tabindex="0" data-step="' + n.step + '"><title>Go to: ' + n.l + "</title>"
+      : "<g>";
+    s += open;
+    s += '<rect class="bx" x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h +
+         '" rx="2"' + (n.id === "mcp" ? ' stroke-dasharray="3 3"' : "") + "/>";
+    var ty = n.y + (n.lab ? 34 : 20);
+    if (n.lab) s += '<text class="lb" x="' + (n.x + 12) + '" y="' + (n.y + 18) + '">' + n.lab + "</text>";
+    s += '<text class="tx" x="' + (n.x + 12) + '" y="' + ty + '">' + n.l + "</text>";
+    if (n.r) s += '<text class="role" x="' + (n.x + 12) + '" y="' + (ty + 14) + '">' + n.r + "</text>";
+    if (n.id === "railway"){
+      s += '<text class="role" x="358" y="66">steps 01&ndash;08 &middot; every 30 min</text>';
+      s += '<text class="role" x="358" y="80">batch poller &middot; every 60 s</text>';
+      s += '<text class="role" x="358" y="94">story threading &middot; compare</text>';
+    }
+    if (n.id === "neon"){
+      s += '<text class="role" x="358" y="232">dossiers &middot; bookmarks</text>';
+    }
+    s += "</g>";
+  });
+  // arrows
+  s += '<path class="ar" d="M126 127 H152"/><polygon class="an" points="158,127 150,123.5 150,130.5"/>';
+  s += '<path class="ar" d="M152 133 H130"/><polygon class="an" points="124,133 132,129.5 132,136.5"/>';
+  s += '<path class="ar" d="M298 112 C 320 112, 324 66, 340 66" stroke="var(--vermillion)"/>' +
+       '<polygon class="an" points="346,66 338,62.5 338,69.5" fill="var(--vermillion)"/>';
+  s += '<text class="lb" x="228" y="78" fill="var(--vermillion)">proxy compare</text>';
+  s += '<path class="ar" d="M262 168 V 205 H 340"/><polygon class="an" points="346,205 338,201.5 338,208.5"/>';
+  s += '<text class="lb" x="268" y="186">reads</text>';
+  s += '<path class="ar" d="M428 120 V 158"/><polygon class="an" points="428,164 424.5,156 431.5,156"/>';
+  s += '<text class="lb" x="434" y="144">writes</text>';
+  s += '<path class="ar" d="M510 40 C 530 40, 534 33, 554 33"/><polygon class="an" points="560,33 552,29.5 552,36.5"/>';
+  s += '<path class="ar" d="M510 70 C 530 70, 534 75, 554 75"/><polygon class="an" points="560,75 552,71.5 552,78.5"/>';
+  s += '<path class="ar" d="M510 100 C 532 100, 534 117, 554 117"/><polygon class="an" points="560,117 552,113.5 552,120.5"/>';
+  s += '<path class="ar" d="M298 219 H 340" stroke-dasharray="3 3"/><polygon class="an" points="346,219 338,215.5 338,222.5"/>';
+  return '<svg class="map-svg" viewBox="0 0 700 268" role="img" aria-label="Browser talks to Vercel. Vercel reads Neon Postgres directly and proxies compare requests to Railway. Railway runs the pipeline, calling RSS feeds, Claude and Voyage, and writes to Neon. An MCP server reads the same database.">' + s + "</svg>";
+}
+
+/* ════════════════════════════════════════════════════════════════
+   STEPS
+   ════════════════════════════════════════════════════════════════ */
+var STEPS = [
+
+/* ─────────── ACT 1 · THE SYSTEM ─────────── */
+{
+  act:"The system", num:"", paid:false,
+  title:"The news, with footnotes",
+  lede:"Sift is an AI-curated news reader with a civic-literacy layer that adds the context news assumes you already have.",
+  body:
+    "<p>An adaptive primer on what you should know first. Inline glossary tooltips. Structured dossiers on every politician, organization, bill and outlet, sourced from public records. And cross-spectrum framing: the same event, as four newsrooms chose to tell it.</p>" +
+    "<p>This walkthrough follows <b>one real article</b> from the moment it appears in a publisher&rsquo;s feed to the moment it reaches a reader &mdash; and then follows three more, because the interesting thing happens when they meet.</p>" +
+    "<p>Everything on the following pages was read out of the source. The article is a real row from Sift&rsquo;s labeled clustering corpus, with its real summary and its real extracted entities.</p>",
+  fig: function(){
+    return fig({
+      t:"The article we are going to follow",
+      s:"One of four articles the corpus records for the same event, in the business category.",
+      body:'<div class="framings">' +
+        '<div class="fr"><div class="fr-o">The Hill</div><div class="fr-t">Trump <b>fires back</b> at EU over Google&rsquo;s $1B fine, launches probe</div></div>' +
+        '<div class="fr"><div class="fr-o">Washington Examiner</div><div class="fr-t">Trump <b>launches trade investigation</b> into EU after $1 billion fine on Google</div></div>' +
+        '<div class="fr"><div class="fr-o">CBS News</div><div class="fr-t">Trump <b>says U.S. to investigate</b> EU trade practices over tech company fines</div></div>' +
+        '<div class="fr"><div class="fr-o">CNBC</div><div class="fr-t">Trump <b>threatens</b> EU with &lsquo;substantial TARIFF&rsquo; for &lsquo;ROBBING&rsquo; U.S. tech giants</div></div>' +
+        "</div>",
+      note:"Four outlets, one event, four verbs. We will follow the first one through the pipeline, and pick the other three back up at story threading."
+    });
+  },
+  hood:[["source","data/eval/clustering_corpus.jsonl &middot; batch <span class='p'>business-4</span> &middot; event <span class='p'>trump-eu-probe-google-fine</span>"],
+        ["scale","59 feeds &middot; 56 outlets &middot; 10 categories"],
+        ["services","Vercel &middot; Railway &middot; Neon Postgres + pgvector"]]
+},
+{
+  act:"The system", num:"", paid:false,
+  title:"Four surfaces, one source of truth",
+  lede:"Three deployments share one database, and the split between them is the most important decision in the system.",
+  body:
+    "<p><b>Vercel</b> owns everything a reader sees. <b>Railway</b> owns the background pipeline, the on-demand compare workflow, and every write. <b>Neon Postgres with pgvector</b> holds all persistent state. A fourth surface, an MCP server, exposes the same database to AI clients.</p>" +
+    '<div class="pull">The whole category-browse experience is a database read. No AI in the request path.<span class="src">sift/docs/HOW_IT_WORKS.md</span></div>' +
+    "<p>Everything in the next act happens on a schedule so that browsing does not have to. Opening a category is one indexed query. The only live-AI path a reader can trigger is Compare, and ten to fifteen seconds is acceptable there because it is a moment of need rather than a daily habit.</p>" +
+    "<p>One SLA model cannot serve both. That is why the pipeline exists as a background process at all.</p>",
+  fig: function(){
+    return fig({
+      t:"The system in four surfaces",
+      s:"Every box is a link — click one to jump to the step that covers it.",
+      body: mapSvg(true)
+    });
+  },
+  hood:[["graph","<span class='p'>workflows/pipeline_workflow.py</span> &middot; build_pipeline_graph(), 8 nodes, strictly linear"],
+        ["schedule","REFRESH_INTERVAL = 30 &times; 60. Was 10 min; stretched to cut spend ~66%. Production only."],
+        ["trigger","POST /v1/pipeline/refresh &middot; X-Pipeline-Key via hmac.compare_digest &middot; 5/minute"],
+        ["also","story_workflow.py &middot; compare_workflow.py &mdash; three compiled state machines in all"]]
+},
+
+/* ─────────── ACT 2 · INGEST ─────────── */
+{
+  act:"Ingest", num:"01", paid:false,
+  title:"fetch_rss",
+  lede:"Fifty-nine feeds are fetched at once. Our article arrives as four fields and a hash.",
+  body:
+    "<p>Each feed yields at most ten entries. Title, body, image and date are parsed out, and a content hash is computed from the normalized title plus the first 500 characters of the body &mdash; enough to catch the same wire story republished under a different URL, short enough not to be defeated by a trailing edit.</p>" +
+    "<p>Nothing here costs money. That is deliberate, and it is why this step and the next one run before any model is called.</p>",
+  spine: function(){
+    return spine("after step 01", [
+      ["source_name", '<span class="v">The Hill</span>'],
+      ["title", '<span class="v">' + ART.title + "</span>"],
+      ["content_hash", '<span class="v">sha256(title + body[:500])</span>'],
+      ["category", '<span class="null">"" — nothing has classified it yet</span>'],
+      ["summary", '<span class="null">NULL</span>']
+    ], "At this point Sift has a headline and a hash. It does not yet know what the article is about, or which category it belongs in.");
+  },
+  war:{
+    t:"Fifteen silent days",
+    body:"<p>Washington Post returned HTTP 400 for roughly fifteen days and nobody noticed. A feed returning zero articles looks exactly like a quiet news day &mdash; the run reported success, the category simply had less in it.</p>" +
+         "<p>The fix was not a retry. It was a structured <code>feed_stats</code> event emitted on every run, naming which feeds succeeded, which failed, and which came back empty. The timeout also went from 10s to 20s, once it turned out WaPo simply answers slowly.</p>",
+    fix:"feed_stats event on every run &middot; feeds_ok / failed / empty / articles_by_source"
+  },
+  hood:[["entry","<span class='p'>services/rss.py</span> &middot; fetch_feeds()"],
+        ["limits","<span class='c'>MAX_ENTRIES_PER_FEED <i>10</i></span><span class='c'>FETCH_TIMEOUT <i>20.0</i></span><span class='c'>MIN_IMAGE_WIDTH <i>300</i></span>"],
+        ["hash","sha256(norm_title + \"\\n\" + norm_content[:500]) &middot; CONTENT_HASH_PREFIX_CHARS = 500"],
+        ["fail loud","zip(FEEDS, results, strict=True)"],
+        ["not ingested","AP and Reuters retired public RSS. Their wire copy still arrives via NPR / CBS / ABC / BBC / Guardian syndication."]]
+},
+{
+  act:"Ingest", num:"02", paid:false,
+  title:"deduplicate",
+  lede:"One SQL round-trip decides whether Sift has seen this before. It is the last free gate before anything costs money.",
+  body:
+    "<p>The incoming batch is matched against the database on either <code>source_url</code> or <code>content_hash</code>, and then against itself. Our article is new on both counts, so it survives &mdash; and so do its three siblings, because four outlets writing up the same event produce four different headlines and therefore four different hashes.</p>" +
+    "<p>That is the correct outcome. They are genuinely four articles. Recognizing them as <em>one story</em> is a separate problem, solved much later and quite differently.</p>" +
+    "<h3>Why three counters, not one</h3>" +
+    "<p>Drops are tallied under three separate reasons, because they mean different things. A spike in intra-batch drops means outlets are syndicating identical wire copy. A spike in hash-matched-in-database means a feed is republishing under new URLs. Collapsing them into a single &ldquo;deduped&rdquo; number would hide both.</p>",
+  spine: function(){
+    return spine("after step 02", [
+      ["source_url", '<span class="new">no match in DB → kept</span>'],
+      ["content_hash", '<span class="new">no match in DB → kept</span>'],
+      ["intra-batch", '<span class="new">3 siblings, 3 different hashes → all kept</span>']
+    ], "Four articles enter the paid section of the pipeline. Sift does not yet know they belong together.");
+  },
+  hood:[["entry","<span class='p'>services/deduplicator.py</span>"],
+        ["query","source_url = ANY($1) OR content_hash = ANY($2) &mdash; one round-trip, not one per article"],
+        ["counters","dropped_url &middot; dropped_hash_db &middot; dropped_hash_intra"],
+        ["bypass","force=True skips dedup entirely"]]
+},
+{
+  act:"Ingest", num:"03", paid:true,
+  title:"summarize",
+  lede:"The first paid call. Five articles per request, and each comes back with a summary and a category in one shot.",
+  body:
+    "<p>Summarization and classification are deliberately a single call. The model has already read the article in order to summarize it; asking a second model to read it again in order to label it is paying twice for the same comprehension.</p>" +
+    "<p>The prompt carries a hard rules block about people and legal matters &mdash; &ldquo;charged&rdquo; is not &ldquo;guilty,&rdquo; contested claims get attributed to whoever made them. A summarizer that editorializes about a named private citizen is a liability, not a bug.</p>",
+  spine: function(){
+    return spine("after step 03", [
+      ["summary", '<span class="new">' + ART.summary + "</span>"],
+      ["category", '<span class="new">business</span>'],
+      ["why_it_matters", '<span class="null">NULL</span>'],
+      ["embedding", '<span class="null">NULL</span>']
+    ], "Both values above are the real ones recorded in the corpus. Note that the summary attributes the characterization — “Trump characterized the fine as…” — rather than asserting it.");
+  },
+  war:{
+    t:"When the model apologizes on a live card",
+    body:"<p>Some RSS entries carry no body at all, or a body identical to the title. Asked to summarize nothing, the model does the polite thing and explains that it cannot &mdash; and that apology was written to the summary column and rendered on live cards.</p>" +
+         "<p>Two defenses now. A pre-filter drops entries with no summarizable content before the call is made. And eighteen high-precision patterns catch the apology if one gets through, deliberately narrow: a looser pattern like <code>not provide sufficient</code> would have eaten the real summary &ldquo;may not provide sufficient votes,&rdquo; which appears in production 97 times.</p>",
+    fix:"_has_summarizable_content pre-filter &middot; 18 refusal regexes &middot; _raw_content_fallback as last resort"
+  },
+  hood:[["model","<span class='p'>claude-haiku-4-5-20251001</span> &middot; billed at request time"],
+        ["entry","<span class='p'>services/summarizer.py</span>"],
+        ["limits","<span class='c'>BATCH_SIZE <i>5</i></span><span class='c'>max_tokens <i>700</i></span><span class='c'>max_retries <i>2</i></span><span class='c'>content <i>500 words</i></span>"],
+        ["categories","top &middot; technology &middot; business &middot; science &middot; energy &middot; world &middot; health &middot; politics &middot; sports &middot; entertainment"],
+        ["price","Haiku 4.5 &mdash; $1.00/M in, $5.00/M out"]]
+},
+{
+  act:"Ingest", num:"04", paid:true,
+  title:"context &mdash; why it matters",
+  lede:"A job is submitted asking for one sentence of stakes. The step then returns empty-handed and the pipeline moves on.",
+  body:
+    "<p>This is the first of two steps that do not wait for an answer. The request goes to Anthropic&rsquo;s Batch API &mdash; half price, with results arriving minutes later instead of immediately &mdash; and the node hands back empty dictionaries. Our article will be stored, and served, with this column still empty.</p>" +
+    "<h3>The rubric is strict on purpose</h3>" +
+    "<p>One sentence. Maximum eighteen words. A concrete, verifiable stake that is <em>not</em> already in the title or the summary. A list of banned phrasings. And the instruction that matters most: <em>when in doubt, return an empty string.</em></p>" +
+    "<p>An absent line renders nothing at all. Null-over-filler is the intended outcome, not a failure &mdash; and the next act shows exactly what that policy cost and what it bought.</p>",
+  spine: function(){
+    return spine("after step 04", [
+      ["why_it_matters", '<span class="null">NULL — a job was submitted, nothing came back yet</span>'],
+      ["importance_score", '<span class="null">NULL — arrives with the same batch</span>'],
+      ["api_batches", '<span class="new">one row, kind=context, status=processing</span>']
+    ], "The batch row carries a manifest mapping each custom_id back to its article URLs. That manifest is the only thing that will let the poller find this article again.");
+  },
+  hood:[["model","<span class='p'>claude-haiku-4-5-20251001</span> &middot; Batch API, flat 50% discount, SLA up to 24h"],
+        ["entry","<span class='p'>services/context_generator.py</span> &middot; submit_context_batch()"],
+        ["limits","<span class='c'>BATCH_SIZE <i>10</i></span><span class='c'>BATCH_KIND <i>context</i></span><span class='c'>custom_id <i>ctx-{n}</i></span>"],
+        ["rubric","one sentence &middot; &le;18 words &middot; not a restatement &middot; when in doubt return \"\""],
+        ["judge","optional Sonnet pass, disabled by default (why_it_matters_judge_enabled = false)"]]
+},
+{
+  act:"Ingest", num:"05", paid:true,
+  title:"primer &mdash; what you should know first",
+  lede:"A second deferred job asks for a short background paragraph and a few glossary terms. Zero terms is a legitimate answer.",
+  body:
+    "<p>The prompt carries an explicit do-not-pick list. <em>Filibuster, cloture, basis points, certiorari</em> are worth defining. <em>Tariffs, IPO, recession, data center, pollen season</em> are not.</p>" +
+    "<p>The term count was tightened from three-to-five down to zero-to-four, and the floor of zero is the important half of that change. A civic-literacy layer that explains words everyone already knows trains people to ignore it &mdash; at which point it stops working for the words that actually needed explaining.</p>" +
+    "<p>Our article is a plausible case for zero: <em>tariff</em> is on the do-not-pick list by name, and the mechanics of an EU competition fine are carried by the summary itself.</p>",
+  spine: function(){
+    return spine("after step 05", [
+      ["context_primer", '<span class="null">NULL — second job submitted, nothing back yet</span>'],
+      ["api_batches", '<span class="new">a second row, kind=primer, status=processing</span>']
+    ], "Two outstanding jobs now, tracked separately by kind. If either comes back misaligned, that batch is skipped whole rather than written partially — see “Proving the batch lines up.”");
+  },
+  hood:[["model","<span class='p'>claude-haiku-4-5-20251001</span> &middot; Batch API, half price"],
+        ["entry","<span class='p'>services/primer_generator.py</span>"],
+        ["limits","<span class='c'>BATCH_SIZE <i>5</i></span><span class='c'>background <i>&le;60 words</i></span><span class='c'>terms <i>0–4</i></span><span class='c'>definition <i>&le;25 words</i></span>"],
+        ["writes","articles.context_primer JSONB &mdash; {background, terms[], generated_at}. Skipped entirely when both are empty."],
+        ["rendered by","components/primer/BackgroundPrimer.tsx"]]
+},
+{
+  act:"Ingest", num:"06", paid:true,
+  title:"embed",
+  lede:"Title and summary become a 512-dimension vector. On failure the embedder returns nothing at all — never a zero.",
+  body:
+    "<p>The text handed to Voyage is simply the title, a period, and the summary. What comes back is stored in pgvector and is what later powers semantic search and the topic feed.</p>" +
+    "<h3>Why never a zero vector</h3>" +
+    "<p>A zero vector is not a missing value. It is a real point in the space, roughly equidistant from everything, and it would quietly surface as a plausible result for any query at all. So the embedder returns <code>None</code> on failure and the column stays empty, which the read path already knows how to skip.</p>",
+  spine: function(){
+    return spine("after step 06", [
+      ["embed input", '<span class="v">"' + "Trump fires back at EU over Google&rsquo;s $1B fine, launches probe. President Trump criticized&hellip;" + '"</span>'],
+      ["embedding", '<span class="new">512 floats</span>'],
+      ["on failure", '<span class="null">NULL — never a zero vector</span>']
+    ], "The caller then uses zip(articles, vectors, strict=True), which raises rather than silently truncating. A short vector list would attach every embedding after the gap to the wrong article.");
+  },
+  hood:[["model","<span class='p'>voyage-3-lite</span> &middot; 512 dimensions &middot; $0.02/M tokens"],
+        ["entry","<span class='p'>services/embedder.py</span> &middot; BATCH_SIZE = 128 &middot; input_type=\"document\""],
+        ["stored as","VECTOR(512), cast $9::vector from a literal string"],
+        ["contract","returns a list aligned 1:1 with its input; None for any text that failed"]]
+},
+{
+  act:"Ingest", num:"07", paid:true,
+  title:"link_entities",
+  lede:"Sift asks which of its dossiers the article is actually about. For this article the honest answer is: almost none of them.",
+  body:
+    "<p>The dossier catalog &mdash; outlets, members of Congress, organizations, bills &mdash; is loaded and sent with the article, marked for prompt caching so repeat calls read it at roughly a tenth of the price. Claude returns the entities it can resolve <em>to a dossier that exists</em>.</p>" +
+    "<h3>What our article gets</h3>" +
+    "<p>Trump, Google and the European Union are all unmistakably in this article. None of them resolves. The seeded catalog is Congress-only &mdash; 536 sitting members, no executive branch &mdash; and its 25 organizations are think tanks and federal agencies, not companies or foreign institutions. So the only link is the outlet itself.</p>" +
+    "<p>That is the system working as designed. An unresolvable name is left alone rather than guessed at, because a wrong dossier link is far worse than a missing one.</p>",
+  spine: function(){
+    return spine("after step 07", [
+      ["entity_links", '<span class="new">[{ type: outlet, canonical_id: the-hill }]</span>'],
+      ["Trump", '<span class="null">no politician dossier in the seeded catalog</span>'],
+      ["Google", '<span class="null">no org dossier</span>'],
+      ["European Union", '<span class="null">no org dossier</span>']
+    ], "Verified against the seed data in sift-api/data/: politician_profiles.csv holds 536 rows, all Congress, none executive; org_profiles.csv holds 25, all think tanks and federal agencies. The live database may carry more.");
+  },
+  war:{
+    t:"Cloud, Banks and Hill",
+    body:"<p>The regex fallback that catches whatever the model misses matches full canonical names only &mdash; never surnames. This looks over-cautious until you notice that sitting members of Congress are named Cloud, Banks and Hill.</p>" +
+         "<p>Surname matching turned weather stories into civic dossiers. Ambiguous keys are now dropped from the search dictionary entirely rather than resolved to a best guess.</p>",
+    fix:"canonical names only &middot; _MIN_KEY_LENGTH = 4 &middot; ambiguous keys dropped, not ranked"
+  },
+  hood:[["model","<span class='p'>claude-haiku-4-5-20251001</span> &middot; one call per article &middot; timeout 8.0s &middot; concurrency 4"],
+        ["cache","catalog block marked cache_control: ephemeral &mdash; 5-min window. Write $1.25/M, read $0.10/M against $1.00/M base."],
+        ["catalog","outlet_profiles &middot; politician_profiles &middot; org_profiles &middot; bill_profiles &mdash; four tables, loaded per run"],
+        ["cost note","the repo&rsquo;s own status doc calls this the largest single cost lever; batching to ~10 articles/call models at roughly &minus;60%"]]
+},
+{
+  act:"Ingest", num:"08", paid:false,
+  title:"store",
+  lede:"The row is written — with three columns still empty — and two more jobs are set running.",
+  body:
+    "<p>The article is upserted on <code>source_url</code>. Its ID comes from a hash of URL plus title, using a djb2 variant with deliberate 32-bit signed overflow, hand-ported from the frontend&rsquo;s TypeScript so both sides compute the same ID for the same article.</p>" +
+    "<p>On conflict, <code>title</code>, <code>image_url</code> and <code>published_date</code> are pointedly <em>not</em> updated. A publisher quietly rewriting a headline should not rewrite what Sift already showed a reader.</p>" +
+    "<h3>The cheapest step starts the most spend</h3>" +
+    "<p>The write itself makes no model call. But this is where the entity-extraction batch is submitted and where story threading is triggered &mdash; and threading alone is roughly 39% of Anthropic spend. Threading is also skipped unless a category gained at least three new articles, or an hour has passed since its stories were last touched.</p>",
+  spine: function(){
+    return spine("after step 08 — the row is live", [
+      ["id", '<span class="v">stable_hash(source_url + title)</span>'],
+      ["title / summary / category", '<span class="v">present</span>'],
+      ["embedding", '<span class="v">present</span>'],
+      ["entity_links", '<span class="v">[the-hill]</span>'],
+      ["why_it_matters", '<span class="null">NULL</span>'],
+      ["context_primer", '<span class="null">NULL</span>'],
+      ["entities", '<span class="null">NULL — a third job was just submitted</span>'],
+      ["story_id", '<span class="null">NULL</span>']
+    ], "This row is now servable. A reader could see this card, with no “why it matters” line and no primer, and nothing about it would look broken — which is the whole point of the next act.");
+  },
+  hood:[["entry","<span class='p'>workflows/pipeline_workflow.py</span> &middot; store_node"],
+        ["upsert","INSERT &hellip; ON CONFLICT (source_url) DO UPDATE &mdash; title, image_url, published_date deliberately excluded"],
+        ["also writes","pipeline_state &mdash; last_refreshed_at + article_count for all 10 categories"],
+        ["branch A","entity-extraction Batch API job &middot; BATCH_SIZE = 15 &middot; people / orgs / locations / event phrase"],
+        ["branch B","story threading, per category &middot; MIN_NEW_ARTICLES_FOR_THREADING = 3 &middot; MAX_THREADING_INTERVAL_SECONDS = 3600"]]
+},
+
+/* ─────────── ACT 3 · WHAT LANDS LATER ─────────── */
+{
+  act:"What lands later", num:"", paid:false,
+  title:"The deferred lane",
+  lede:"A poller wakes every sixty seconds, collects whatever has finished, and patches the empty columns in place.",
+  body:
+    "<p>Three jobs are outstanding for our article: context, primer, and entity extraction. Each was recorded in <code>api_batches</code> with a manifest mapping its custom IDs back to article URLs, which is the only way the poller can find its way home.</p>" +
+    "<p>This is why those four columns are nullable and why the read path treats a missing value as normal rather than as an error. Watch the row fill in:</p>",
+  fig: function(){
+    return fig({
+      t:"One row, three wake-ups",
+      s:"Step through the poller's view of our article.",
+      body:
+        '<div class="tl-ctl" role="group" aria-label="Timeline step">' +
+          '<button class="tlb" data-step="0" aria-pressed="true">T+0 · stored</button>' +
+          '<button class="tlb" data-step="1" aria-pressed="false">T+60s · poll</button>' +
+          '<button class="tlb" data-step="2" aria-pressed="false">T+~4min · patched</button>' +
+          '<span class="tl-when" id="tl-when">The store node has just committed. Four columns are empty and the card is already servable.</span>' +
+        "</div>" +
+        '<table class="data"><thead><tr><th>Column</th><th>Filled by</th><th>Value</th></tr></thead><tbody>' +
+        '<tr><td>summary</td><td>step 03</td><td>President Trump criticized the EU&hellip;</td></tr>' +
+        '<tr><td>embedding</td><td>step 06</td><td>512 floats</td></tr>' +
+        '<tr><td>why_it_matters</td><td>context poller</td><td class="nullv" data-fill="&quot;&quot; — suppressed by the rubric" data-at="2">NULL</td></tr>' +
+        '<tr><td>importance_score</td><td>context poller</td><td class="nullv" data-fill="3" data-at="2">NULL</td></tr>' +
+        '<tr><td>context_primer</td><td>primer poller</td><td class="nullv" data-fill="{background, 0 terms}" data-at="2">NULL</td></tr>' +
+        '<tr><td>entities</td><td>entity poller</td><td class="nullv" data-fill="{people:[Trump], orgs:[The Hill, European Union, Google], locations:[EU]}" data-at="2">NULL</td></tr>' +
+        "</tbody></table>",
+      note:"The <b>entities</b> value is the real one recorded in the corpus — including its wart. <b>The Hill</b> is listed as an organization in its own article, because the extractor read the byline as a named entity. The other three values are illustrative: this article's context and primer output are not in the corpus, and inventing them would be exactly the kind of unearned precision the rest of this page argues against."
+    });
+  },
+  hood:[["poller","<span class='p'>services/batch_poller.py</span> &middot; POLL_INTERVAL_SECONDS = 60 &middot; production only"],
+        ["manifest","api_batches &mdash; batch_id PK, kind &isin; context | primer | entity, status, metadata JSONB"],
+        ["discount","Batch API &mdash; flat 50% off, SLA up to 24h, typically minutes"],
+        ["two entity sets","articles.entities is free text from the extractor. articles.entity_links is only what resolved to a dossier. For our article: four entities extracted, one linked."]]
+},
+{
+  act:"What lands later", num:"", paid:true,
+  title:"Story threading &mdash; where the four meet",
+  lede:"Now the other three articles matter. A nested state machine finds the same event across outlets and writes one story with each outlet's framing attached.",
+  body:
+    "<p>It runs per category and usually does not run at all &mdash; the skip guard exists because threading is the single most expensive thing in the system. When it does run, it looks at the last 48 hours, at most 50 articles, and only rows whose entity extraction has already landed. An article whose batch has not returned simply waits for the next cycle.</p>" +
+    "<p>Clustering is one Haiku call, with the instruction that &ldquo;same event&rdquo; means the same specific occurrence, not the same broad topic. Our four articles are the same occurrence. Then each cluster is synthesized into a headline, a neutral summary, and a per-outlet framing with a tone label.</p>" +
+    "<h3>The framing spread is the product</h3>" +
+    "<p>This is what Sift exists to show. The four outlets agree on every fact and differ entirely in posture &mdash; and the difference is legible in the verbs alone:</p>",
+  fig: function(){
+    return fig({
+      t:"One event, four postures",
+      s:"Real headlines from the four corpus rows, in the order the batch recorded them.",
+      body:'<div class="framings">' +
+        '<div class="fr"><div class="fr-o">The Hill</div><div class="fr-t">Trump <b>fires back</b> at EU &mdash; conflict framing, Trump as respondent</div></div>' +
+        '<div class="fr"><div class="fr-o">Washington Examiner</div><div class="fr-t">Trump <b>launches trade investigation</b> &mdash; procedural framing, action as policy</div></div>' +
+        '<div class="fr"><div class="fr-o">CBS News</div><div class="fr-t">Trump <b>says</b> U.S. to investigate &mdash; attributed framing, claim kept at arm&rsquo;s length</div></div>' +
+        '<div class="fr"><div class="fr-o">CNBC</div><div class="fr-t">Trump <b>threatens</b> EU for &lsquo;ROBBING&rsquo; U.S. tech giants &mdash; quotes the rhetoric, keeps the scare quotes</div></div>' +
+        "</div>",
+      note:"Headlines and outlets are verbatim from the corpus. The posture descriptions on the right are this page's reading of them, not model output — Sift's own synthesizer produces a framing and a tone per outlet, from a fixed set: neutral, urgent, analytical, critical, optimistic."
+    });
+  },
+  spine: function(){
+    return spine("after threading", [
+      ["story_id", '<span class="new">sha256 of the sorted member IDs, first 16 chars</span>'],
+      ["article_count", '<span class="new">4</span>'],
+      ["synthesis_status", '<span class="new">complete</span>'],
+      ["distinct outlets", '<span class="new">4 — passes the single-outlet gate</span>']
+    ], "Story IDs are content-addressable, so if clustering later shifts, this ID changes and the old story row is orphaned. The read path compensates by counting members live and dropping anything below two.");
+  },
+  war:{
+    t:"Zero stories, reported as success",
+    body:"<p><code>max_tokens</code> was a fixed 1024. On large batches the model&rsquo;s JSON array was cut off mid-array, parsing failed, and the run produced no stories at all &mdash; while logging success. Nothing distinguished it from a genuinely uneventful hour.</p>" +
+         "<p>Separately, &ldquo;how four outlets covered this&rdquo; sometimes turned out to be four posts from one outlet. That one was a data problem wearing a copywriting costume.</p>",
+    fix:"max_tokens = min(2048, 128 + 40n) &middot; stop_reason logged on every call &middot; clusters with &lt;2 distinct source_name dropped outright"
+  },
+  hood:[["graph","<span class='p'>workflows/story_workflow.py</span> &middot; fetch &rarr; extract &rarr; cluster &rarr; synthesize"],
+        ["window","RECENCY_WINDOW_HOURS = 48 &middot; LIMIT 50 &middot; only rows where jsonb_typeof(entities) = 'object'"],
+        ["no LLM","the extract step makes no model call &mdash; it assembles the map from columns the poller already filled"],
+        ["synthesis","tone &isin; neutral | urgent | analytical | critical | optimistic"],
+        ["prompt rule","&ldquo;Where the sources disagree about a fact, say they disagree. Do not pick a winner.&rdquo;"]]
+},
+
+/* ─────────── ACT 4 · KEPT HONEST ─────────── */
+{
+  act:"Kept honest", num:"", paid:false,
+  title:"Proving the batch lines up",
+  lede:"Every batched call asks the model for a numbered array and maps results back by that number. Checking the number is in range is not enough.",
+  body:
+    "<p>Our article travelled in three separate batches. Each time, its result had to be matched back to it by index &mdash; and a repeated, skipped or shifted index passes a range check while silently attaching a result to the <em>wrong</em> article.</p>" +
+    '<div class="pull">That is confirmed production behaviour, not a hypothetical: articles were found carrying other articles&rsquo; summaries on 2026-07-30, written by a path that reported success.<span class="src">services/index_alignment.py</span></div>' +
+    "<p>So a response is accepted only when its indices are exactly the set 1..n &mdash; no duplicates, no gaps, nothing out of range. Anything else is rejected whole.</p>" +
+    "<h3>Why all-or-nothing</h3>" +
+    "<p>A batch of five comes back with indices 1, 2, 3, 4. Either the model skipped article five, in which case the other four are right &mdash; or it shifted everything by one, in which case all four are wrong. Nothing in the response tells you which. A gap is indistinguishable from a shift, so none of it can be trusted.</p>" +
+    "<p>Live paths retry. Batch paths cannot &mdash; their results arrive long after the request is gone &mdash; so they write nothing for that sub-batch and log every affected URL by name for the backfill scripts.</p>",
+  hood:[["module","<span class='p'>services/index_alignment.py</span>"],
+        ["accepts","aligned_entries(parsed, expected) &mdash; indices exactly {1..n}"],
+        ["live paths","with_alignment_retry &middot; MAX_BATCH_ATTEMPTS = 2"],
+        ["batch paths","log_misaligned_sub_batch &mdash; names every source_url for scripts/backfill_*.py"],
+        ["scope","index integrity only. Whether the payload is acceptable stays with each caller."]]
+},
+{
+  act:"Kept honest", num:"", paid:false,
+  title:"The quality gate, and what it cost",
+  lede:"Three layers in order of cost: a generation rubric that is free, a regex pass that is free, and a judge that is not and stays off.",
+  body:
+    "<p>Thirty-one high-precision patterns catch the phrases that are almost always filler in a one-line stakes sentence. Every one is narrow on purpose. These are real lines that reached live cards &mdash; select one to see what killed it.</p>",
+  fig: function(){
+    return fig({
+      t:"Three lines that did not survive",
+      s:"From the hand-labeled corpus. The first two are marked as live production failures.",
+      body:
+        '<button class="gl" aria-expanded="false"><span class="gl-t">Cop fired after video shows him fatally shooting suspect</span>' +
+        '<span class="gl-l">&ldquo;An officer was fired for fatally shooting an unarmed, naked man, raising serious questions about police accountability.&rdquo;</span>' +
+        '<span class="gl-x">Matched <code>rais\\w*\\s+(?:serious\\s+)?questions?</code> &mdash; and it restates the headline besides. Labelled <b>filler</b>; failure modes <code>cliche</code> + <code>restatement</code>.</span></button>' +
+        '<button class="gl" aria-expanded="false"><span class="gl-t">New questions raised over Anna Kepner&rsquo;s cruise murder</span>' +
+        '<span class="gl-l">&ldquo;New DNA evidence could finally crack a cold case that&rsquo;s haunted investigators for years.&rdquo;</span>' +
+        '<span class="gl-x">Matched two patterns &mdash; <code>could\\s+finally</code> and <code>haunt\\w+\\s+(?:investigators|&hellip;)</code>. Labelled <b>filler</b>; failure modes <code>cliche</code> + <code>editorial</code>.</span></button>' +
+        '<button class="gl" aria-expanded="false"><span class="gl-t">Senate passes sweeping climate package</span>' +
+        '<span class="gl-l">&ldquo;The vote marks a turning point in the nation&rsquo;s approach to climate policy.&rdquo;</span>' +
+        '<span class="gl-x">Matched <code>(?:a|the)\\s+(?:major\\s+|real\\s+)?turning\\s+point</code>. Significance by assertion &mdash; it tells the reader the vote mattered without saying what changes.</span></button>'
+    });
+  },
+  fig2: function(){
+    return fig({
+      t:"What the rewrite actually did",
+      s:"500 real articles — 50 from each of the 10 categories — scored before and after.",
+      body:'<table class="data"><thead><tr><th>Metric</th><th>Before</th><th>After</th><th></th></tr></thead><tbody>' +
+        "<tr><td>Lines shown</td><td>500 / 500</td><td>271 / 500</td><td>229 suppressed</td></tr>" +
+        '<tr class="hl"><td>Judge pass rate</td><td>5.4%</td><td class="up">34.7%</td><td>6.4&times;</td></tr>' +
+        '<tr><td>Clich&eacute; or editorial</td><td>76.6%</td><td class="up">30.6%</td><td>&minus;46 pts</td></tr>' +
+        '<tr><td>Adds real significance</td><td>9.4%</td><td class="up">37.3%</td><td>4.0&times;</td></tr>' +
+        "<tr><td>Restatement</td><td>40.4%</td><td>37.6%</td><td>&minus;2.8 pts</td></tr>" +
+        "<tr><td>Dropped by the regex gate</td><td>25</td><td>0</td><td>the rubric caught them first</td></tr>" +
+        "</tbody></table>",
+      note:"Sift now shows 46% fewer of these lines, and that is the win rather than the cost: a stakes line that restates the headline is worse than no line, because it occupies the same space and teaches the reader to skip that slot. The last row is the quiet one — in the new run the regex gate dropped nothing, not because it stopped working but because the rewritten rubric refused to generate what it would have caught. Restatement barely moved, which is honest: catching paraphrase needs semantics, and that is what the third layer is for."
+  });
+  },
+  hood:[["module","<span class='p'>services/quality_gate.py</span>"],
+        ["patterns","<span class='c'>_CLICHE_SOURCES <i>31</i></span><span class='c'>_REFUSAL_SOURCES <i>18</i></span>"],
+        ["thresholds","<span class='c'>NEAR_RESTATEMENT_MAX_NOVELTY <i>0.20</i></span><span class='c'>MIN_SUMMARY_WORDS <i>10</i></span>"],
+        ["layer 3","claude-sonnet-4-6, off by default. Drops only on restates OR not-clich&eacute;-free &mdash; never on adds_significance alone."],
+        ["eval","data/_cache/eval_500.json &middot; data/eval/why_it_matters_corpus.jsonl (16 labeled cases)"]]
+},
+{
+  act:"Kept honest", num:"", paid:false,
+  title:"The cost guard",
+  lede:"Every paid call checks a daily ledger before it fires, and the check fails closed.",
+  body:
+    "<p>If the guard is enabled and the ledger cannot be read, paid calls are blocked rather than allowed. That is the uncomfortable choice &mdash; a database hiccup can stall the pipeline &mdash; but the alternative is that the one failure mode which lets spend run unbounded is also the one hardest to notice. A stalled pipeline is loud. An unmetered one is silent until the invoice.</p>" +
+    "<p>Each call writes back into a daily ledger keyed by date, provider, model and operation, so spend is attributable per step rather than as one monthly number.</p>" +
+    "<p>This exists because the estimate was wrong by roughly twenty times: actual spend is around $10 a day, against a long-held belief of about $15 a month. Nothing was broken. The number had simply never been measured.</p>",
+  fig: function(){
+    return fig({
+      t:"What our article cost",
+      s:"Rates are the published ones in the repo. Per-article totals are not separately metered, so this is the rate card, not a receipt.",
+      body:'<table class="data"><thead><tr><th>Step</th><th>Service</th><th>Rate</th></tr></thead><tbody>' +
+        "<tr><td>01 fetch_rss</td><td>&mdash;</td><td>free</td></tr>" +
+        "<tr><td>02 deduplicate</td><td>&mdash;</td><td>free</td></tr>" +
+        '<tr class="hl"><td>03 summarize</td><td>Haiku 4.5</td><td>$1.00/M in &middot; $5.00/M out</td></tr>' +
+        '<tr class="hl"><td>04 context</td><td>Haiku 4.5, batch</td><td>&minus;50%</td></tr>' +
+        '<tr class="hl"><td>05 primer</td><td>Haiku 4.5, batch</td><td>&minus;50%</td></tr>' +
+        '<tr class="hl"><td>06 embed</td><td>voyage-3-lite</td><td>$0.02/M</td></tr>' +
+        '<tr class="hl"><td>07 link_entities</td><td>Haiku 4.5 + cache</td><td>cache read $0.10/M vs $1.00/M</td></tr>' +
+        "<tr><td>08 store</td><td>&mdash;</td><td>free, starts two paid jobs</td></tr>" +
+        "</tbody></table>",
+      note:"Web search, used only by Compare, is $0.010 per call."
+    });
+  },
+  hood:[["module","<span class='p'>services/cost_guard.py</span> &middot; check_budget()"],
+        ["fail-closed","an unreadable ledger blocks the call rather than allowing it"],
+        ["ledger","ai_usage_daily &mdash; PK (usage_date, provider, model, operation)"],
+        ["alert","ai_cost_alert_threshold_ratio = 0.8 &mdash; once per UTC day, to logs and Sentry"],
+        ["feed health","separate daily monitor; leash_for(active_days) scales tolerance to each outlet&rsquo;s own publishing rhythm"]]
+},
+
+/* ─────────── ACT 5 · WHEN A READER ARRIVES ─────────── */
+{
+  act:"When a reader arrives", num:"", paid:false,
+  title:"Browse",
+  lede:"Everything so far happened on a schedule so that this does not have to. Opening a category is one indexed query.",
+  body:
+    "<p>Ranking is a single expression: importance score, decayed exponentially by age. Our article, whose score arrived late from the batch poller, defaults to 3 &mdash; the middle of the 1&ndash;5 scale &mdash; so a missing score is neutral rather than disqualifying.</p>" +
+    "<h3>The 30-day floor that looks redundant</h3>" +
+    "<p>The query also refuses anything older than 30 days, which appears pointless: the exponential decay already multiplies a 30-day-old row by about 1e&minus;13, so it can never rank. But without the floor, Postgres still <em>fetches and sorts</em> every feed-quality row in the category &mdash; 29,000 for business, 73,000 for sports.</p>" +
+    "<p>The decay makes old rows unrankable. The floor makes them unread.</p>" +
+    "<p>Because our article ended up in a story, it surfaces through the stories query instead, which counts members live and requires at least two &mdash; the compensation for content-addressable story IDs that go stale when clustering shifts.</p>",
+  hood:[["queries","<span class='p'>sift/lib/db.ts</span> &middot; getArticlesByCategory, getStoriesWithArticles"],
+        ["ranking","COALESCE(importance_score, 3) * EXP(&minus;days_old)"],
+        ["indexes","idx_articles_feed (category, published_date DESC) &middot; idx_articles_story_feed &middot; idx_stories_feed"],
+        ["also filtered","from_search = false &middot; non-empty summary &middot; summaries starting &ldquo;unable to provide&rdquo; excluded at read time"],
+        ["stack","Next.js 16 &middot; React 19 &middot; Tailwind v4 &middot; Clerk &middot; Sentry &middot; pool max 5"]]
+},
+{
+  act:"When a reader arrives", num:"", paid:true,
+  title:"Compare",
+  lede:"The one path where a reader's click spends money. Pick a topic and a set of outlets, get back who claims what.",
+  body:
+    "<p>Three nodes. A parallel fan-out, one Claude call per outlet with the web-search tool. Then a single call that extracts three to eight claims and tags each <code>unanimous</code>, <code>majority</code>, <code>disputed</code> or <code>unique</code>. Then pure validation, with no model call at all.</p>" +
+    "<p>Outlet names are validated against an allowlist built from the database itself, and the topic string is sanitized before it reaches a prompt. Both exist because this is the one endpoint where a reader&rsquo;s text becomes part of a paid call.</p>" +
+    "<h3>Four timeouts, deliberately ordered</h3>" +
+    "<p>Backend 50s &lt; proxy abort 55s &lt; Vercel maxDuration 60s &lt; client 65s. Invert any pair and the reader gets a platform error page instead of an application error that explains what happened.</p>",
+  hood:[["graph","<span class='p'>workflows/compare_workflow.py</span> &middot; search &rarr; extract &rarr; format"],
+        ["search","web_search_20250305 &middot; max_uses 3 &middot; PER_SOURCE_TIMEOUT = 20"],
+        ["extract","Haiku &middot; max_tokens 4096 &middot; 3&ndash;8 claims"],
+        ["guard","COMPARE_COST_ESTIMATE_PER_SOURCE_USD = 0.04, pre-checked against the cost guard &middot; 10/minute"],
+        ["allowlist","outlet_profiles.name &cup; .slug &cup; source_name_aliases.raw_source_name"]]
+},
+{
+  act:"When a reader arrives", num:"", paid:false,
+  title:"Dossiers and the MCP surface",
+  lede:"The footnotes. Every linked entity resolves to a structured profile built from public records.",
+  body:
+    '<div class="pull">Sift doesn&rsquo;t compute political lean; it surfaces what published raters say verbatim.<span class="src">sift/docs/HOW_IT_WORKS.md</span></div>' +
+    "<p>That constraint does a lot of work. Every field traces to a named source &mdash; OpenSecrets, GovTrack, ProPublica, FEC, FARA, AllSides, Media Bias/Fact Check &mdash; so the methodology page is defensible and no reader has to take Sift&rsquo;s word for anything. It also means Sift owns no proprietary score it would have to defend.</p>" +
+    "<p>Our article got one link, to The Hill&rsquo;s outlet dossier: parent company, founding date, funding model, and third-party lean and factuality ratings quoted rather than computed.</p>" +
+    "<h3>The MCP server</h3>" +
+    "<p>A separate service exposes the same database to any MCP client with five read-only tools. Four are plain database reads at roughly 50ms. The fifth, <code>compare_outlets</code>, always reads Sift&rsquo;s own index first and only falls back to live web search when coverage is sparse &mdash; tagging each claim <code>index</code> or <code>web</code> so the caller knows which is which.</p>",
+  fig: function(){
+    return fig({
+      t:"What is actually seeded",
+      s:"Row counts from the CSVs in sift-api/data/.",
+      body:'<table class="data"><thead><tr><th>Table</th><th>Rows</th><th>Contents</th></tr></thead><tbody>' +
+        "<tr><td>politician_profiles</td><td>536</td><td>sitting members of Congress &mdash; no executive branch</td></tr>" +
+        "<tr><td>outlet_profiles</td><td>57</td><td>parent, founding, funding, AllSides + MBFC ratings</td></tr>" +
+        "<tr><td>org_profiles</td><td>25</td><td>think tanks and federal agencies</td></tr>" +
+        "<tr><td>bill_profiles</td><td>1</td><td>Inflation Reduction Act of 2022</td></tr>" +
+        "</tbody></table>",
+      note:"This is why step 07 linked only the outlet. The discrepancy this panel used to flag — the MCP server querying a fifth table, judge_profiles, with an entity type of <b>judge</b>, against no migration in sift-api/migrations — is <b>resolved as of 2026-08-05</b>. The table was real but came from a branch that never merged, seeded into prod by hand; migration 016 moved its nine Justices into politician_profiles under id_source&nbsp;=&nbsp;'scotus' and dropped it, and the MCP server no longer exposes a judge type. Four dossier types are exposed; four are linked."
+    });
+  },
+  hood:[["migrations","006_outlet_profiles.sql &middot; 007_politician_org_bill_profiles.sql &middot; 012/013 org budget provenance"],
+        ["linked from","articles.entity_links JSONB, GIN-indexed"],
+        ["frontend","/politician/[bioguide] &middot; /org/[slug] &middot; /bill/[id] &middot; /outlet/[slug]"],
+        ["mcp","<span class='p'>sift-mcp</span> &middot; FastMCP &middot; sparse-coverage thresholds: top score &lt; 0.42, &lt; 3 outlets, or &lt; 5 articles"]]
+},
+
+/* ─────────── ACT 6 · CLOSE ─────────── */
+{
+  act:"Close", num:"", paid:false,
+  title:"What isn&rsquo;t measured",
+  lede:"The recurring failure in this system has a name: reporting success while producing nothing.",
+  body:
+    "<p>Washington Post returned HTTP 400 for fifteen days. A fixed token limit truncated the clustering response and produced zero stories. A batch response was trusted to line up with its input and attached summaries to the wrong articles. Every one of those paths logged success, and every one was found by hand, weeks late, by someone looking at something else.</p>" +
+    "<p>Most of the machinery in this walkthrough &mdash; the feed stats, the logged stop reason, the exact-set index proof, the strict zip, the daily ledger &mdash; exists to convert that class of silence into noise.</p>" +
+    "<h3>And the part that is still silent</h3>" +
+    "<p>Our four articles clustered correctly. I know that because a human labeled them in the corpus, not because Sift measured it.</p>" +
+    '<div class="pull">Until then, event-clustering accuracy is <b>unmeasured</b> and should not be quoted.<span class="src">sift-api/STATUS.md</span></div>' +
+    "<p>That line is in the repo&rsquo;s own status document, written to stop a future version of its author from citing a number that does not exist. It is the most load-bearing sentence in the project: a system that gates its own output on evidence has to hold its own claims to the same gate.</p>",
+  fig: function(){
+    return fig({
+      t:"Measured, and not",
+      body:'<table class="data"><thead><tr><th>Measured</th><th>Not measured</th></tr></thead><tbody>' +
+        "<tr><td>why_it_matters quality &mdash; 500 articles, judged</td><td>event-clustering accuracy</td></tr>" +
+        "<tr><td>feed health &mdash; daily, per outlet</td><td>entity-linking precision and recall</td></tr>" +
+        "<tr><td>spend &mdash; per day, model and operation</td><td>summary faithfulness against source text</td></tr>" +
+        "<tr><td>search funnel &middot; primer expansions</td><td>whether readers open the primer twice</td></tr>" +
+        "</tbody></table>",
+      note:"The clustering corpus exists and is partly labeled; it needs roughly 3–4 hours of hand review before the first real accuracy number can be produced."
+    });
+  },
+  hood:[["sources","<span class='p'>sift-api/STATUS.md</span> &middot; sift/docs/HOW_IT_WORKS.md &middot; sift/docs/DECISIONS.md (D1&ndash;D46)"],
+        ["stale, do not cite","sift/docs/ARCHITECTURE.md &mdash; claims 1024 dims (actually 512), &ldquo;100+ feeds&rdquo; (actually 59), and a 5-node pipeline"],
+        ["corpora","data/eval/clustering_corpus.jsonl &mdash; labeled batches, awaiting hand review"]]
+}
+];
+
+/* incidents surfaced on the map view */
+var INCIDENTS = [
+  { s:2,  t:"Fifteen silent days", d:"A feed returned HTTP 400 for two weeks and the run kept reporting success." },
+  { s:4,  t:"The model apologized on a live card", d:"Empty RSS bodies produced polite refusals that were written to the summary column." },
+  { s:8,  t:"Cloud, Banks and Hill", d:"Surname matching turned weather stories into civic dossier links." },
+  { s:11, t:"Zero stories, reported as success", d:"A fixed token limit truncated the clustering array mid-response." },
+  { s:12, t:"Articles carrying other articles' summaries", d:"A batch response was trusted to line up with its input instead of made to prove it." },
+  { s:14, t:"Off by twenty times", d:"Believed spend was ~$15/month. Actual was ~$10/day. Nothing was broken; nothing was measured." }
+];
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER
+   ════════════════════════════════════════════════════════════════ */
+var host = document.getElementById("step-host"),
+    ticksEl = document.getElementById("ticks"),
+    actsEl = document.getElementById("acts"),
+    viewSteps = document.getElementById("view-steps"),
+    viewMap = document.getElementById("view-map"),
+    btnSteps = document.getElementById("btn-steps"),
+    btnMap = document.getElementById("btn-map");
+var cur = 0, seen = {}, mode = "steps";
+
+/* group consecutive steps by act for the axis */
+var ACT_SHORT = { "What lands later":"Deferred", "When a reader arrives":"The reader" };
+function actRuns(){
+  var runs = [], last = null;
+  STEPS.forEach(function(s, i){
+    if (!last || last.name !== s.act){ last = { name:s.act, from:i, to:i }; runs.push(last); }
+    else last.to = i;
+  });
+  return runs;
+}
+function buildAxis(){
+  var runs = actRuns();
+  actsEl.style.gridTemplateColumns = runs.map(function(r){ return (r.to - r.from + 1) + "fr"; }).join(" ");
+  actsEl.innerHTML = runs.map(function(r){
+    return '<div class="act-span" data-from="' + r.from + '" data-to="' + r.to + '">' + (ACT_SHORT[r.name] || r.name) + "</div>";
+  }).join("");
+  ticksEl.style.gridTemplateColumns = "repeat(" + STEPS.length + ", 1fr)";
+  ticksEl.innerHTML = STEPS.map(function(s, i){
+    var label = s.num || "\u00b7";
+    return '<button class="tick" type="button" data-i="' + i + '" aria-label="' +
+      (s.act + ": " + s.title).replace(/<[^>]+>/g, "").replace(/"/g, "") + '">' + label + "</button>";
+  }).join("");
+}
+function paintAxis(){
+  Array.prototype.forEach.call(ticksEl.children, function(b, i){
+    b.classList.toggle("on", i === cur);
+    b.classList.toggle("seen", i !== cur && !!seen[i]);
+  });
+  Array.prototype.forEach.call(actsEl.children, function(a){
+    var f = +a.getAttribute("data-from"), t = +a.getAttribute("data-to");
+    a.classList.toggle("on", cur >= f && cur <= t);
+  });
+}
+function drawer(kind, tag, title, inner){
+  return '<details class="d ' + kind + '"><summary><span class="d-tag">' + tag + "</span>" + title +
+    '</summary><div class="d-body">' + inner + "</div></details>";
+}
+function render(i, animate){
+  cur = Math.max(0, Math.min(STEPS.length - 1, i));
+  seen[cur] = true;
+  var s = STEPS[cur];
+  var h = '<article class="step' + (animate ? " anim" : "") + (s.paid ? " paid" : "") + '">' +
+    '<div class="head">' +
+      '<div class="num">' + (s.num || "") + "</div>" +
+      "<div>" +
+        '<p class="eyebrow">' + s.act + "</p>" +
+        '<h2 class="title">' + s.title + "</h2>" +
+      "</div>" +
+      '<p class="lede">' + s.lede + "</p>" +
+      '<div class="body">' + s.body + "</div>" +
+      (s.fig ? s.fig() : "") +
+      (s.fig2 ? s.fig2() : "") +
+      (s.spine ? s.spine() : "");
+
+  var dr = "";
+  if (s.war) dr += drawer("war", "WHAT WENT WRONG", s.war.t,
+    s.war.body + (s.war.fix ? '<div class="fixline"><b>The fix</b>' + s.war.fix + "</div>" : ""));
+  if (s.hood) dr += drawer("hood", "UNDER THE HOOD", "Files, models and constants",
+    "<dl>" + s.hood.map(function(r){ return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>"; }).join("") + "</dl>");
+  if (dr) h += '<div class="drawers">' + dr + "</div>";
+
+  var prev = STEPS[cur - 1], next = STEPS[cur + 1];
+  h += '<div class="foot">' +
+    '<button class="nav-b prev" type="button"' + (prev ? "" : " disabled") + "><small>Previous</small>" +
+      '<span class="t">' + (prev ? prev.title : "&mdash;") + "</span></button>" +
+    '<span class="nav-count">' + (cur + 1) + " / " + STEPS.length + "</span>" +
+    '<button class="nav-b next" type="button"' + (next ? "" : " disabled") + "><small>Next</small>" +
+      '<span class="t">' + (next ? next.title : "&mdash;") + "</span></button>" +
+    "</div>";
+
+  h += "</div></article>";
+  host.innerHTML = h;
+
+  var p = host.querySelector(".prev"), n = host.querySelector(".next");
+  if (p) p.addEventListener("click", function(){ go(cur - 1); });
+  if (n) n.addEventListener("click", function(){ go(cur + 1); });
+  wireStepWidgets();
+  paintAxis();
+}
+function go(i){
+  if (i < 0 || i >= STEPS.length) return;
+  render(i, true);
+  window.scrollTo(0, 0);
+}
+
+/* per-step interactive bits */
+function wireStepWidgets(){
+  // gate lines
+  Array.prototype.forEach.call(host.querySelectorAll(".gl"), function(b){
+    b.addEventListener("click", function(){
+      b.setAttribute("aria-expanded", b.getAttribute("aria-expanded") === "true" ? "false" : "true");
+    });
+  });
+  // deferred-lane timeline
+  var tlb = host.querySelectorAll(".tlb");
+  if (tlb.length){
+    var cells = host.querySelectorAll("td[data-fill]"),
+        when = host.querySelector("#tl-when"),
+        copy = [
+          "The store node has just committed. Four columns are empty and the card is already servable.",
+          "The poller wakes. The batches are still processing, so nothing changes yet.",
+          "Batches ended. The poller patches each row in place \u2014 gates applied, misaligned sub-batches skipped."
+        ];
+    Array.prototype.forEach.call(tlb, function(btn){
+      btn.addEventListener("click", function(){
+        var at = +btn.getAttribute("data-step");
+        Array.prototype.forEach.call(tlb, function(b2){ b2.setAttribute("aria-pressed", String(b2 === btn)); });
+        if (when) when.textContent = copy[at];
+        Array.prototype.forEach.call(cells, function(td){
+          var on = at >= +td.getAttribute("data-at");
+          td.innerHTML = on ? td.getAttribute("data-fill") : "NULL";
+          td.classList.toggle("nullv", !on);
+          td.classList.toggle("fill", on);
+        });
+      });
+    });
+  }
+  // clickable map nodes inside a step
+  wireMapNodes(host);
+}
+function wireMapNodes(root){
+  Array.prototype.forEach.call(root.querySelectorAll(".map-node"), function(g){
+    function jump(){
+      var t = +g.getAttribute("data-step");
+      if (!isNaN(t)){ setMode("steps"); go(t); }
+    }
+    g.addEventListener("click", jump);
+    g.addEventListener("keydown", function(e){
+      if (e.key === "Enter" || e.key === " "){ e.preventDefault(); jump(); }
+    });
+  });
+}
+
+/* map view */
+function renderMap(){
+  var h = '<div class="map-head">' +
+    '<p class="eyebrow">Overview</p>' +
+    "<h2>The whole system on one page</h2>" +
+    "<p>Every box jumps to the step that covers it. Below, the failures that shaped the design &mdash; each one also a step.</p>" +
+    "</div>" +
+    '<div class="fig" style="grid-column:auto"><div class="fig-in"><div class="fig-scroll">' + mapSvg(true) + "</div></div></div>" +
+    '<div class="ledger"><div class="ledger-h">What went wrong, and where it is covered</div>' +
+    INCIDENTS.map(function(x){
+      return '<button class="inc" type="button" data-i="' + x.s + '"><span><span class="inc-t">' + x.t +
+        '</span><span class="inc-d">' + x.d + "</span></span><span class=\"inc-go\">GO &rarr;</span></button>";
+    }).join("") +
+    "</div>" +
+    '<p class="colophon">Compiled from the sift, sift-api and sift-mcp repositories at their current state on disk. ' +
+    "Every constant, model ID and metric was read out of the source rather than recalled; the followed article, its summary and its entities are real rows from the labeled clustering corpus. " +
+    "Where a value is illustrative rather than measured, the figure says so.</p>";
+  viewMap.innerHTML = h;
+  wireMapNodes(viewMap);
+  Array.prototype.forEach.call(viewMap.querySelectorAll(".inc"), function(b){
+    b.addEventListener("click", function(){ setMode("steps"); go(+b.getAttribute("data-i")); });
+  });
+}
+function setMode(m){
+  mode = m;
+  var isSteps = m === "steps";
+  viewSteps.hidden = !isSteps;
+  viewMap.hidden = isSteps;
+  btnSteps.setAttribute("aria-pressed", String(isSteps));
+  btnMap.setAttribute("aria-pressed", String(!isSteps));
+  document.getElementById("axis").style.visibility = isSteps ? "visible" : "hidden";
+  window.scrollTo(0, 0);
+}
+
+/* wire up */
+buildAxis();
+ticksEl.addEventListener("click", function(e){
+  var b = e.target.closest(".tick");
+  if (b) go(+b.getAttribute("data-i"));
+});
+btnSteps.addEventListener("click", function(){ setMode("steps"); });
+btnMap.addEventListener("click", function(){ setMode("map"); });
+document.addEventListener("keydown", function(e){
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  var tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea") return;
+  if (e.key === "ArrowRight"){ if (mode === "steps") go(cur + 1); }
+  else if (e.key === "ArrowLeft"){ if (mode === "steps") go(cur - 1); }
+  else if (e.key === "m" || e.key === "M"){ setMode(mode === "steps" ? "map" : "steps"); }
+});
+renderMap();
+render(0, false);
+})();
+</script>

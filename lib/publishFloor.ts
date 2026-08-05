@@ -62,7 +62,11 @@ export function isPublishablePolitician(p: PoliticianProfile): boolean {
   if (p.chamber === "house" || p.chamber === "senate") {
     return p.committees.length > 0 || p.topIndustriesCurrentCycle.length > 0;
   }
-  if (p.chamber === "executive" || p.chamber === "foreign-executive") {
+  if (
+    p.chamber === "executive" ||
+    p.chamber === "foreign-executive" ||
+    p.chamber === "scotus"
+  ) {
     return present(p.role.roleTitle) && present(p.role.roleTitleSource);
   }
   return false;
