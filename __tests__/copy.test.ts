@@ -174,3 +174,35 @@ describe("COPY strings", () => {
     });
   });
 });
+
+describe("org budget labels name the record they came from", () => {
+  const { annualBudgetLabel, budgetSourceLabel } = COPY.orgDossier;
+
+  it("calls a 990 figure total expenses", () => {
+    expect(annualBudgetLabel("$107.7M", "FY ending June 2025", "form990"))
+      .toBe("Total expenses $107.7M · FY ending June 2025");
+    expect(budgetSourceLabel("form990")).toContain("Form 990");
+  });
+
+  it("calls an OMB figure net outlays", () => {
+    expect(annualBudgetLabel("$37.0B", "FY2025", "ombOutlays"))
+      .toBe("Net outlays $37.0B · FY2025");
+    expect(budgetSourceLabel("ombOutlays")).toContain("OMB Historical Tables");
+  });
+
+  it("never calls an OMB figure a Form 990", () => {
+    // 23 agency pages did exactly this until 2026-08-07.
+    expect(budgetSourceLabel("ombOutlays")).not.toContain("990");
+    expect(annualBudgetLabel("$37.0B", "FY2025", "ombOutlays")).not.toContain("expenses");
+  });
+
+  it("names neither when the record is unidentified", () => {
+    expect(annualBudgetLabel("$1", "FY2025", null)).toBe("$1 · FY2025");
+    expect(budgetSourceLabel(null)).toBe("Per the cited source");
+  });
+
+  it("reads correctly for a negative net outlay (GSA, FY2025)", () => {
+    expect(annualBudgetLabel("-$379.0M", "FY2025", "ombOutlays"))
+      .toBe("Net outlays -$379.0M · FY2025");
+  });
+});

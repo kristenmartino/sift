@@ -106,6 +106,7 @@ describe("parseDbOrgProfile", () => {
         type: "think-tank",
         annualBudgetFy: "FY ending June 2025",
         annualBudgetSource: "https://projects.propublica.org/nonprofits/organizations/530196577",
+        annualBudgetKind: "form990",
         foundedYear: 1916,
         annualBudgetUsd: 120_000_000,
         majorFunders: [
@@ -359,5 +360,49 @@ describe("parseDbOrgProfile", () => {
       expect(profile?.name).toBe("Brookings Institution");
       expect(profile?.selfDescription).toBeNull();
     });
+  });
+});
+
+describe("annualBudgetKind", () => {
+  const row = (source: string): DbOrgProfileRow => ({
+    ...fullRow,
+    annual_budget_usd: 1000,
+    annual_budget_fy: "FY2025",
+    annual_budget_source: source,
+  });
+
+  it("names a ProPublica 990 source", () => {
+    const o = parseDbOrgProfile(row("https://projects.propublica.org/nonprofits/organizations/1"));
+    expect(o?.annualBudgetKind).toBe("form990");
+  });
+
+  it("names an OMB Historical Tables source", () => {
+    const o = parseDbOrgProfile(row("https://www.whitehouse.gov/wp-content/uploads/2026/04/hist04z1_fy2027.xlsx"));
+    expect(o?.annualBudgetKind).toBe("ombOutlays");
+  });
+
+  it("accepts govinfo as the same OMB series", () => {
+    expect(parseDbOrgProfile(row("https://www.govinfo.gov/content/pkg/x/hist.xlsx"))?.annualBudgetKind)
+      .toBe("ombOutlays");
+  });
+
+  it("returns null for an unrecognised host rather than guessing", () => {
+    expect(parseDbOrgProfile(row("https://example.org/budget.pdf"))?.annualBudgetKind).toBeNull();
+  });
+
+  it("matches on host, not substring — a lookalike URL does not count", () => {
+    const o = parseDbOrgProfile(row("https://evil.com/?u=projects.propublica.org"));
+    expect(o?.annualBudgetKind).toBeNull();
+  });
+
+  it("is null when the budget itself is withheld for want of a source", () => {
+    const o = parseDbOrgProfile({
+      ...fullRow,
+      annual_budget_usd: 1000,
+      annual_budget_fy: null,
+      annual_budget_source: "https://projects.propublica.org/nonprofits/organizations/1",
+    });
+    expect(o?.annualBudgetUsd).toBeNull();
+    expect(o?.annualBudgetKind).toBeNull();
   });
 });

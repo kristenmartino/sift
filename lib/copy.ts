@@ -6,7 +6,7 @@
 // Rules: contractions always, active voice, no jargon, no exclamation marks.
 // Show the data, link the source, let the reader conclude.
 
-import type { StoryFraming } from "./types";
+import type { BudgetSourceKind, StoryFraming } from "./types";
 
 // ── Outlet-count phrasing (issue #153) ──────────────────
 // One source of truth for how the LIVE curated-outlet count reads, so it can't
@@ -369,11 +369,28 @@ export const COPY = {
     // Single-line lede builder bits.
     foundedYearLabel: (year: number) => `Founded ${year}`,
     // Was `Annual budget ~${budget}` against an unsourced fixture figure.
-    // "Annual budget" was never a checkable claim; total expenses from a named
+    // "Annual budget" was never a checkable claim; a named figure from a named
     // filing is. The tilde is gone too — the figure is now exact.
-    annualBudgetLabel: (budget: string, fy: string) =>
-      `Total expenses ${budget} · ${fy}`,
-    budgetSourceLabel: "Per the Form 990 on ProPublica Nonprofit Explorer",
+    //
+    // Keyed on which record the source is, because the two do not measure the
+    // same thing. A 990 reports total functional expenses. OMB Historical
+    // Tables report net outlays — net of offsetting receipts, hence GSA's
+    // legitimate −$379M, which reads as a bug under the word "expenses".
+    // These were a single hardcoded pair until 2026-08-07, so 23 agency pages
+    // cited an OMB spreadsheet under the name of a Form 990 they do not have.
+    annualBudgetLabel: (budget: string, fy: string, kind: BudgetSourceKind | null) =>
+      kind === "ombOutlays"
+        ? `Net outlays ${budget} · ${fy}`
+        : kind === "form990"
+          ? `Total expenses ${budget} · ${fy}`
+          : // Neither record identified: state the figure, name nothing.
+            `${budget} · ${fy}`,
+    budgetSourceLabel: (kind: BudgetSourceKind | null) =>
+      kind === "ombOutlays"
+        ? "Per OMB Historical Tables, Table 4.1 (outlays by agency)"
+        : kind === "form990"
+          ? "Per the Form 990 on ProPublica Nonprofit Explorer"
+          : "Per the cited source",
     methodologyHint: "Funding data comes from IRS 990s and FARA. Read the methodology.",
   },
   billDossier: {
