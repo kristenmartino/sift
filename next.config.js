@@ -6,11 +6,56 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Allow news article images from any HTTPS domain.
-    // Sift aggregates from ~58 RSS sources with diverse CDN domains,
-    // making a strict allowlist impractical. Images are only loaded from
-    // URLs stored in the database via trusted RSS feed ingestion.
-    remotePatterns: [{ protocol: "https", hostname: "**" }],
+    // Allowlist of image hosts, derived from every image_url the pipeline has
+    // ever stored (62 registrable domains with >=5 images across 182,855; the 4 that
+    // fall below it are one-off singletons).
+    //
+    // This was `hostname: "**"`, justified as "images are only loaded from
+    // URLs stored in the database via trusted RSS feed ingestion". That is
+    // true of the *app* and irrelevant to the risk: `/_next/image` is a public
+    // endpoint that takes an arbitrary `url` parameter. With a wildcard,
+    // anyone can point it at any HTTPS resource on the internet and bill this
+    // account's Vercel image-optimization quota — the app's own behaviour
+    // constrains nothing. remotePatterns is the only thing that does.
+    //
+    // Narrowing is low-risk here: components/CardImage.tsx already has an
+    // onError handler, so a host that is not on this list degrades to the
+    // same placeholder a broken image URL produces today. Many outlets (CBS
+    // News, BBC, ESPN, NPR, Washington Post) serve no images at all and are
+    // unaffected either way.
+    //
+    // Shared CDNs — cloudfront.net, amazonaws.com, jwplayer.com — are
+    // necessarily broad, so this narrows the hole rather than closing it. It
+    // still cuts the reachable surface from "the entire HTTPS internet" to a
+    // handful of CDNs.
+    //
+    // To regenerate after adding outlets:
+    //   SELECT DISTINCT ... FROM articles WHERE image_url IS NOT NULL
+    // grouped by registrable domain, keeping those with >=5 images.
+    remotePatterns: [
+      "abc-cdn.net.au", "abcnews.com", "amazonaws.com", "aolcdn.com",
+      "arstechnica.net", "axios.com", "bwbx.io", "cbsistatic.com",
+      "cdn-si-edu.com", "cloudfront.net", "ctfassets.net", "dailycaller.com",
+      "deadline.com", "decider.com", "decrypt.co", "dwcdn.net",
+      "engadget.com", "forbes.com", "foreignpolicy.com", "fortune.com",
+      "foxnews.com", "france24.com", "ft.com", "futurecdn.net",
+      "guim.co.uk", "i-scmp.com", "ieee.org", "ignimgs.com", "insider.com",
+      "japantimes.co.jp", "jwplayer.com", "minutemediacdn.com", "mktw.net",
+      "nasa.gov", "newscientist.com", "nypost.com", "nyt.com",
+      "opensecrets.org", "pagesix.com", "pitchfork.com", "politico.com",
+      "polygonimages.com", "quantamagazine.org", "qz.com", "rbl.ms",
+      "restofworld.org", "rollcall.com", "sciencenews.org", "slate.com",
+      "statnews.com", "theatlantic.com", "thediplomat.com", "thedispatch.com",
+      "thehill.com", "theintercept.com", "toiimg.com", "variety.com",
+      "washingtonexaminer.com", "washtimes.com", "wired.com", "wp.com",
+      "youtube.com",
+    ].flatMap((domain) => [
+      { protocol: "https", hostname: domain },
+      { protocol: "https", hostname: `**.${domain}` },
+    ]),
+    // The feed rotates every 30 minutes, so without this each generated width
+    // of each new image is re-transformed far more often than it is served.
+    minimumCacheTTL: 60 * 60 * 24 * 7,
   },
   async headers() {
     const csp = [

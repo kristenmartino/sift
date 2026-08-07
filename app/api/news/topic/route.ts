@@ -403,10 +403,23 @@ async function embedQuery(text: string): Promise<number[]> {
 
 // ─── Interim daily-budget check ─────────────────────────
 
-// Is the shared daily AI ledger still under the ceiling? Fails OPEN (returns
-// true) on any read error so a ledger hiccup never breaks search — only a
-// confirmed over-budget read skips the paid fallback. The durable #79 version
-// runs server-side in sift-api and can fail closed like the compare path.
+// Is the shared daily AI ledger still under the ceiling?
+//
+// Fails CLOSED. This returned true on a read error, reasoning that "a ledger
+// hiccup never breaks search" — but this function is only reached when
+// AI_COST_GUARD_ENABLED is true (see the call site), i.e. only when someone
+// has deliberately asked for a ceiling. Failing open there removes the
+// ceiling during precisely the failure mode it exists for: spend that cannot
+// be measured is spend that cannot be capped.
+//
+// It also does not break search. A false here skips only the paid web-search
+// fallback; the vector results are already computed and still returned. The
+// user gets a thinner answer, not an error — which is the trade the ceiling
+// was asking for in the first place.
+//
+// Matches services/cost_guard.check_budget in sift-api, whose docstring makes
+// the same argument: "an enabled ceiling would permit unlimited spend during
+// the exact failure mode where spend can't be measured."
 async function isUnderDailyAiBudget(): Promise<boolean> {
   try {
     const spent = await getTodayAiSpendUsd();
@@ -418,8 +431,11 @@ async function isUnderDailyAiBudget(): Promise<boolean> {
     }
     return true;
   } catch (err) {
-    console.warn("AI budget check failed; allowing fallback:", err);
-    return true;
+    console.error(
+      "AI budget unreadable; skipping paid fallback (fail-closed):",
+      err
+    );
+    return false;
   }
 }
 
