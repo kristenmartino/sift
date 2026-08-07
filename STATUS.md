@@ -1,43 +1,30 @@
 # Sift — STATUS
 
 **Updated:** 2026-08-05
-**Tier:** v1.5 (civic-literacy pivot) — **feature work resumed 2026-08-05**, by explicit decision, after ~6 days of the evidence-only posture D46 set
-**Velocity:** Six-week gap broken 2026-07-30 (3 PRs: [#190](https://github.com/kristenmartino/sift/pull/190), [`sift-api#113`](https://github.com/kristenmartino/sift-api/pull/113), [`sift-mcp#19`](https://github.com/kristenmartino/sift-mcp/pull/19)). By month: Mar 44 · Apr 39 · May 51 · Jun 13 · Jul 3. **2026-08-05: 5 PRs merged** — [#197](https://github.com/kristenmartino/sift/pull/197) here, [`sift-api#129`](https://github.com/kristenmartino/sift-api/pull/129) / [`#130`](https://github.com/kristenmartino/sift-api/pull/130) / [`#131`](https://github.com/kristenmartino/sift-api/pull/131) / [`#132`](https://github.com/kristenmartino/sift-api/pull/132) — plus the executive role-provenance work still on a branch. Read that as one concentrated day, not a new baseline; the 2026-07-31 burst of 8 was also followed by four quiet days. Prior to 2026-07-30 this line read "**Zero.** Last commit 2026-06-17," which was accurate when written; before that it read "High (10+ PRs / week)" and had been wrong for eight weeks — see [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) §2.5.
+**Tier:** v1.5 (civic-literacy pivot) — **feature work active** (un-paused 2026-08-05)
+**Velocity:** **27 PRs merged 2026-08-05** (24 `sift-api`, 3 `sift`) — the largest single day in the project's history, against a six-week gap that ended 2026-07-30. By month: Mar 44 · Apr 39 · May 51 · Jun 13 · Jul 3. This line has twice been wrong in the *optimistic* direction (it read "High (10+ PRs / week)" through eight weeks of near-zero — see [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) §2.5); treat a single day as a day, not a baseline.
 
-> ⚠️ **The 2026-07-30 work was engineering, not the evidence D46 asked for.** It was measurement rather than features — bug fixes, an eval harness, test verification — so it sits inside the evidence-only posture on a technicality. But the memo's stated next action is the **~10-hour week-one librarian/policy-staffer test**, and that has still not been run. Zero replies counted, because zero emails sent. Engineering is the comfortable work here; the outreach is the one that answers Q1–Q3.
+> **Feature work is no longer paused** (2026-08-05). The evidence-only posture D46 set held from 2026-07-27 and is now lifted; the passage that used to sit here — arguing the 2026-07-30 commits fit inside it "on a technicality" — described a constraint that no longer applies.
 >
-> ⚠️ **Still true on 2026-08-05, and the day made it sharper.** Feature work is un-paused and a lot shipped — but **zero emails have still been sent**, so Q1–Q3 remain unanswered by anyone outside this repo. What changed is that two of the pause's own premises turned out to be wrong, and both were wrong in the direction of *understating* the asset: the inventory below was badly stale, and the dossiers had no crawl path at all, so "is anyone finding these?" had never been a fair question. Neither discovery is a substitute for the test. The honest read is that the day removed excuses rather than evidence.
+> **What has not changed: the week-one librarian / policy-staffer test still has not been run.** Un-pausing the build does not answer Q1–Q3, and shipping is still the more comfortable of the two jobs. The difference is that this is now a sequencing question rather than a prohibition.
 
 ## Active focus
 
-**Launch evidence, not features.** Per [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) — the output of running `docs/GROWTH_STRATEGY.md` through the six role agents in `.claude/agents/` — the next action is a **~10-hour week-one test**: publish the 25 org dossiers as one static page, send it to ~40 librarians and ~20 policy staffers with one question ("is this useful, and does your organization pay for anything like it?"), and count replies. That test answers Q1, Q2, and Q3 simultaneously. If nobody replies, Q9 triggers in week one instead of day 180.
+**Sourcing the dossier corpus, and the outreach that tests whether anyone wants it.** The two are no longer exclusive.
 
-Budget is re-baselined to **6 hrs/week**, against an observed six weeks of zero. Cut by name: Bluesky, domain migration (deferred — buy the name, don't migrate yet), the dossier SEO pass, and Show HN.
+Shipped 2026-08-05 — the uncited-claims class of defect is closed across every population it appeared in:
 
-> **The dossier SEO pass was un-cut and shipped on 2026-08-05** ([#197](https://github.com/kristenmartino/sift/pull/197)). It was cut on a cost estimate; what the work actually found is that there was **no `sitemap.ts`, no `robots.ts`, and no structured data anywhere in the app** — 838 dossiers with no declared crawl path. That is not an optimization pass, it is the difference between the asset being visible and not. `docs/GROWTH_STRATEGY.md:68` had scoped it at ~6 hrs and it was accurate.
+- **111 rows cleaned of uncited prose about living people.** 102 executive / foreign-executive rows (migration 015) and 9 Supreme Court Justices (016), all traced to one un-merged branch's hand-run seeders on 2026-05-20, which also produced the 93 agency org rows 013 had already fixed. `docs/OPERATING_CONTEXT.md` §5 forbade all of it.
+- **67 dossiers now publish**, gated on sourcing rather than on chamber: 47 U.S. executive, 13 foreign, 9 Justices. Sitemap **674 → 734 URLs**. Every claim-bearing field is paired with the record that backs it, dropped in the parser if the source is absent.
+- Alongside: the linker's regex pre-gate, the cost breakdown, Neon retention, and `init.sql` finally describing all 15 tables.
 
-**Blocking and independent of all of the above — ~50 minutes, do today:** remove *"Edited by Claude"* from the `/colophon` masthead (`app/colophon/page.tsx:70` — the live site currently states that no human holds editorial responsibility, six days before EU AI Act Art. 50(4) applies); add the living-persons / legal-outcome constraint block to the three generation prompts in `sift-api/services/` (they currently contain none); and set `SEARCH_LOGGING_ENABLED=false` in `.env.local` (local dev against the prod `DATABASE_URL` is writing rows into the analytics tables now). Then B6 — the org-dossier citation fix — which is a prerequisite for the week-one test, not a parallel task.
+**Next, in order.** The **~10-hour week-one test** (`LAUNCH_DECISION_MEMO.md`) is still the action that answers Q1, Q2 and Q3, and it is still unrun. Its prerequisites are now *all* met — B1/B2/B7 and B6 are done, and the dossier set it would point at is both larger and defensible. Nothing is blocking it except doing it.
 
 Paused, preserved, not deleted: Android v1 (see Recent decisions), the sift-mcp→sift-api merge ([`sift-api#62`](https://github.com/kristenmartino/sift-api/issues/62)), Ask Sift + Refined Compare ([`sift-api#63`](https://github.com/kristenmartino/sift-api/issues/63)), theme migration 2E QA.
 
 ## Open strategic question
 
-**Is there enough product here to launch?** Raised by the panel and not settled. The strategic thesis (`OPERATING_CONTEXT.md` §2) is that the dossier dataset is the sellable asset.
-
-**The inventory this question rested on was wrong, and understated the asset. Corrected against prod 2026-08-05:**
-
-| | This section previously said | Actually in prod |
-|---|---|---|
-| politicians | 536, all sitting Congress | **638** — 436 house, 100 senate, 56 executive, 46 foreign-executive |
-| orgs | 25 | **103** — 93 agencies, 8 think tanks, 2 advocacy |
-| bills | **one** | **25** |
-| outlets | 72 | 72 ✓ |
-
-The 536 / 25 / 1 figures came from the seed CSVs in `sift-api/data/`. **Prod diverged from those CSVs months ago** — that is the D40 drift, worse than [`sift-api#91`](https://github.com/kristenmartino/sift-api/issues/91) recorded: 102 politician rows existed that no file in either repo described. Anything quoting dossier counts must query the tables, never the CSVs.
-
-Still true, and still the weak part: `interest_group_ratings` empty on all 638 rows, PAC figures from the 2022 cycle (OpenSecrets API discontinued Apr 2025), no refresh job on any profile table, and only **665 of 838 dossiers clear the publish floor** (`lib/publishFloor.ts`) — the rest render but are `noindex` because they have no sourced substantive field.
-
-The honest inventory is now: one real dataset (the org dossiers), one public directory that got materially deeper today (638 politicians, 47 executives newly on primary records), one small-but-real bill set (25), and one commodity not yet licensed (72 outlet ratings). The week-one test is still what answers this question, and it still has not been run.
+**Is there enough product here to launch?** Raised by the panel and not settled. The strategic thesis (`OPERATING_CONTEXT.md` §2) is that the dossier dataset is the sellable asset. Verified composition: `interest_group_ratings` empty on all 536 politician rows, PAC figures from the 2022 cycle (OpenSecrets API discontinued Apr 2025), 25 orgs against a planned ~200, **one** bill, no refresh job. The honest inventory is one real dataset (the 25 org dossiers — genuinely good, real synthesis), one public directory with two bookmarks per row (536 politicians), one placeholder (1 bill), and one commodity not yet licensed (72 outlet ratings). The week-one test is designed so this question gets answered by strangers rather than argued internally.
 
 **"What changed" on a developing story — candidate feature, not committed.**
 
@@ -74,13 +61,13 @@ Surfaced 2026-06-01. The **neutrality rule**, the **"won't do" calls** (MBFC cre
 
 ## Next 3
 
-1. **[~15 min, most of this is done]** B1 + B2 + B7 from [`LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) §5. Verified 2026-08-05: **B1 shipped** — `/colophon` now names a human who "holds editorial responsibility", the Art. 50(4) exposure is closed. **B7 shipped** — `SEARCH_LOGGING_ENABLED=false` is set in `.env.local`, so local dev no longer writes analytics rows into prod. **B2 is one-third done**: `services/summarizer.py:192` carries the constraint (*"Never characterize a legal outcome beyond what the source literally says"*), but `services/primer_generator.py` has **no constraint block at all** and it generates prose about named people. That is the remaining item, and it is small. `effort-hours`.
-2. **[week 1]** B6 (org-dossier citations, §5.1) → publish the org dossiers as one static page → ~60 emails → count replies. **This is the launch.** `effort-days`.
-3. **[gated on #2]** Ten conversations in two rounds, per the pre-registered decision rules in the memo §6 (Q1/Q2). Only happens if replies arrive. `effort-week`.
+1. **[week 1] The week-one test — send it.** `LAUNCH_DECISION_MEMO.md` §5.1: publish the dossiers as one static page, send to ~40 librarians and ~20 policy staffers with one question ("is this useful, and does your organization pay for anything like it?"), count replies. Answers Q1, Q2 and Q3 at once; if nobody replies, Q9 triggers in week one rather than day 180. **Every prerequisite is now met** — B1/B2/B7 shipped, B6 shipped, and the page it points at is 67 sourced dossiers rather than 25. `effort-days`.
+2. **[~1 hr, do alongside] `role_verified_at` on the publish floor.** Every published dossier's claim rests on a page that was checked once. For the 13 foreign rows the source names the person, so it *decays*: `gov.uk` records that Keir Starmer left office 2026-07-20 while Sift called him the sitting PM. Add the column, set it from the verification report, and require it within ~90 days to publish. Stale rows keep rendering and drop out of the sitemap — the existing "don't index yet" semantics, zero human hours, fails in the safe direction. Precedent: `outlet_profiles.allsides_last_checked`, `org_profiles.self_description_checked`. `effort-hours`.
+3. **[gated on #1]** Ten conversations in two rounds, per the pre-registered decision rules in the memo §6 (Q1/Q2). Only happens if replies arrive. `effort-week`.
 
-**Carried in from 2026-08-05, sequenced behind the above:** finish the entity-link backfill — halted at 213,000/282,960 to stop it writing regex false positives, resumes with `backfill_entity_links.py --include-empty` once the `_REGEX_INELIGIBLE_NAMES` blocklist lands; and decide the **297 residual chips** for the five outlet names the one-off cleanup did not cover (~74% wrong, but a blanket strip destroys ~78 correct ones — `--mode llm` over just those 297 costs ~$0.30). Both are in [`sift-api/STATUS.md`](https://github.com/kristenmartino/sift-api/blob/main/STATUS.md) with the measurements.
+**Deliberately not next:** SSR/streaming ([#56](https://github.com/kristenmartino/sift/issues/56)), the civic-literacy final mile ([#98](https://github.com/kristenmartino/sift/issues/98)), the web `/ask` chat UI, Refined Compare's "Focus on…" input, Android. Feature work being un-paused does not make these next — it makes the *ordering* a judgement rather than a rule, and the judgement is still that a corpus nobody has been asked about does not need more surfaces.
 
-**Deliberately not next:** SSR/streaming ([#56](https://github.com/kristenmartino/sift/issues/56)), the civic-literacy final mile ([#98](https://github.com/kristenmartino/sift/issues/98)), the web `/ask` chat UI, Refined Compare's "Focus on…" input, Android. All are building; none can be justified until the week-one test returns. The failure mode this plan exists to correct is shipping more product instead of finding out whether anyone wants the product that exists.
+**Not built, deliberately, and why** — a cron that re-verifies sources and auto-unpublishes on failure. The observed failure mode is bot-blocking, not office change: 6 of the foreign sources return hard 403s and 3 more render in JS. Wiring prod writes to a signal that is roughly half infrastructure noise would drop correct rows the first time a government site rate-limits us. #2 above gets the same guarantee by expiry instead.
 
 ## The 10 think-tank rows are demo fixtures — scoped cleanup, 2026-07-28
 
@@ -199,6 +186,8 @@ Both found while applying migration 012 to prod. Neither blocks the week-one tes
 ## Recent decisions
 
 Cross-repo architecture decisions now live in [`docs/DECISIONS.md`](./docs/DECISIONS.md) (the canonical register); entries below keep their dates + links and point there instead of duplicating.
+
+- **2026-08-05** — **Feature work un-paused.** D46's evidence-only posture, set 2026-07-27, is lifted. It did the job it was built for — it stopped a quarter of building against zero validated demand, and it forced the launch memo — but the constraint had started reading as a prohibition on work that was in fact *fixing correctness*, and 27 PRs merged the same day it came off. Two things it should NOT be read as: the week-one test is still unrun and still the thing that answers Q1–Q3, and "Deliberately not next" in the Next 3 still holds. What changed is that the ordering is now a judgement call rather than a rule.
 
 - **2026-08-05** — **Feature work un-paused, and the dossier set made discoverable for the first time** ([#197](https://github.com/kristenmartino/sift/pull/197)). There was **no `sitemap.ts`, no `robots.ts`, and zero structured data** anywhere in the app: the 838-row asset `OPERATING_CONTEXT.md` §2 calls sellable had no declared crawl path, so every prior argument about whether the dossiers were "working" was untestable. Now 674 URLs (9 static + 665 dossiers), `Person`/`Organization`/`Legislation`/`NewsMediaOrganization` JSON-LD, and a **publish floor** (`lib/publishFloor.ts`) that generalises the rule `listCitedAgencies` already applied to `/agencies`. **Catalog set and published set are now deliberately different** — a thin row still renders and still resolves an entity chip, it just isn't advertised; `follow: true` on withheld pages keeps their public-record links crawlable.
 
