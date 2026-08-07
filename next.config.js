@@ -7,8 +7,15 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 const nextConfig = {
   images: {
     // Allowlist of image hosts, derived from every image_url the pipeline has
-    // ever stored (62 registrable domains with >=5 images across 182,855; the 4 that
-    // fall below it are one-off singletons).
+    // ever stored. Next caps this array at 50 entries, so the 48 domains that
+    // fit are chosen by CURRENT activity rather than all-time volume:
+    // 100% of the last 30 days' images are covered and no active host is
+    // dropped, against 99.34% of the all-time corpus. Ranking by lifetime
+    // volume instead would have dropped decider.com, dwcdn.net and
+    // boltdns.net, all of which are still serving.
+    //
+    // One pattern per domain where the data allows it — `**.d` for the 39
+    // that only ever serve from subdomains, bare `d` for the apex-only ones.
     //
     // This was `hostname: "**"`, justified as "images are only loaded from
     // URLs stored in the database via trusted RSS feed ingestion". That is
@@ -29,30 +36,61 @@ const nextConfig = {
     // still cuts the reachable surface from "the entire HTTPS internet" to a
     // handful of CDNs.
     //
-    // To regenerate after adding outlets:
-    //   SELECT DISTINCT ... FROM articles WHERE image_url IS NOT NULL
-    // grouped by registrable domain, keeping those with >=5 images.
+    // To regenerate after adding outlets: group articles.image_url by
+    // registrable domain, order by last-30-day count, and take domains until
+    // the pattern count hits 50.
     remotePatterns: [
-      "abc-cdn.net.au", "abcnews.com", "amazonaws.com", "aolcdn.com",
-      "arstechnica.net", "axios.com", "bwbx.io", "cbsistatic.com",
-      "cdn-si-edu.com", "cloudfront.net", "ctfassets.net", "dailycaller.com",
-      "deadline.com", "decider.com", "decrypt.co", "dwcdn.net",
-      "engadget.com", "forbes.com", "foreignpolicy.com", "fortune.com",
-      "foxnews.com", "france24.com", "ft.com", "futurecdn.net",
-      "guim.co.uk", "i-scmp.com", "ieee.org", "ignimgs.com", "insider.com",
-      "japantimes.co.jp", "jwplayer.com", "minutemediacdn.com", "mktw.net",
-      "nasa.gov", "newscientist.com", "nypost.com", "nyt.com",
-      "opensecrets.org", "pagesix.com", "pitchfork.com", "politico.com",
-      "polygonimages.com", "quantamagazine.org", "qz.com", "rbl.ms",
-      "restofworld.org", "rollcall.com", "sciencenews.org", "slate.com",
-      "statnews.com", "theatlantic.com", "thediplomat.com", "thedispatch.com",
-      "thehill.com", "theintercept.com", "toiimg.com", "variety.com",
-      "washingtonexaminer.com", "washtimes.com", "wired.com", "wp.com",
-      "youtube.com",
-    ].flatMap((domain) => [
-      { protocol: "https", hostname: domain },
-      { protocol: "https", hostname: `**.${domain}` },
-    ]),
+      { protocol: "https", hostname: "**.abc-cdn.net.au" },
+      { protocol: "https", hostname: "**.abcnews.com" },
+      { protocol: "https", hostname: "**.amazonaws.com" },
+      { protocol: "https", hostname: "**.aolcdn.com" },
+      { protocol: "https", hostname: "**.arstechnica.net" },
+      { protocol: "https", hostname: "**.axios.com" },
+      { protocol: "https", hostname: "**.boltdns.net" },
+      { protocol: "https", hostname: "**.bwbx.io" },
+      { protocol: "https", hostname: "**.cbsistatic.com" },
+      { protocol: "https", hostname: "**.cloudfront.net" },
+      { protocol: "https", hostname: "**.dailycaller.com" },
+      { protocol: "https", hostname: "**.decrypt.co" },
+      { protocol: "https", hostname: "**.dwcdn.net" },
+      { protocol: "https", hostname: "**.forbes.com" },
+      { protocol: "https", hostname: "**.foxnews.com" },
+      { protocol: "https", hostname: "**.france24.com" },
+      { protocol: "https", hostname: "**.ft.com" },
+      { protocol: "https", hostname: "**.futurecdn.net" },
+      { protocol: "https", hostname: "**.guim.co.uk" },
+      { protocol: "https", hostname: "**.i-scmp.com" },
+      { protocol: "https", hostname: "**.ignimgs.com" },
+      { protocol: "https", hostname: "**.insider.com" },
+      { protocol: "https", hostname: "**.japantimes.co.jp" },
+      { protocol: "https", hostname: "**.minutemediacdn.com" },
+      { protocol: "https", hostname: "**.mktw.net" },
+      { protocol: "https", hostname: "**.nypost.com" },
+      { protocol: "https", hostname: "**.nyt.com" },
+      { protocol: "https", hostname: "**.pitchfork.com" },
+      { protocol: "https", hostname: "**.politico.com" },
+      { protocol: "https", hostname: "**.polygonimages.com" },
+      { protocol: "https", hostname: "**.slate.com" },
+      { protocol: "https", hostname: "**.statnews.com" },
+      { protocol: "https", hostname: "**.theatlantic.com" },
+      { protocol: "https", hostname: "**.toiimg.com" },
+      { protocol: "https", hostname: "**.variety.com" },
+      { protocol: "https", hostname: "**.washingtonexaminer.com" },
+      { protocol: "https", hostname: "**.washtimes.com" },
+      { protocol: "https", hostname: "**.wired.com" },
+      { protocol: "https", hostname: "**.wp.com" },
+      { protocol: "https", hostname: "deadline.com" },
+      { protocol: "https", hostname: "decider.com" },
+      { protocol: "https", hostname: "foreignpolicy.com" },
+      { protocol: "https", hostname: "fortune.com" },
+      { protocol: "https", hostname: "nypost.com" },
+      { protocol: "https", hostname: "pagesix.com" },
+      { protocol: "https", hostname: "qz.com" },
+      { protocol: "https", hostname: "thedispatch.com" },
+      { protocol: "https", hostname: "thehill.com" },
+      { protocol: "https", hostname: "theintercept.com" },
+      { protocol: "https", hostname: "variety.com" },
+    ],
     // The feed rotates every 30 minutes, so without this each generated width
     // of each new image is re-transformed far more often than it is served.
     minimumCacheTTL: 60 * 60 * 24 * 7,
