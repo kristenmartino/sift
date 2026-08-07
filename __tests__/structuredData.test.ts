@@ -57,6 +57,7 @@ const org: OrgProfile = {
   annualBudgetUsd: 36_970_000_000,
   annualBudgetFy: "FY2027",
   annualBudgetSource: "https://www.whitehouse.gov/example.xlsx",
+  annualBudgetKind: "ombOutlays",
   majorFunders: [],
   faraRegistered: false,
   faraCountries: [],

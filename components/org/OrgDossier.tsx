@@ -40,7 +40,9 @@ export default function OrgDossier({ org }: OrgDossierProps) {
   // so this is defense in depth against a profile built by another path —
   // the lede must never be the one place an uncited figure gets through.
   if (budgetLabel && org.annualBudgetFy && org.annualBudgetSource)
-    ledeBits.push(c.annualBudgetLabel(budgetLabel, org.annualBudgetFy));
+    ledeBits.push(
+      c.annualBudgetLabel(budgetLabel, org.annualBudgetFy, org.annualBudgetKind),
+    );
 
   // External links: stable order; forward-compat for unknown keys.
   const linkOrder: Array<keyof typeof c.externalLinkLabels> = [
@@ -101,7 +103,7 @@ export default function OrgDossier({ org }: OrgDossierProps) {
                 rel="noopener noreferrer"
                 className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
               >
-                {c.budgetSourceLabel} <span aria-hidden>↗</span>
+                {c.budgetSourceLabel(org.annualBudgetKind)} <span aria-hidden>↗</span>
               </a>
             </p>
           )}

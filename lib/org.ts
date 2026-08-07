@@ -5,6 +5,7 @@
 // budget. Pure functions only; trivially unit-testable.
 
 import type {
+  BudgetSourceKind,
   OrgExternalLinks,
   OrgProfile,
   OrgType,
@@ -129,6 +130,38 @@ function asOrgType(v: string | null): OrgType | null {
 }
 
 /**
+ * Identify which kind of record a budget source points at, so the page can
+ * name the figure correctly.
+ *
+ * Keyed on the source URL rather than on `org.type`, because the label
+ * describes the *record*, not the organization — a nonprofit cited to a 990
+ * and an agency cited to OMB are different claims even when both are typed
+ * `foundation`. Before this, `copy.ts` hardcoded "Per the Form 990 on
+ * ProPublica Nonprofit Explorer" for every row, so 23 federal agencies cited
+ * to an OMB spreadsheet rendered under the name of a filing they do not have.
+ *
+ * Host-matched, not substring-matched: a bare `includes("propublica.org")`
+ * would also match `evil.com/?u=propublica.org`. Unknown hosts return null and
+ * the UI falls back to naming neither.
+ */
+function budgetSourceKind(src: string): BudgetSourceKind | null {
+  let host: string;
+  try {
+    host = new URL(src).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  const matches = (domain: string) =>
+    host === domain || host.endsWith(`.${domain}`);
+
+  if (matches("propublica.org")) return "form990";
+  // OMB publishes the Historical Tables on whitehouse.gov; govinfo carries the
+  // same series for prior administrations.
+  if (matches("whitehouse.gov") || matches("govinfo.gov")) return "ombOutlays";
+  return null;
+}
+
+/**
  * Coerce pg's NUMERIC representation (often returned as string to preserve
  * precision) into a JS number. Returns null for invalid inputs rather than
  * NaN — the dossier conditionally skips the budget section on null.
@@ -195,6 +228,7 @@ export function parseDbOrgProfile(
         annualBudgetUsd: cited ? usd : null,
         annualBudgetFy: cited ? fy : null,
         annualBudgetSource: cited ? src : null,
+        annualBudgetKind: cited ? budgetSourceKind(src) : null,
       };
     })(),
     majorFunders: asStringArray(row.major_funders),

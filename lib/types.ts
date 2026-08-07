@@ -193,6 +193,19 @@ export interface BillExternalLinks {
  * list. The methodology page documents that this is symmetric — every
  * registered org gets the same treatment regardless of which country.
  */
+/**
+ * The kind of record a budget figure came from. Decides what the figure is
+ * *called* on the page, because the two measure different things:
+ *
+ * - `form990`     — total functional expenses, from an IRS Form 990.
+ * - `ombOutlays`  — net outlays, from OMB Historical Tables. Net of offsetting
+ *                   receipts, so it is legitimately negative for an agency
+ *                   with large revolving funds (GSA, FY2025: −$379M).
+ *
+ * `null` means the source is neither, and the UI must not assert which.
+ */
+export type BudgetSourceKind = "form990" | "ombOutlays";
+
 export interface OrgProfile {
   slug: string;
   name: string;
@@ -210,12 +223,24 @@ export interface OrgProfile {
   governanceSource: string | null;
   foundedYear: number | null;
   /**
-   * Total functional expenses from the Form 990 at `annualBudgetSource`.
-   * NOT a general "annual budget" — that was the unsourced fixture value this
-   * replaced (migration 013). Renders only with `annualBudgetFy` + source.
+   * The figure at `annualBudgetSource`. NOT a general "annual budget" — that
+   * was the unsourced fixture value this replaced (migration 013). Renders
+   * only with `annualBudgetFy` + source.
+   *
+   * **It does not mean the same thing for every row**, which is why
+   * `annualBudgetKind` exists: for a nonprofit it is total functional expenses
+   * from a Form 990; for a federal agency it is net outlays from OMB
+   * Historical Tables. Labelling the second as the first is a miscitation, and
+   * it also makes GSA's legitimately negative net outlays read as an error.
    */
   annualBudgetUsd: number | null;
   annualBudgetFy: string | null;
+  /**
+   * Which record `annualBudgetSource` points at, so the UI can name the figure
+   * correctly. Derived from the source itself rather than from `type` — the
+   * label describes the record, not the organization.
+   */
+  annualBudgetKind: BudgetSourceKind | null;
   annualBudgetSource: string | null;
   majorFunders: string[];
   faraRegistered: boolean;
