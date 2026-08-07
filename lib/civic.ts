@@ -79,6 +79,7 @@ export const ORG_TYPE_LABELS: Record<OrgType, string> = {
   "foundation": "Foundations",
   "industry-group": "Industry groups",
   "agency": "Federal agencies",
+  "igo": "International organizations",
   "other": "Other",
 };
 

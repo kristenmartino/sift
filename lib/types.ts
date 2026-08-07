@@ -117,6 +117,12 @@ export type OrgType =
   | "foundation"
   | "industry-group"
   | "agency"
+  // Intergovernmental organizations — UN, NATO, IMF, WHO, WTO, the European
+  // Commission, ILO. Q8 closed "global" (DECISIONS.md D47) and these were the
+  // entry point rather than more foreign heads of state, because a founding
+  // treaty is a fixed document at a stable URL: it does not decay the way a
+  // page naming a sitting head of government does.
+  | "igo"
   | "other";
 
 /**

@@ -52,6 +52,7 @@
 | D44 | Source expansion | Grow ~50 → ~200 by empirical set-cover; "curated AND rated," factual floor + resolvable/ingestable gates | $0 to decide | DECIDED; **PAUSED by D46** — it is building, not evidence (Jul 2026) |
 | D45 | Rank by civic impact | Rank by civic impact + reader accessibility (paywall) signal, not coverage volume; validate empirically | $0 to decide | DECIDED, in design (Jun 2026) |
 | D46 | Android paused; launch re-planned around evidence | Pause Android v1 for 90 days; replace the feature roadmap with a ~10-hr week-one evidence test; re-baseline budget to 6 hrs/wk | $0 to decide | SETTLED (Jul 2026); **feature-work pause LIFTED 2026-08-05** — Android stays paused, the week-one test stays the next action, but building is no longer prohibited |
+| D47 | Q8 closed: global civic content | Sift covers non-US civic institutions. Entry point is IGOs sourced to founding treaties, not more foreign heads of state | $0 to decide | SETTLED (Aug 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -842,6 +843,22 @@ Both share tool handlers, the cost-cap pool, the Anthropic SDK pattern, and SSE;
 **Cost:** $0 to decide.
 
 ---
+
+### D47. Q8 closed — global civic content, entered through treaties rather than people
+
+**Decided 2026-08-05.** `OPERATING_CONTEXT.md` §6 had held Q8 open to week 12 with the note that US-only "makes the dossier moat deeper and the compliance surface smaller". Both halves of that are still true. The decision is to accept the wider surface.
+
+**What decided the entry point was evidence, not preference.** The same day, an attempt to source all 46 `foreign-executive` politician rows returned **13**. The other 33 failed for reasons that do not yield to effort: 6 official sites return hard 403s to any non-browser client, 3 render their content in JS, and the formers have no official archive at all — an office page names the incumbent, so publishing a former head of government from one would assert they still hold it.
+
+Worse, the 13 that *did* verify **decay**. Their only evidence of incumbency is a page that names them today. `gov.uk` records that Keir Starmer was Prime Minister "from 5 July 2024 to 20 July 2026" — he had left office three weeks before Sift's own prose was corrected, and nothing detected it. Migration 017 now expires those rows after 90 days, which bounds the risk but does not remove it.
+
+**Intergovernmental organizations invert every one of those properties.** A founding treaty is a fixed document at a stable URL: the UN Charter will say the same thing in ten years. Nothing decays, so no expiry is needed. And an IGO is an institution rather than a living person, which keeps §5's sharpest constraint — no claim about a living person without a citation to the primary record — largely out of scope.
+
+They also cost almost nothing to add. `org_profiles` already carries `governance_structure` + `governance_source`, the sitemap's org rule is type-independent, and `/civic` groups by type — so a new `igo` value in `OrgType` is the whole frontend change. `/agencies` deliberately keeps filtering `type = 'agency'`: the UN is not a federal agency and must not be labelled one.
+
+**First tranche: 7 rows** — UN, NATO, IMF, WHO, WTO, European Commission, ILO. Each `governance_structure` is a paraphrase in the register the 93 agency rows already use, backed by phrases quoted from the treaty that `scripts/verify_igo_sources.py` requires on the cited page. 25 phrases checked, 0 failures — but only after the check rejected four first attempts: the WHO claim overreached a landing page that is not the constitution's full text, the TEU says "completely independent" rather than "complete independence", the ILO URL 404'd, and the IAEA statute is reachable only as a PDF and was **dropped rather than cited unverified**.
+
+**What this does not decide.** Not global *news sources* — AllSides and MBFC rate US outlets almost exclusively, so the ratings layer that makes `/outlet` pages work has no equivalent, and that remains gated on Q4. Not the 33 withheld politician rows, which stay open as `sift-api`#166. And it does not lower the sourcing bar: the reason IGOs went first is precisely that they clear the existing bar without one.
 
 ### D46. Android v1 paused; the launch is re-planned around evidence, not features
 

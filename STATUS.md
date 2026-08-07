@@ -50,7 +50,7 @@ Both are still open, but the frame around them changed on 2026-07-27 and the old
 
 **What's actually still open, re-framed as web questions:**
 
-- **Q8 — US-only or global civic content** (`OPERATING_CONTEXT.md` §6, week 12). Everything in `LAUNCH_DECISION_MEMO.md` assumes a US-only posture, now explicit rather than tacit. US-only makes the dossier moat deeper and the compliance surface smaller.
+- ~~**Q8 — US-only or global civic content**~~ **CLOSED 2026-08-05 — global** → [`DECISIONS.md` D47](./docs/DECISIONS.md). Entry point is intergovernmental organizations sourced to founding treaties, **not** more foreign heads of state — the day's evidence was that 33 of 46 head-of-state rows could not be verified at all, and the 13 that could decay (gov.uk had Starmer leaving office three weeks before Sift noticed). A treaty is a fixed document at a stable URL. First tranche: UN, NATO, IMF, WHO, WTO, European Commission, ILO. Does **not** decide global news sources, which stay gated on Q4.
 - **Q3 — monetization.** No longer "free indefinitely vs subscription exploration in 2027." The memo's target is **one paid pilot at $2,000–5,000 once** (a journalism school or public library, invoiced directly — no procurement, no VPAT), not a consumer subscription. The $5/mo consumer path was shown not to reach $1,500/mo net before ~2029. Willingness-to-pay gets asked in writing in the week-one test, months earlier than this section assumed.
 
 Both are now answered by the same evidence the wedge question is waiting on, not by platform strategy.
@@ -188,6 +188,8 @@ Both found while applying migration 012 to prod. Neither blocks the week-one tes
 ## Recent decisions
 
 Cross-repo architecture decisions now live in [`docs/DECISIONS.md`](./docs/DECISIONS.md) (the canonical register); entries below keep their dates + links and point there instead of duplicating.
+
+- **2026-08-05** — **Q8 closed: global** → [`DECISIONS.md` D47](./docs/DECISIONS.md). Sift covers non-US civic institutions. The entry point was chosen on evidence rather than preference: sourcing all 46 `foreign-executive` rows the same day returned 13, and the 33 failures were structural (hard 403s, JS-rendered pages, formers with no official archive). The 13 that verified **decay** — their only evidence of incumbency is a page naming them today. IGOs invert that: a founding treaty is fixed, at a stable URL, and describes an institution rather than a living person. 7 rows seeded (UN, NATO, IMF, WHO, WTO, European Commission, ILO), 25 treaty phrases verified, 0 failures — after the check rejected four first attempts, including an IAEA statute reachable only as a PDF, which was dropped rather than cited unverified. `OPERATING_CONTEXT.md` §6's warning stands and is accepted: the compliance surface is now wider, across jurisdictions less forgiving than the US.
 
 - **2026-08-05** — **Feature work un-paused.** D46's evidence-only posture, set 2026-07-27, is lifted. It did the job it was built for — it stopped a quarter of building against zero validated demand, and it forced the launch memo — but the constraint had started reading as a prohibition on work that was in fact *fixing correctness*, and 27 PRs merged the same day it came off. Two things it should NOT be read as: the week-one test is still unrun and still the thing that answers Q1–Q3, and "Deliberately not next" in the Next 3 still holds. What changed is that the ordering is now a judgement call rather than a rule.
 
