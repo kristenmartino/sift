@@ -51,7 +51,7 @@
 | D43 | Agentic surfaces | Refined Compare (`lens`) + Ask Sift in v1.5 (web + Android); depends on D41 | $0 to decide | SETTLED scope; **build PAUSED by D46** (Jul 2026) |
 | D44 | Source expansion | Grow ~50 → ~200 by empirical set-cover; "curated AND rated," factual floor + resolvable/ingestable gates | $0 to decide | DECIDED; **PAUSED by D46** — it is building, not evidence (Jul 2026) |
 | D45 | Rank by civic impact | Rank by civic impact + reader accessibility (paywall) signal, not coverage volume; validate empirically | $0 to decide | DECIDED, in design (Jun 2026) |
-| D46 | Android paused; launch re-planned around evidence | Pause Android v1 for 90 days; replace the feature roadmap with a ~10-hr week-one evidence test; re-baseline budget to 6 hrs/wk | $0 to decide | SETTLED (Jul 2026) |
+| D46 | Android paused; launch re-planned around evidence | Pause Android v1 for 90 days; replace the feature roadmap with a ~10-hr week-one evidence test; re-baseline budget to 6 hrs/wk | $0 to decide | SETTLED (Jul 2026); **feature-work pause LIFTED 2026-08-05** — Android stays paused, the week-one test stays the next action, but building is no longer prohibited |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -844,6 +844,14 @@ Both share tool handlers, the cost-cap pool, the Anthropic SDK pattern, and SSE;
 ---
 
 ### D46. Android v1 paused; the launch is re-planned around evidence, not features
+
+> **Amended 2026-08-05 — the feature-work pause is lifted.** The three parts of D46 are separable and only one is withdrawn.
+>
+> **Still in force:** Android v1 stays paused; the ~10-hour week-one test is still the next action and is still unrun; the 6 hrs/week budget re-baseline stands.
+>
+> **Withdrawn:** the blanket prohibition on feature work. It did what it was built for — it stopped a fourth quarter of building against zero validated demand and it forced the launch memo — but it had begun to read as a bar on work that was *fixing correctness*, not adding surface. The 2026-08-05 dossier-sourcing work (migrations 015/016: 111 rows of uncited claims about living people removed, 67 dossiers published behind a sourcing gate) was required by `OPERATING_CONTEXT.md` §5 regardless of what any evidence test returns, and could not honestly be classified as "building".
+>
+> The replacement rule is a judgement rather than a prohibition: **work that makes an existing claim defensible is not gated on the evidence test; work that adds a new surface still is.** The "Deliberately not next" list in `STATUS.md` is unchanged.
 
 **Context.** `docs/GROWTH_STRATEGY.md` (2026-07-27) proposed a 90-day plan to take Sift from "launched, not adopted" to an asset with revenue. It was run through the six role agents in `.claude/agents/` as an independent panel, then the reconciled result was run through `red-team`. Full record — including where the roles disagreed and how it was resolved — in [`LAUNCH_DECISION_MEMO.md`](./LAUNCH_DECISION_MEMO.md).
 
