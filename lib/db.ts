@@ -683,7 +683,8 @@ export async function getPoliticianByBioguide(
               role_start_date, role_end_date, role_dates_source,
               nomination_date, nomination_url,
               confirmation_date, confirmation_vote_url,
-              confirmation_vote_result, predecessor_name
+              confirmation_vote_result, predecessor_name, predecessor_source,
+              role_verified_at
        FROM politician_profiles
        WHERE bioguide_id = $1
        LIMIT 1`,
@@ -1010,9 +1011,16 @@ export async function listSitemapEntries(): Promise<SitemapEntry[]> {
         WHERE (chamber IN ('house', 'senate')
                AND (jsonb_array_length(COALESCE(committees, '[]'::jsonb)) > 0
                  OR jsonb_array_length(COALESCE(top_industries_current_cycle, '[]'::jsonb)) > 0))
-           OR (chamber IN ('executive', 'foreign-executive', 'scotus')
+           OR (chamber IN ('executive', 'scotus')
                AND role_title IS NOT NULL
                AND role_title_source IS NOT NULL)
+           -- Foreign rows additionally expire. Mirrors
+           -- ROLE_VERIFICATION_MAX_AGE_DAYS in lib/publishFloor.ts — change both.
+           OR (chamber = 'foreign-executive'
+               AND role_title IS NOT NULL
+               AND role_title_source IS NOT NULL
+               AND role_verified_at IS NOT NULL
+               AND role_verified_at >= CURRENT_DATE - INTERVAL '90 days')
        UNION ALL
        SELECT '/org/' || slug, updated_at
          FROM org_profiles

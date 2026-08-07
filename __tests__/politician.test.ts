@@ -155,6 +155,7 @@ describe("parseDbPoliticianProfile", () => {
           confirmationVoteResult: null,
           predecessorName: null,
           predecessorSource: null,
+          roleVerifiedAt: null,
         },
       });
     });

@@ -58,7 +58,56 @@ function present(s: string | null | undefined): boolean {
  * second clause is a sourcing test even though it reads like a presence test.
  * The 46 foreign heads of state have no such record and stay below the floor.
  */
-export function isPublishablePolitician(p: PoliticianProfile): boolean {
+/**
+ * How long a foreign-executive row may go unchecked and still be advertised.
+ *
+ * A judgement, not a derivation: long enough that a quarterly re-run keeps the
+ * set published, short enough that a head of government who has left office is
+ * withheld within one quarter rather than indefinitely. `listSitemapEntries`
+ * mirrors this as a SQL interval — change both.
+ */
+export const ROLE_VERIFICATION_MAX_AGE_DAYS = 90;
+
+/**
+ * True when a foreign row's source was refetched recently enough to still
+ * stand behind the claim.
+ *
+ * Only foreign rows decay. Their `roleTitleSource` is a live page that names
+ * the person — gov.uk naming Keir Starmer — so it stops being true the moment
+ * they leave office, and nothing else on the row records that they did.
+ * gov.uk now says Starmer was Prime Minister "from 5 July 2024 to 20 July
+ * 2026" while Sift's own prose still called him the sitting PM; that is the
+ * failure this exists to bound.
+ *
+ * US executive and scotus rows do not decay and are deliberately exempt: their
+ * title comes from a statute, their appointment from a Senate roll-call, and
+ * their *departure* from the successor's roll-call, which sets roleEndDate.
+ * All three are permanent records. Expiring them would drop 56 correct rows
+ * out of the sitemap because nobody re-ran a script.
+ */
+function verificationIsCurrent(verifiedAt: string | null, now: Date): boolean {
+  if (!present(verifiedAt)) return false;
+  const checked = Date.parse(`${verifiedAt}T00:00:00Z`);
+  if (Number.isNaN(checked)) return false;
+  // Whole days from UTC midnight, because the SQL half of this rule compares
+  // `role_verified_at >= CURRENT_DATE - INTERVAL '90 days'` — pure date
+  // arithmetic. Comparing against the current *instant* instead would make the
+  // two disagree for most of every day: a row checked exactly 90 days ago
+  // reads as 90.5 days old here and 90 days old in Postgres, so the sitemap
+  // would list a page whose own metadata says noindex.
+  const today = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+  const ageDays = (today - checked) / 86_400_000;
+  return ageDays >= 0 && ageDays <= ROLE_VERIFICATION_MAX_AGE_DAYS;
+}
+
+export function isPublishablePolitician(
+  p: PoliticianProfile,
+  now: Date = new Date(),
+): boolean {
   if (p.chamber === "house" || p.chamber === "senate") {
     return p.committees.length > 0 || p.topIndustriesCurrentCycle.length > 0;
   }
@@ -67,7 +116,13 @@ export function isPublishablePolitician(p: PoliticianProfile): boolean {
     p.chamber === "foreign-executive" ||
     p.chamber === "scotus"
   ) {
-    return present(p.role.roleTitle) && present(p.role.roleTitleSource);
+    if (!present(p.role.roleTitle) || !present(p.role.roleTitleSource)) {
+      return false;
+    }
+    return (
+      p.chamber !== "foreign-executive" ||
+      verificationIsCurrent(p.role.roleVerifiedAt, now)
+    );
   }
   return false;
 }

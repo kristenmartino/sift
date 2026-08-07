@@ -30,6 +30,7 @@ const emptyRole: PoliticianProfile["role"] = {
   confirmationVoteResult: null,
   predecessorName: null,
   predecessorSource: null,
+  roleVerifiedAt: null,
 };
 
 const austin: PoliticianProfile = {
@@ -60,6 +61,7 @@ const austin: PoliticianProfile = {
     confirmationVoteResult: "Confirmed 93-2",
     predecessorName: "Mark T. Esper",
     predecessorSource: "https://www.congress.gov/nomination/117th-congress/78",
+    roleVerifiedAt: "2026-08-07",
   },
 };
 
@@ -152,6 +154,7 @@ describe("PoliticianDossier — executive office section", () => {
             confirmationVoteUrl: null,
             predecessorName: "Mark T. Esper",
             predecessorSource: null,
+          roleVerifiedAt: null,
             nominationUrl: null,
           },
         }}

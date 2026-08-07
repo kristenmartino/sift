@@ -395,6 +395,12 @@ export interface PoliticianRoleProvenance {
    * who are never confirmed. The UI must say the narrower thing.
    */
   predecessorSource: string | null;
+  /**
+   * Date `roleTitleSource` was last refetched and confirmed (migration 017).
+   * Load-bearing for foreign-executive rows only, whose source is a live page
+   * naming the person and therefore decays; see `lib/publishFloor.ts`.
+   */
+  roleVerifiedAt: string | null;
 }
 
 /**
