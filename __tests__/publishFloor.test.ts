@@ -4,6 +4,7 @@ import {
   isPublishableOrg,
   isPublishableOutlet,
   isPublishablePolitician,
+  ROLE_VERIFICATION_MAX_AGE_DAYS,
 } from "@/lib/publishFloor";
 import type {
   BillProfile,
@@ -43,6 +44,7 @@ const politician: PoliticianProfile = {
     confirmationVoteResult: null,
     predecessorName: null,
     predecessorSource: null,
+    roleVerifiedAt: null,
   },
 };
 
@@ -186,6 +188,70 @@ describe("isPublishablePolitician", () => {
         committees: ["Appropriations"],
       }),
     ).toBe(false);
+  });
+});
+
+describe("isPublishablePolitician — foreign-executive expiry (017)", () => {
+  const NOW = new Date("2026-08-07T12:00:00Z");
+  const foreign = (roleVerifiedAt: string | null): PoliticianProfile => ({
+    ...politician,
+    chamber: "foreign-executive",
+    committees: [],
+    topIndustriesCurrentCycle: [],
+    role: {
+      ...politician.role,
+      roleTitle: "Prime Minister",
+      roleTitleSource: "https://www.gov.uk/government/people/keir-starmer",
+      roleVerifiedAt,
+    },
+  });
+
+  it("publishes a foreign row checked recently", () => {
+    expect(isPublishablePolitician(foreign("2026-08-01"), NOW)).toBe(true);
+  });
+
+  it("withholds one never checked", () => {
+    // A sourced title is not enough on its own here: the source is a live page
+    // that names the person, so an unknown check date is an unknown claim.
+    expect(isPublishablePolitician(foreign(null), NOW)).toBe(false);
+  });
+
+  it("withholds one checked longer ago than the window", () => {
+    const stale = new Date(NOW);
+    stale.setUTCDate(stale.getUTCDate() - (ROLE_VERIFICATION_MAX_AGE_DAYS + 1));
+    expect(
+      isPublishablePolitician(foreign(stale.toISOString().slice(0, 10)), NOW),
+    ).toBe(false);
+  });
+
+  it("still publishes exactly at the boundary", () => {
+    const edge = new Date(NOW);
+    edge.setUTCDate(edge.getUTCDate() - ROLE_VERIFICATION_MAX_AGE_DAYS);
+    expect(
+      isPublishablePolitician(foreign(edge.toISOString().slice(0, 10)), NOW),
+    ).toBe(true);
+  });
+
+  it("rejects an unparseable date rather than treating it as fresh", () => {
+    expect(isPublishablePolitician(foreign("not-a-date"), NOW)).toBe(false);
+  });
+
+  it("does NOT expire US executive or scotus rows", () => {
+    // Their title is a statute and their appointment a permanent roll-call;
+    // departure is caught by the successor's confirmation, not by a recheck.
+    // Expiring them would drop 56 correct rows for lack of a script run.
+    for (const chamber of ["executive", "scotus"] as const) {
+      expect(
+        isPublishablePolitician(
+          { ...foreign(null), chamber },
+          NOW,
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("does not expire sitting Congress, which has no role source at all", () => {
+    expect(isPublishablePolitician(politician, NOW)).toBe(true);
   });
 });
 

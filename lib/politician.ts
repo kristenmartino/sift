@@ -138,6 +138,7 @@ export interface DbPoliticianProfileRow {
   confirmation_vote_result?: string | null;
   predecessor_name?: string | null;
   predecessor_source?: string | null;
+  role_verified_at?: string | Date | null;
 }
 
 /** `pg` hands DATE columns back as Date objects; normalize to YYYY-MM-DD. */
@@ -186,6 +187,9 @@ function asRoleProvenance(
       ? row.predecessor_name?.trim() || null
       : null,
     predecessorSource,
+    // Not gated on another column: this IS the provenance of the check, and a
+    // row that was never verified must read as never verified, not as absent.
+    roleVerifiedAt: asIsoDate(row.role_verified_at),
     confirmationDate: voteUrl ? asIsoDate(row.confirmation_date) : null,
     confirmationVoteResult: voteUrl
       ? row.confirmation_vote_result?.trim() || null

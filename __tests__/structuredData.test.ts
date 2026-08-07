@@ -40,6 +40,7 @@ const politician: PoliticianProfile = {
     confirmationVoteResult: null,
     predecessorName: null,
     predecessorSource: null,
+    roleVerifiedAt: null,
   },
 };
 
