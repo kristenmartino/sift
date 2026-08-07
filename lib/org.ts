@@ -21,6 +21,7 @@ const ORG_TYPES: ReadonlySet<string> = new Set([
   "foundation",
   "industry-group",
   "agency",
+  "igo",
   "other",
 ]);
 
@@ -35,6 +36,7 @@ const ORG_TYPE_LABELS: Record<OrgType, string> = {
   foundation: "Foundation",
   "industry-group": "Industry group",
   agency: "Federal agency",
+  igo: "International organization",
   other: "Organization",
 };
 
