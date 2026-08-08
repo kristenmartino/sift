@@ -6,11 +6,94 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Allow news article images from any HTTPS domain.
-    // Sift aggregates from ~58 RSS sources with diverse CDN domains,
-    // making a strict allowlist impractical. Images are only loaded from
-    // URLs stored in the database via trusted RSS feed ingestion.
-    remotePatterns: [{ protocol: "https", hostname: "**" }],
+    // Allowlist of image hosts, derived from every image_url the pipeline has
+    // ever stored. Next caps this array at 50 entries, so the 48 domains that
+    // fit are chosen by CURRENT activity rather than all-time volume:
+    // 100% of the last 30 days' images are covered and no active host is
+    // dropped, against 99.34% of the all-time corpus. Ranking by lifetime
+    // volume instead would have dropped decider.com, dwcdn.net and
+    // boltdns.net, all of which are still serving.
+    //
+    // One pattern per domain where the data allows it — `**.d` for the 39
+    // that only ever serve from subdomains, bare `d` for the apex-only ones.
+    //
+    // This was `hostname: "**"`, justified as "images are only loaded from
+    // URLs stored in the database via trusted RSS feed ingestion". That is
+    // true of the *app* and irrelevant to the risk: `/_next/image` is a public
+    // endpoint that takes an arbitrary `url` parameter. With a wildcard,
+    // anyone can point it at any HTTPS resource on the internet and bill this
+    // account's Vercel image-optimization quota — the app's own behaviour
+    // constrains nothing. remotePatterns is the only thing that does.
+    //
+    // Narrowing is low-risk here: components/CardImage.tsx already has an
+    // onError handler, so a host that is not on this list degrades to the
+    // same placeholder a broken image URL produces today. Many outlets (CBS
+    // News, BBC, ESPN, NPR, Washington Post) serve no images at all and are
+    // unaffected either way.
+    //
+    // Shared CDNs — cloudfront.net, amazonaws.com, jwplayer.com — are
+    // necessarily broad, so this narrows the hole rather than closing it. It
+    // still cuts the reachable surface from "the entire HTTPS internet" to a
+    // handful of CDNs.
+    //
+    // To regenerate after adding outlets: group articles.image_url by
+    // registrable domain, order by last-30-day count, and take domains until
+    // the pattern count hits 50.
+    remotePatterns: [
+      { protocol: "https", hostname: "**.abc-cdn.net.au" },
+      { protocol: "https", hostname: "**.abcnews.com" },
+      { protocol: "https", hostname: "**.amazonaws.com" },
+      { protocol: "https", hostname: "**.aolcdn.com" },
+      { protocol: "https", hostname: "**.arstechnica.net" },
+      { protocol: "https", hostname: "**.axios.com" },
+      { protocol: "https", hostname: "**.boltdns.net" },
+      { protocol: "https", hostname: "**.bwbx.io" },
+      { protocol: "https", hostname: "**.cbsistatic.com" },
+      { protocol: "https", hostname: "**.cloudfront.net" },
+      { protocol: "https", hostname: "**.dailycaller.com" },
+      { protocol: "https", hostname: "**.decrypt.co" },
+      { protocol: "https", hostname: "**.dwcdn.net" },
+      { protocol: "https", hostname: "**.forbes.com" },
+      { protocol: "https", hostname: "**.foxnews.com" },
+      { protocol: "https", hostname: "**.france24.com" },
+      { protocol: "https", hostname: "**.ft.com" },
+      { protocol: "https", hostname: "**.futurecdn.net" },
+      { protocol: "https", hostname: "**.guim.co.uk" },
+      { protocol: "https", hostname: "**.i-scmp.com" },
+      { protocol: "https", hostname: "**.ignimgs.com" },
+      { protocol: "https", hostname: "**.insider.com" },
+      { protocol: "https", hostname: "**.japantimes.co.jp" },
+      { protocol: "https", hostname: "**.minutemediacdn.com" },
+      { protocol: "https", hostname: "**.mktw.net" },
+      { protocol: "https", hostname: "**.nypost.com" },
+      { protocol: "https", hostname: "**.nyt.com" },
+      { protocol: "https", hostname: "**.pitchfork.com" },
+      { protocol: "https", hostname: "**.politico.com" },
+      { protocol: "https", hostname: "**.polygonimages.com" },
+      { protocol: "https", hostname: "**.slate.com" },
+      { protocol: "https", hostname: "**.statnews.com" },
+      { protocol: "https", hostname: "**.theatlantic.com" },
+      { protocol: "https", hostname: "**.toiimg.com" },
+      { protocol: "https", hostname: "**.variety.com" },
+      { protocol: "https", hostname: "**.washingtonexaminer.com" },
+      { protocol: "https", hostname: "**.washtimes.com" },
+      { protocol: "https", hostname: "**.wired.com" },
+      { protocol: "https", hostname: "**.wp.com" },
+      { protocol: "https", hostname: "deadline.com" },
+      { protocol: "https", hostname: "decider.com" },
+      { protocol: "https", hostname: "foreignpolicy.com" },
+      { protocol: "https", hostname: "fortune.com" },
+      { protocol: "https", hostname: "nypost.com" },
+      { protocol: "https", hostname: "pagesix.com" },
+      { protocol: "https", hostname: "qz.com" },
+      { protocol: "https", hostname: "thedispatch.com" },
+      { protocol: "https", hostname: "thehill.com" },
+      { protocol: "https", hostname: "theintercept.com" },
+      { protocol: "https", hostname: "variety.com" },
+    ],
+    // The feed rotates every 30 minutes, so without this each generated width
+    // of each new image is re-transformed far more often than it is served.
+    minimumCacheTTL: 60 * 60 * 24 * 7,
   },
   async headers() {
     const csp = [
