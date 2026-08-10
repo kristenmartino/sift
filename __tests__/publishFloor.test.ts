@@ -27,7 +27,7 @@ const politician: PoliticianProfile = {
   chamber: "senate",
   committees: ["Appropriations"],
   topIndustriesCurrentCycle: [],
-  interestGroupRatings: {},
+  interestGroupRatings: [],
   externalLinks: {},
   notes: null,
   role: {
