@@ -24,7 +24,23 @@ Paused, preserved, not deleted: Android v1 (see Recent decisions), the sift-mcp�
 
 ## Open strategic question
 
-**Is there enough product here to launch?** Raised by the panel and not settled. The strategic thesis (`OPERATING_CONTEXT.md` §2) is that the dossier dataset is the sellable asset. Verified composition: `interest_group_ratings` empty on all 536 politician rows, PAC figures from the 2022 cycle (OpenSecrets API discontinued Apr 2025), 25 orgs against a planned ~200, **one** bill, no refresh job. The honest inventory is one real dataset (the 25 org dossiers — genuinely good, real synthesis), one public directory with two bookmarks per row (536 politicians), one placeholder (1 bill), and one commodity not yet licensed (72 outlet ratings). The week-one test is designed so this question gets answered by strangers rather than argued internally.
+**Is there enough product here to launch?** Raised by the panel and not settled. The strategic thesis (`OPERATING_CONTEXT.md` §2) is that the dossier dataset is the sellable asset.
+
+> ⚠️ **This paragraph has now been corrected twice.** A version of it was fixed in [#203](https://github.com/kristenmartino/sift/pull/203) and reverted by a later merge, restoring figures that were wrong by an order of magnitude in places. If you are about to quote a dossier count from this file, query the tables instead — `data/*.csv` and this paragraph have both been wrong.
+
+**Verified against prod 2026-08-07:**
+
+| | Stated here until 2026-08-07 | Actually in prod |
+|---|---|---|
+| politicians | 536, all sitting Congress | **649** — 437 house, 100 senate, 56 executive, 46 foreign-executive, 9 scotus, 1 former |
+| orgs | 25 | **110** |
+| bills | **one** | **25** |
+| outlets | 72 | 72 ✓ |
+| `interest_group_ratings` | empty on all rows | **531 carry an LCV 2025 score**, each with its year and source URL |
+
+Still true and still the weak part: PAC figures are from the 2022 cycle (OpenSecrets API discontinued Apr 2025), there is no automated refresh on any profile table, and the LCV scorecard is **one advocacy group's** — a conservative counterpart was attempted and is not obtainable, so the page says "Advocacy-group scorecards" rather than claiming a general rating.
+
+The honest inventory is now: a real org dataset, a public directory that got materially deeper (649 politicians, 531 with a sourced third-party score, 47 executives on primary records), a small-but-real bill set, and one commodity not yet licensed. The week-one test still answers this question, and it still has not been run.
 
 **"What changed" on a developing story — candidate feature, not committed.**
 
@@ -186,6 +202,14 @@ Both found while applying migration 012 to prod. Neither blocks the week-one tes
 - Triage of `sift-api` #62 (merge) and #63 (Ask Sift + Refined Compare) into the sequenced roadmap
 
 ## Recent decisions
+
+- **2026-08-07** — **Politician dossiers now carry a third-party score, framed as one lens** ([#207](https://github.com/kristenmartino/sift/pull/207), with [`sift-api#179`](https://github.com/kristenmartino/sift-api/pull/179)). `interest_group_ratings` had been empty since the column was created; 531 members now show LCV's 2025 environmental score with its year and a link to LCV's page for that member.
+
+  **Heading is "Advocacy-group scorecards", not "Interest-group ratings"** — deliberately singular in spirit. LCV is an advocacy group, not a referee, and a conservative counterpart is **not obtainable**: ACU/CPAC serves 15 of ~540 lawmakers per page from a Wix collection with no pagination, no card hrefs and worker-fetched data; Heritage Action is a JS shell; ADA 404s; Vote Smart 403s. Verified with plain HTTP and a real browser. Presenting one advocacy group's number as a general "rating" is the framing D37 exists to prevent, so the UI names the rater, dates it, links it, and averages nothing.
+
+  **The parser is the enforcement point, not the JSX.** `asInterestGroupRatings` drops any entry missing score, year or an https source, so the page, the JSON-LD builder and any future API consumer inherit the rule. JSON-LD omits the scores entirely — a third-party assessment restated as Sift's own machine-readable claim about a named living person strips the attribution that makes it fair.
+
+  **Two tests were passing for the wrong reason** and are worth flagging as a pattern: the JSON-LD exclusion test ran against an empty ratings fixture after the type change, proving nothing, and the roster-prune scoping tests only became meaningful once checked against the un-guarded version. A guard that has never been seen to fail is not evidence.
 
 Cross-repo architecture decisions now live in [`docs/DECISIONS.md`](./docs/DECISIONS.md) (the canonical register); entries below keep their dates + links and point there instead of duplicating.
 
