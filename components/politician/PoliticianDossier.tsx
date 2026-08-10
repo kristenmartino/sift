@@ -144,7 +144,7 @@ export default function PoliticianDossier({
     }
   }
 
-  const ratingsEntries = Object.entries(politician.interestGroupRatings);
+  const ratingsEntries = politician.interestGroupRatings;
   const industriesEmpty = politician.topIndustriesCurrentCycle.length === 0;
   const ratingsEmpty = ratingsEntries.length === 0;
   // The "not yet enriched" caption is about OpenSecrets/Vote Smart data for
@@ -300,24 +300,46 @@ export default function PoliticianDossier({
           </section>
         )}
 
-        {/* Interest-group ratings */}
+        {/* Advocacy-group scorecards.
+            Each row is one organization's own published score, attributed by
+            name, dated, and linked to their page for this member. Sift does
+            not average them, derive a composite, or characterize what a score
+            means — the same posture D37 requires for AllSides and MBFC on
+            outlet dossiers. `lib/politician.ts` guarantees every entry here
+            carries a year and an https source. */}
         {!ratingsEmpty && (
           <section className="mb-10">
             <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
               {c.sections.interestGroupRatings}
             </p>
-            <ul className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5">
-              {ratingsEntries.map(([group, rating]) => (
+            <ul className="flex flex-col gap-2">
+              {ratingsEntries.map((r) => (
                 <li
-                  key={group}
-                  className="grid grid-cols-[1fr_auto] gap-x-3 items-baseline border-b border-(--border-subtle) pb-1.5"
+                  key={`${r.rater}-${r.year}`}
+                  className="border-b border-(--border-subtle) pb-2"
                 >
-                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-tertiary)">
-                    {group}
-                  </span>
-                  <span className="font-mono text-[13px] tabular-nums text-(--text-secondary)">
-                    {typeof rating === "number" ? `${rating}%` : rating}
-                  </span>
+                  <div className="grid grid-cols-[1fr_auto] gap-x-3 items-baseline">
+                    <span className="font-body text-[14px] text-(--text-secondary)">
+                      {r.raterName}
+                      <span className="text-(--text-tertiary)"> · {r.year}</span>
+                    </span>
+                    <span className="font-mono text-[13px] tabular-nums text-(--text-primary)">
+                      {r.unit === "percent" ? `${r.score}%` : r.score}
+                    </span>
+                  </div>
+                  <p className="font-body text-meta text-(--text-tertiary) mt-0.5">
+                    {r.lifetimeScore !== null && (
+                      <>{r.lifetimeScore}% lifetime · </>
+                    )}
+                    <a
+                      href={r.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
+                    >
+                      {r.rater} scorecard <span aria-hidden>↗</span>
+                    </a>
+                  </p>
                 </li>
               ))}
             </ul>

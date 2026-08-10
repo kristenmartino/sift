@@ -470,6 +470,32 @@ export interface PoliticianExternalLinks {
  * change over time (LCV, NRA, ADA, ACU, NEA, AFL-CIO, etc.). The UI renders
  * them as a key/value list without assuming any particular keys exist.
  */
+/**
+ * One advocacy group's published score for a member of Congress.
+ *
+ * **Not Sift's assessment.** Each entry is a named third party's own number,
+ * shown with the year and a link to their page for that member — the same
+ * treatment `outlet_profiles` gives AllSides and MBFC.
+ *
+ * `score`, `year` and `sourceUrl` are non-nullable by construction:
+ * `lib/politician.ts:asInterestGroupRatings` drops any entry missing one,
+ * the way `lib/org.ts` nulls the budget triple. An uncited rating about a
+ * living person must never reach the page.
+ */
+export interface InterestGroupRating {
+  /** Short form used as the on-page label, e.g. "LCV". */
+  rater: string;
+  /** Full organization name, e.g. "League of Conservation Voters". */
+  raterName: string;
+  score: number;
+  /** Only "percent" today; present so a letter-grade rater can be added. */
+  unit: string;
+  year: number;
+  /** Career-long score where the rater publishes one. */
+  lifetimeScore: number | null;
+  sourceUrl: string;
+}
+
 export interface PoliticianProfile {
   bioguideId: string;
   name: string;
@@ -478,7 +504,7 @@ export interface PoliticianProfile {
   chamber: PoliticianChamber | null;
   committees: string[];
   topIndustriesCurrentCycle: IndustryDonation[];
-  interestGroupRatings: Record<string, number | string>;
+  interestGroupRatings: InterestGroupRating[];
   externalLinks: PoliticianExternalLinks;
   notes: string | null;
   /**

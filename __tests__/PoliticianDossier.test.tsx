@@ -41,7 +41,7 @@ const austin: PoliticianProfile = {
   chamber: "executive",
   committees: [],
   topIndustriesCurrentCycle: [],
-  interestGroupRatings: {},
+  interestGroupRatings: [],
   externalLinks: { official: "https://www.defense.gov" },
   notes: null,
   role: {

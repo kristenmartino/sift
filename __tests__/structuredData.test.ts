@@ -20,7 +20,18 @@ const politician: PoliticianProfile = {
   chamber: "senate",
   committees: ["Appropriations", "Indian Affairs"],
   topIndustriesCurrentCycle: [{ industry: "Oil & Gas", amount_usd: 250_000 }],
-  interestGroupRatings: { LCV: 92 },
+  // A real entry, not []. The assertion below is that JSON-LD never restates
+  // an advocacy group's score as Sift's structured claim; an empty fixture
+  // would make that test pass without proving anything.
+  interestGroupRatings: [{
+    rater: "LCV",
+    raterName: "League of Conservation Voters",
+    score: 92,
+    unit: "percent",
+    year: 2025,
+    lifetimeScore: 88,
+    sourceUrl: "https://www.lcv.org/moc/lisa-a-murkowski/",
+  }],
   externalLinks: {
     govtrack: "https://www.govtrack.us/congress/members/lisa_murkowski/300075",
     wikipedia: "https://en.wikipedia.org/wiki/Lisa_Murkowski",
@@ -119,10 +130,16 @@ describe("politicianJsonLd", () => {
     expect(JSON.stringify(politicianJsonLd(politician))).not.toContain("Uncited prose");
   });
 
-  it("never emits PAC figures or interest-group ratings", () => {
+  it("never emits PAC figures or advocacy-group scores", () => {
+    // These are third-party assessments the page presents verbatim with a
+    // link. Restating one as Sift's own machine-readable claim about a named
+    // living person is the framing D37 rejects.
     const s = JSON.stringify(politicianJsonLd(politician));
     expect(s).not.toContain("250000");
     expect(s).not.toContain("LCV");
+    expect(s).not.toContain("League of Conservation Voters");
+    expect(s).not.toContain("92");
+    expect(s).not.toContain("lcv.org");
   });
 
   it("omits jobTitle for a chamber with no defined role", () => {

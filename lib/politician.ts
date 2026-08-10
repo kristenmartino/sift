@@ -7,6 +7,7 @@
 
 import type {
   IndustryDonation,
+  InterestGroupRating,
   PoliticianChamber,
   PoliticianExternalLinks,
   PoliticianProfile,
@@ -229,17 +230,50 @@ export function asTopIndustries(v: unknown): IndustryDonation[] {
   return out;
 }
 
-function asInterestGroupRatings(v: unknown): Record<string, number | string> {
-  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
-  const out: Record<string, number | string> = {};
-  for (const [key, value] of Object.entries(v as Record<string, unknown>)) {
-    const trimmedKey = key.trim();
-    if (!trimmedKey) continue;
-    if (typeof value === "number" && Number.isFinite(value)) {
-      out[trimmedKey] = value;
-    } else if (typeof value === "string" && value.trim().length > 0) {
-      out[trimmedKey] = value.trim();
-    }
+/**
+ * Parse the interest_group_ratings JSONB array (migration 019).
+ *
+ * Drops any entry missing score, year or source_url. That is the load-bearing
+ * line: the column previously held a bare {rater: score} dict, and putting an
+ * unsourced, undated number about a living person on a page is the defect
+ * migrations 013 and 015 each had to remove. Enforced here rather than in JSX
+ * so every consumer — page, JSON-LD, API — inherits it.
+ *
+ * Tolerates the pre-019 object shape by returning [] for it: an old dict
+ * carries no provenance, so there is nothing in it that may be rendered.
+ */
+function asInterestGroupRatings(v: unknown): InterestGroupRating[] {
+  if (!Array.isArray(v)) return [];
+  const out: InterestGroupRating[] = [];
+  for (const raw of v) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const e = raw as Record<string, unknown>;
+
+    const rater = typeof e.rater === "string" ? e.rater.trim() : "";
+    const score = typeof e.score === "number" && Number.isFinite(e.score)
+      ? e.score
+      : null;
+    const year = typeof e.year === "number" && Number.isFinite(e.year)
+      ? e.year
+      : null;
+    const sourceUrl = typeof e.source_url === "string" ? e.source_url.trim() : "";
+
+    // All four are required. A rating with no citation is not renderable.
+    if (!rater || score === null || year === null) continue;
+    if (!/^https?:\/\//i.test(sourceUrl)) continue;
+
+    const raterName = typeof e.rater_name === "string" && e.rater_name.trim()
+      ? e.rater_name.trim()
+      : rater;
+    const lifetime = typeof e.lifetime_score === "number"
+      && Number.isFinite(e.lifetime_score)
+      ? e.lifetime_score
+      : null;
+    const unit = typeof e.unit === "string" && e.unit.trim()
+      ? e.unit.trim()
+      : "percent";
+
+    out.push({ rater, raterName, score, unit, year, lifetimeScore: lifetime, sourceUrl });
   }
   return out;
 }

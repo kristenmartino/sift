@@ -260,7 +260,11 @@ export const COPY = {
     sections: {
       committees: "Committee assignments",
       topIndustries: "Top industries by PAC contributions (2022 cycle)",
-      interestGroupRatings: "Interest-group ratings",
+      // Deliberately NOT "Interest-group ratings" (plural, general).
+      // Only one scorecard is obtainable today, so the heading names
+      // what it is: a third party's own record, attributed. Revisit
+      // the wording when a second, differently-aligned rater lands.
+      interestGroupRatings: "Advocacy-group scorecards",
       links: "Where to read more",
       notes: "Notes",
       // Migration 015. Committees / PAC industries / interest-group ratings

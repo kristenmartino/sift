@@ -19,7 +19,15 @@ const fullRow: DbPoliticianProfileRow = {
     { industry: "Securities & investment", amount_usd: 1_200_000 },
     { industry: "Real estate", amount_usd: 620_000 },
   ],
-  interest_group_ratings: { LCV: 92, "AFL-CIO": 100, NRA: "F" },
+  interest_group_ratings: [{
+    rater: "LCV",
+    rater_name: "League of Conservation Voters",
+    score: 92,
+    unit: "percent",
+    year: 2025,
+    lifetime_score: 88,
+    source_url: "https://www.lcv.org/moc/chuck-schumer/",
+  }],
   external_links: {
     govtrack: "https://www.govtrack.us/congress/members/charles_schumer/300087",
     opensecrets: "https://www.opensecrets.org/members-of-congress/charles-schumer/summary",
@@ -132,7 +140,15 @@ describe("parseDbPoliticianProfile", () => {
           { industry: "Securities & investment", amount_usd: 1_200_000 },
           { industry: "Real estate", amount_usd: 620_000 },
         ],
-        interestGroupRatings: { LCV: 92, "AFL-CIO": 100, NRA: "F" },
+        interestGroupRatings: [{
+          rater: "LCV",
+          raterName: "League of Conservation Voters",
+          score: 92,
+          unit: "percent",
+          year: 2025,
+          lifetimeScore: 88,
+          sourceUrl: "https://www.lcv.org/moc/chuck-schumer/",
+        }],
         externalLinks: {
           govtrack: "https://www.govtrack.us/congress/members/charles_schumer/300087",
           opensecrets: "https://www.opensecrets.org/members-of-congress/charles-schumer/summary",
@@ -288,47 +304,87 @@ describe("parseDbPoliticianProfile", () => {
     });
   });
 
-  describe("interest_group_ratings JSONB validation", () => {
-    it("accepts numeric scores and string letter-grades side by side", () => {
+  describe("interest_group_ratings provenance (migration 019)", () => {
+    // The column used to hold a bare { LCV: 92 } dict — a claim about a
+    // living person's voting record with no year and no citation. These
+    // cases pin the rule that replaced it: an entry renders only if it
+    // carries score + year + an https source_url.
+    const valid = {
+    rater: "LCV",
+    rater_name: "League of Conservation Voters",
+    score: 20,
+    unit: "percent",
+    year: 2025,
+    lifetime_score: 20,
+    source_url: "https://www.lcv.org/moc/lisa-a-murkowski/",
+  };
+
+    it("parses a fully-formed entry", () => {
       const profile = parseDbPoliticianProfile({
         ...fullRow,
-        interest_group_ratings: { LCV: 92, NRA: "F", ADA: 88 },
+        interest_group_ratings: [valid],
       });
-      expect(profile?.interestGroupRatings).toEqual({ LCV: 92, NRA: "F", ADA: 88 });
+      expect(profile!.interestGroupRatings).toEqual([{
+        rater: "LCV",
+        raterName: "League of Conservation Voters",
+        score: 20,
+        unit: "percent",
+        year: 2025,
+        lifetimeScore: 20,
+        sourceUrl: "https://www.lcv.org/moc/lisa-a-murkowski/",
+      }]);
     });
 
-    it("drops null / boolean / non-finite values", () => {
+    it.each([
+      ["score", { ...valid, score: undefined }],
+      ["year", { ...valid, year: undefined }],
+      ["source_url", { ...valid, source_url: undefined }],
+      ["rater", { ...valid, rater: "  " }],
+      ["a non-numeric score", { ...valid, score: "high" }],
+      ["a non-http source", { ...valid, source_url: "javascript:alert(1)" }],
+    ])("drops an entry missing %s", (_label, entry) => {
       const profile = parseDbPoliticianProfile({
         ...fullRow,
-        interest_group_ratings: {
-          LCV: 92,
-          BAD_BOOL: true,
-          BAD_NULL: null,
-          BAD_NAN: NaN,
-          BAD_INF: Infinity,
-          NRA: "F",
-        },
+        interest_group_ratings: [entry],
       });
-      expect(profile?.interestGroupRatings).toEqual({ LCV: 92, NRA: "F" });
+      expect(profile!.interestGroupRatings).toEqual([]);
     });
 
-    it("drops empty-string values", () => {
+    it("keeps the sound entries and drops the unsound ones together", () => {
       const profile = parseDbPoliticianProfile({
         ...fullRow,
-        interest_group_ratings: { LCV: 92, EMPTY: "  ", NRA: "F" },
+        interest_group_ratings: [valid, { ...valid, rater: "ACU", year: undefined }],
       });
-      expect(profile?.interestGroupRatings).toEqual({ LCV: 92, NRA: "F" });
+      expect(profile!.interestGroupRatings.map((r) => r.rater)).toEqual(["LCV"]);
     });
 
-    it("returns {} for an array passed as ratings", () => {
+    it("treats lifetime_score as optional", () => {
       const profile = parseDbPoliticianProfile({
         ...fullRow,
-        interest_group_ratings: ["LCV", "NRA"],
+        interest_group_ratings: [{ ...valid, lifetime_score: undefined }],
       });
-      expect(profile?.interestGroupRatings).toEqual({});
+      expect(profile!.interestGroupRatings[0].lifetimeScore).toBeNull();
     });
+
+    it("returns [] for the pre-019 dict shape", () => {
+      // An old { LCV: 92 } value carries no year and no source, so there is
+      // nothing in it that may legally be rendered.
+      const profile = parseDbPoliticianProfile({
+        ...fullRow,
+        interest_group_ratings: { LCV: 92, NRA: "F" },
+      });
+      expect(profile!.interestGroupRatings).toEqual([]);
+    });
+
+    it.each([[null], [undefined], ["nope"], [42]])(
+      "returns [] for %p", (v) => {
+        const profile = parseDbPoliticianProfile({
+          ...fullRow, interest_group_ratings: v,
+        });
+        expect(profile!.interestGroupRatings).toEqual([]);
+      },
+    );
   });
-
   describe("external_links JSONB validation", () => {
     it("accepts string URLs and trims whitespace", () => {
       const profile = parseDbPoliticianProfile({
