@@ -1,0 +1,138 @@
+WEEK-ONE OUTREACH — PASTE-READY EMAILS
+======================================
+
+GENERATED FILE — do not edit by hand.
+  source:     docs/WEEK_ONE_OUTREACH.md  (canonical; edit the wording THERE)
+  regenerate: node scripts/build-week-one-emails.mjs
+  guard:      __tests__/weekOneEmails.test.ts fails if the two drift
+
+Generated 2026-08-10.
+
+Artifact:  https://siftnews.io/agencies
+           Verified 2026-08-05: HTTP 200, 25 cited agencies, 96 links to
+           law.cornell.edu, no auth wall, no AI-generated text.
+
+
+BEFORE YOU SEND — fill these in
+-------------------------------
+Librarian email:
+  [name]
+  [research guide on government information]  <- their actual guide
+  [the specific resource they link]           <- something they actually link
+
+Staffer email:
+  [name]
+  [specific bill / issue area / committee]
+
+The doc's rule: if you can't find something specific to reference, SKIP that
+recipient. A generic opener converts a warm contact into a burned one.
+
+
+SEND PLAN
+---------
+  NOW        5 librarians (pilot) — learn the reply shape before spending the list
+  THIS WEEK  the rest of the librarians, once the pilot returns
+  SEP 14+    all 20 staffers
+
+Staffers wait because Congress is in recess through August and October ahead of
+the midterms. WEEK_ONE_OUTREACH.md: "hold. Twenty unpiloted emails into the
+pre-recess crush is the worst available combination, and staffer contacts are
+the harder list to rebuild."
+
+Success is NOT a reply count. It is enough named humans to book five calls.
+~6 replies from 60 is the expected outcome, and is a success if five will talk.
+
+
+================================================================================
+EMAIL 1 — LIBRARIANS  (send 5 now)
+================================================================================
+
+Subject: A cited page on who controls federal agencies — useful for your guide?
+
+Hi [name],
+
+I saw your [research guide on government information], specifically that you link [the specific resource they link].
+
+I've put together a page on who actually controls 25 federal agencies: how many members, who appoints them, term lengths, and whether the authorizing statute caps how many can share a political party. Thirteen of the twenty-five have that cap written into law. The FEC's six commissioners are limited to three per party — which is the structural reason it deadlocks 3–3, rather than a personality problem. The NLRB has no cap at all.
+
+Every line links to the section of the U.S. Code it came from. Nothing on the page is AI-generated.
+
+https://siftnews.io/agencies
+
+Two things, if you have a minute:
+
+1. Is this useful to you or your patrons?
+2. If something like this were worth paying for, could your library actually buy it from one person, invoiced directly — or does that route not really exist?
+
+I'm working through the other 68 agencies. Want me to send you the next batch?
+
+Either answer helps. If it's not useful, that's the most useful thing you can tell me.
+
+Kristen Martino
+
+P.S. Unrelated, if you have a second: when a story develops over several days, is there anything you use — or point patrons to — that shows what changed? Which facts are new, which got corrected, which outlets came late. I can't find one, and I'd like to know whether that's because nobody needs it.
+
+
+================================================================================
+EMAIL 2 — POLICY STAFFERS  (hold until Sep 14)
+================================================================================
+
+Subject: The partisan-balance caps, in one page with the statutes
+
+Hi [name],
+
+I saw your work on [specific bill / issue area / committee].
+
+I put together a page on the governance of 25 federal agencies — members, appointment, terms, and the statutory partisan-balance caps. Thirteen of the twenty-five have one. The FEC is capped at three of six, the NCUA at two of three, and the NLRB has no cap at all, which is the kind of thing that explains a deadlock story without explaining it as personalities.
+
+Every entry cites the section it came from, so it's usable in a memo rather than just orienting.
+
+https://siftnews.io/agencies
+
+Two things, if you have a minute:
+
+1. Is this useful in your work? A "no, we use X" is genuinely useful — I'd rather know.
+2. If it were, could your office actually buy something like this from one person, invoiced directly — or does procurement not have a shape for that?
+
+I'm working through the other 68 agencies. Want the next batch when it's up?
+
+Kristen Martino
+
+
+================================================================================
+CLAIMS, AND WHERE EACH IS VERIFIED   (checked 2026-08-05)
+================================================================================
+Both emails go to people who read statutes for a living. Every claim was
+checked against the cited statute itself, not just against Sift's own page.
+
+  25 federal agencies ............ prod: 25 agencies with cited governance
+  "thirteen of the twenty-five" .. prod: 13 carry a partisan-balance cap
+  FEC three of six ............... 52 U.S.C. 30106 — "...may be affiliated with
+                                   the same political party"; six members,
+                                   single 6-year term
+  NCUA two of three .............. 12 U.S.C. 1752a — "not more than two members
+                                   of the board shall be members of the same
+                                   political party"
+  NLRB no cap at all ............. 29 U.S.C. 153 — zero party-cap mentions
+  "the other 68 agencies" ........ prod: 93 agency rows, 25 cited, 68 left
+
+  If a staffer pushes back on the FEC line: 30106 caps the APPOINTED members at
+  three per party, and the Commission also seats the Secretary of the Senate and
+  the Clerk of the House as NON-VOTING ex officio members. "Three of six" is
+  correct for the voting membership, and the page says "appointed members".
+
+
+================================================================================
+THE P.S. (librarian email only)
+================================================================================
+Cheapest thing to cut. After the 5-send pilot:
+  - all five answered the numbered questions and skipped the P.S. -> DROP it
+  - even one named a tool -> KEEP it, and write the name down verbatim
+
+
+================================================================================
+DECIDE BEFORE A REPLY ARRIVES
+================================================================================
+"What happens if ten librarians say yes?" WEEK_ONE_OUTREACH.md says write the
+answer down now, because the two available answers are different companies.
+Read its closing section before you send, not after.
