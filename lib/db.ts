@@ -40,6 +40,11 @@ const pool = new Pool({
   }),
 });
 
+// Ceiling on how many articles one outlet can hold in a category's standalone
+// pool (LIMIT 50). Without it a single high-volume feed dominates the pool —
+// NY Post held 23/50 of 'top' when this was added (2026-08-10).
+const MAX_ARTICLES_PER_SOURCE = 6;
+
 export interface DbArticle {
   id: string;
   title: string;
@@ -86,7 +91,7 @@ export async function getArticlesByCategory(
             OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
      ORDER BY
        COALESCE(importance_score, 3)::float *
-       EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
+       EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700))
      DESC NULLS LAST
      LIMIT $2`,
     [category, limit]
@@ -141,7 +146,7 @@ export async function getStoriesWithArticles(
        HAVING COUNT(a.id) >= 2
        ORDER BY
          COUNT(a.id)::float *
-         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))) / 86400.0, 700))
+         EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))), 0) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 20`,
       [category]
@@ -189,22 +194,40 @@ export async function getStoriesWithArticles(
   // when its story_id is NULL *or* when its story_id points to a story that
   // was dropped in step 1 (orphan: fewer than 2 live member articles). This
   // prevents orphan articles from disappearing entirely from the feed.
+  //
+  // The scored/capped CTEs cap each outlet at MAX_ARTICLES_PER_SOURCE rows
+  // so one firehose feed can't fill the pool. Story-member articles (2a) are
+  // deliberately uncapped — capping them would drop story members and
+  // recreate the "View 0 articles" bug class described above.
   let standaloneArticles: DbArticle[] = [];
   try {
     const standaloneResult = await pool.query<DbArticle>(
-      `SELECT id, title, summary, source_url, source_name, image_url,
+      `WITH scored AS (
+         SELECT id, title, summary, source_url, source_name, image_url,
+                category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at,
+                COALESCE(importance_score, 3)::float *
+                EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700))
+                AS rank_score
+         FROM articles
+         WHERE category = $1 AND from_search = false
+           AND (story_id IS NULL OR story_id <> ALL($2::text[]))
+           AND summary IS NOT NULL AND summary != ''
+           AND LOWER(summary) NOT LIKE 'unable to provide%'
+           AND (published_date > NOW() - INTERVAL '30 days'
+                OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
+       ),
+       capped AS (
+         SELECT *, ROW_NUMBER() OVER (
+                  PARTITION BY source_name
+                  ORDER BY rank_score DESC, published_date DESC NULLS LAST
+                ) AS source_rank
+         FROM scored
+       )
+       SELECT id, title, summary, source_url, source_name, image_url,
               category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at
-       FROM articles
-       WHERE category = $1 AND from_search = false
-         AND (story_id IS NULL OR story_id <> ALL($2::text[]))
-         AND summary IS NOT NULL AND summary != ''
-         AND LOWER(summary) NOT LIKE 'unable to provide%'
-         AND (published_date > NOW() - INTERVAL '30 days'
-              OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
-       ORDER BY
-         COALESCE(importance_score, 3)::float *
-         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
-       DESC NULLS LAST
+       FROM capped
+       WHERE source_rank <= ${MAX_ARTICLES_PER_SOURCE}
+       ORDER BY rank_score DESC
        LIMIT 50`,
       [category, storyIds]
     );
@@ -213,18 +236,31 @@ export async function getStoriesWithArticles(
     const msg = String(err);
     if (!msg.includes("story_id")) throw err;
     const fallback = await pool.query<DbArticle>(
-      `SELECT id, title, summary, source_url, source_name, image_url,
+      `WITH scored AS (
+         SELECT id, title, summary, source_url, source_name, image_url,
+                category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at,
+                COALESCE(importance_score, 3)::float *
+                EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700))
+                AS rank_score
+         FROM articles
+         WHERE category = $1 AND from_search = false
+           AND summary IS NOT NULL AND summary != ''
+           AND LOWER(summary) NOT LIKE 'unable to provide%'
+           AND (published_date > NOW() - INTERVAL '30 days'
+                OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
+       ),
+       capped AS (
+         SELECT *, ROW_NUMBER() OVER (
+                  PARTITION BY source_name
+                  ORDER BY rank_score DESC, published_date DESC NULLS LAST
+                ) AS source_rank
+         FROM scored
+       )
+       SELECT id, title, summary, source_url, source_name, image_url,
               category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at
-       FROM articles
-       WHERE category = $1 AND from_search = false
-         AND summary IS NOT NULL AND summary != ''
-         AND LOWER(summary) NOT LIKE 'unable to provide%'
-         AND (published_date > NOW() - INTERVAL '30 days'
-              OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
-       ORDER BY
-         COALESCE(importance_score, 3)::float *
-         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
-       DESC NULLS LAST
+       FROM capped
+       WHERE source_rank <= ${MAX_ARTICLES_PER_SOURCE}
+       ORDER BY rank_score DESC
        LIMIT 50`,
       [category]
     );
@@ -255,7 +291,7 @@ export async function getTopStoryForLanding(): Promise<DbArticle | null> {
          AND LOWER(summary) NOT LIKE 'unable to provide%'
        ORDER BY
          COALESCE(importance_score, 3)::float *
-         EXP(-LEAST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))) / 86400.0, 700))
+         EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 1`
     );
