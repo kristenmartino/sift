@@ -254,7 +254,11 @@ In three weeks the first will feel like progress and the second will feel like a
 
 ### What is still on the old host
 
-Sign-in, bookmarks and compare. The three Clerk CSP entries in `next.config.js` still pin `clerk.siftnews.kristenmartino.ai`, so **someone who lands on `siftnews.io` and clicks Sign in hits a broken flow.** Theoretical at zero users, and it is the tradeoff that made this twenty minutes instead of six hours. Migrating the Clerk production instance is the 4–6 hour job `red-team` costed, and it still has no day-90 payoff on its own.
+**Nothing, as of 2026-08-11.** The Clerk production instance was migrated to `siftnews.io`: a domain change on the *existing* instance (new publishable key in Vercel, CNAMEs on Vercel DNS, the three CSP entries in `next.config.js`) — not the new-instance rebuild `red-team` costed at 4–6 hours. Sign-in, bookmarks and compare now work on the canonical domain; auth on the old subdomain stops working, which is the correct direction of breakage.
+
+The paragraph below described the state from 2026-07-28 to 2026-08-11 and is kept for the record:
+
+> Sign-in, bookmarks and compare. The three Clerk CSP entries in `next.config.js` still pin `clerk.siftnews.kristenmartino.ai`, so **someone who lands on `siftnews.io` and clicks Sign in hits a broken flow.** Theoretical at zero users, and it is the tradeoff that made this twenty minutes instead of six hours. Migrating the Clerk production instance is the 4–6 hour job `red-team` costed, and it still has no day-90 payoff on its own.
 
 ### Original assessment, kept for the record
 
