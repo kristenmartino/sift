@@ -51,7 +51,9 @@ export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
       return;
     }
 
-    setAnimate(true);
+    // One frame later than mount — effects must not set state synchronously,
+    // and the reveal gating only needs to be in place before the IO fires.
+    const raf = requestAnimationFrame(() => setAnimate(true));
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -64,7 +66,10 @@ export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
       { threshold: 0.15 },
     );
     reveals.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      io.disconnect();
+    };
   }, []);
 
   return (

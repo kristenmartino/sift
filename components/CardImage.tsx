@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { CATEGORY_COLORS } from "@/lib/constants";
 import type { CardImageProps } from "@/lib/types";
@@ -11,9 +11,13 @@ export default function CardImage({ src, alt, featured, category }: CardImagePro
     src ? "loading" : "error"
   );
 
-  useEffect(() => {
+  // Reset when the source changes — guarded render-time adjust, the React-docs
+  // pattern for state that depends on a prop.
+  const [prevSrc, setPrevSrc] = useState(src);
+  if (prevSrc !== src) {
+    setPrevSrc(src);
     setStatus(src ? "loading" : "error");
-  }, [src]);
+  }
 
   // No image — render nothing (parent handles text-first layout)
   if (!src || status === "error") return null;

@@ -417,7 +417,7 @@ async function main() {
                category, vectorStr, estimateReadTime(a.summary)]
             );
             inserted++;
-          } catch (err) {
+          } catch {
             // Duplicate or other DB error — skip
           }
         }

@@ -55,7 +55,7 @@ async function extractOgImage(url: string): Promise<string | null> {
 
     if (!match) return null;
 
-    let imageUrl = match[1];
+    const imageUrl = match[1];
     // Skip tiny tracking pixels and data URIs
     if (imageUrl.startsWith("data:")) return null;
     if (imageUrl.length < 10) return null;
