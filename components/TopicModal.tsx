@@ -190,7 +190,7 @@ export default function TopicModal({ onClose, onAdd, existingTopics, colorIndex 
                     cursor: inputValue.trim().length >= 2 ? "pointer" : "not-allowed",
                   }}
                 >
-                  Generate preview
+                  {COPY.topics.generate}
                 </button>
               )}
             </form>

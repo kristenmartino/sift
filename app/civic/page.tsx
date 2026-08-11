@@ -16,8 +16,11 @@ export const revalidate = 600;
 // Per-route metadata override so shared /civic links carry the index's
 // own title/description in unfurl cards (not the homepage default).
 const CIVIC_TITLE = "Civic dossiers — Sift";
+// Count-free on purpose: the hardcoded "536 sitting members" froze stale
+// while the corpus grew past 600 (executives, foreign leaders, SCOTUS).
+// Same rule as the outlet count — quote a number only where it's derived.
 const CIVIC_DESC =
-  "Browse Sift's curated politician, organization, and bill dossiers. 536 sitting members of Congress, federal agencies, the major think-tanks shaping policy, and landmark bills.";
+  "Browse Sift's curated politician, organization, and bill dossiers. Every sitting member of Congress, federal agencies, the major think-tanks shaping policy, and landmark bills.";
 
 export const metadata: Metadata = {
   title: CIVIC_TITLE,

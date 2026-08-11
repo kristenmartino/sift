@@ -90,6 +90,15 @@ export default function StoryCard({
   const sortedFramed = isMultiSource
     ? [...framedUnits].sort((a, b) => leanRank(a) - leanRank(b))
     : framedUnits;
+  // The spectrum note only renders when the outlets actually span 2+ lean
+  // buckets — the sort is unconditional, the claim about it isn't.
+  const spansSpectrum =
+    isMultiSource &&
+    new Set(
+      sortedFramed
+        .map((u) => bucketize(u.outlet?.allSidesRating))
+        .filter(Boolean),
+    ).size >= 2;
 
   const isFeaturedGrid = featured && hasImage;
   const pad = featured ? "p-7 md:p-8" : "p-5";
@@ -224,6 +233,11 @@ export default function StoryCard({
                   className="flex-1 h-px bg-linear-to-r from-(--border) to-transparent"
                 />
               </div>
+              {spansSpectrum && (
+                <p className="text-[11px] text-(--text-tertiary) mb-1.5 italic">
+                  {COPY.stories.spectrumNote}
+                </p>
+              )}
               <div className="flex flex-col">
                 {sortedFramed.map((u) => (
                   <SourceRow key={u.sourceName} unit={u} onCompare={onCompare} />

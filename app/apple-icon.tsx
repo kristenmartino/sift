@@ -13,7 +13,7 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#4338ca",
+          background: "#E0492A",
           borderRadius: 36,
         }}
       >
@@ -22,7 +22,7 @@ export default function AppleIcon() {
           width="120"
           height="120"
           viewBox="0 0 24 24"
-          fill="#fff"
+          fill="#FBF8F1"
         >
           <path d="M12 2L22 12L12 22L2 12Z" />
         </svg>

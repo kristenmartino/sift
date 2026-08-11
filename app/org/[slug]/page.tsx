@@ -23,8 +23,8 @@ export async function generateMetadata({
   if (!org) return { title: "Organization not found" };
 
   // Per-route metadata override so shared org-dossier links carry the
-  // org's name in the unfurl card. og:image inherits the site default
-  // for now; per-route images are a Phase 2 polish.
+  // org's name in the unfurl card. og:image comes from the sibling
+  // opengraph-image.tsx (shared card factory in lib/og.tsx).
   const fullTitle = `${org.name} — Org dossier | Sift`;
   // No "political lean" here — migration 013 dropped the column precisely so
   // Sift stops characterizing organizations. The description shouldn't keep

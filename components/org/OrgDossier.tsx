@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import CorrectionPath from "@/components/CorrectionPath";
 import LandingMasthead from "@/components/landing/LandingMasthead";
+import ShareActions from "@/components/ShareActions";
 import { COPY } from "@/lib/copy";
 import {
   formatBudgetUsd,
@@ -107,6 +108,14 @@ export default function OrgDossier({ org }: OrgDossierProps) {
               </a>
             </p>
           )}
+          <ShareActions
+            citeEntry={`${org.name} — Org dossier`}
+            citeSources={[
+              org.externalLinks.propublica ? "ProPublica Nonprofit Explorer" : null,
+              org.externalLinks.irs_990 ? "IRS Form 990" : null,
+              org.externalLinks.fara ? "FARA" : null,
+            ].filter((s): s is string => s !== null)}
+          />
         </header>
 
         <hr className="border-0 border-t border-(--border) my-10" />

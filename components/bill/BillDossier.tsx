@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import LandingMasthead from "@/components/landing/LandingMasthead";
+import ShareActions from "@/components/ShareActions";
 import { PartyTag } from "@/components/primitives";
 import {
   formatBillIdDisplay,
@@ -83,6 +84,14 @@ export default function BillDossier({ bill, sponsor }: BillDossierProps) {
             {bill.shortTitle ? `${displayId} · ` : ""}
             {bill.title}
           </p>
+          <ShareActions
+            citeEntry={`${bill.shortTitle ?? displayId} — Bill dossier`}
+            citeSources={[
+              bill.externalLinks.congress ? "Congress.gov" : null,
+              bill.externalLinks.govtrack ? "GovTrack" : null,
+              bill.externalLinks.opensecrets ? "OpenSecrets" : null,
+            ].filter((s): s is string => s !== null)}
+          />
         </header>
 
         <hr className="border-0 border-t border-(--border) my-10" />
