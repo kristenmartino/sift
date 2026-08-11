@@ -347,11 +347,20 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     // major news.
     const GRIM_DAMPENER = 0.6;
     // Ranking v2 stage 1 (docs/RANKING_SIGNALS.md; constants mirror lib/db.ts):
-    // stories score 3 + STORY_BOOST·ln(1 + sources) — the same saturating
-    // curve the SQL pool now truncates under — times a small cross-spectrum
-    // bonus per occupied L/C/R bucket beyond the first (spectrumBuckets is
-    // derived at the API boundary from framings' AllSides ratings).
-    const STORY_BOOST = 0.8;
+    // stories score STORY_BASE + STORY_BOOST·ln(1 + outlets) — the same
+    // saturating curve the SQL pool truncates under — times a small
+    // cross-spectrum bonus per occupied L/C/R bucket beyond the first
+    // (spectrumBuckets is derived at the API boundary from framings' AllSides
+    // ratings).
+    //
+    // BOTH constants must match lib/db.ts exactly. They were (3, 0.8) until
+    // 2026-08-11; the reasoning for (1, 2.0) — and why the base had to move
+    // with the boost rather than the boost alone — is documented there.
+    // Short version: STORY_BASE sets stories against standalone articles,
+    // which score on the 1-5 importance scale, so raising only the boost
+    // crowds articles out of the feed instead of ordering stories by coverage.
+    const STORY_BASE = 1;
+    const STORY_BOOST = 2.0;
     const SPECTRUM_BOOST = 0.1;
     // Stage 4 (mirrors OPINION_DAMPENER in lib/db.ts): outlet-declared
     // opinion ranks x0.6 at any importance - op-eds are not top stories.
@@ -382,7 +391,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         // two formulas must move together — v2 stage 1 exists because they
         // once disagreed, and the LIMIT 20 truncation then happened under an
         // order no reader ever saw.
-        const sourceScore = 3 + STORY_BOOST * Math.log(1 + item.data.outletCount);
+        const sourceScore = STORY_BASE + STORY_BOOST * Math.log(1 + item.data.outletCount);
         const spectrum = 1 + SPECTRUM_BOOST * Math.max(0, (item.data.spectrumBuckets ?? 1) - 1);
         // Corroboration is the story-level analog of importance: a
         // two-outlet grim story dampens, a five-outlet disaster does not.
