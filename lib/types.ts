@@ -661,6 +661,13 @@ export interface Story {
    * Feeds the D48 dampener for thinly-corroborated grim stories.
    */
   tone?: ArticleTone;
+  /**
+   * Distinct L/C/R AllSides buckets occupied by this story's framings (1-3;
+   * absent when none are bucketable). Derived at the API boundary via
+   * countOccupiedBuckets. Ranking v2 stage 1: the client re-rank applies a
+   * small corroboration bonus per bucket beyond the first.
+   */
+  spectrumBuckets?: number;
 }
 
 export type FeedItem =

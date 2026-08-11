@@ -82,6 +82,19 @@ export function groupFramingsByBucket(
  * never have all three by chance. Rejected unbucketed framings are still
  * surfaced via the StoryCard's flat-list fallback.
  */
+/**
+ * Number of distinct L/C/R buckets a story's framings occupy (0–3).
+ * Ranking v2 stage 1 (docs/RANKING_SIGNALS.md): coverage spanning the
+ * spectrum is stronger corroboration than three same-lane outlets, so the
+ * feed applies a small bonus per bucket beyond the first. Unbucketable
+ * framings (no outlet, or a `mixed`/null rating) count toward nothing —
+ * absence of a rating is never evidence of spectrum spread.
+ */
+export function countOccupiedBuckets(framings: StoryFraming[]): number {
+  const groups = groupFramingsByBucket(framings);
+  return CROSS_SPECTRUM_BUCKETS.filter((b) => groups[b].length > 0).length;
+}
+
 export function shouldRenderCrossSpectrum(framings: StoryFraming[]): boolean {
   const groups = groupFramingsByBucket(framings);
   const bucketed = groups.left.length + groups.center.length + groups.right.length;

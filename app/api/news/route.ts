@@ -9,6 +9,7 @@ import {
 import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
 import { enrichLinksWithContext } from "@/lib/civicContext";
+import { countOccupiedBuckets } from "@/lib/crossSpectrum";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { CategoryId, Article, ArticleTone, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
@@ -164,6 +165,12 @@ export async function GET(request: NextRequest) {
           eventDescription: stripHtml(String(e.event_description ?? "")),
         }));
 
+      // Ranking v2 stage 1: distinct L/C/R buckets among this story's
+      // framings (0-3). The client re-rank applies a small corroboration
+      // bonus per bucket beyond the first — cross-spectrum coverage is
+      // stronger evidence a story matters than three same-lane outlets.
+      const spectrumBuckets = countOccupiedBuckets(framings);
+
       return {
         id: s.id,
         headline: stripHtml(s.headline),
@@ -177,6 +184,7 @@ export async function GET(request: NextRequest) {
         articles: childArticles,
         // A story is grim when at least half its live members are (D48).
         ...(Number(s.grim_share ?? 0) >= 0.5 ? { tone: "grim" as const } : {}),
+        ...(spectrumBuckets > 0 ? { spectrumBuckets } : {}),
       };
     });
 

@@ -287,12 +287,19 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
       ...currentArticles.map((a) => ({ type: "article" as const, data: a })),
     ];
 
-    // Rank by composite score: (importance + source_boost) * recency_decay
+    // Rank by composite score: (importance | corroboration) * recency_decay
     // D48 grim dampener (mirrors GRIM_DAMPENER in lib/db.ts): low-importance
     // grim items rank as if ~12h older; importance 4-5 somber news and
     // untagged items are untouched — de-stack tabloid crime, never hide
     // major news.
     const GRIM_DAMPENER = 0.6;
+    // Ranking v2 stage 1 (docs/RANKING_SIGNALS.md; constants mirror lib/db.ts):
+    // stories score 3 + STORY_BOOST·ln(1 + sources) — the same saturating
+    // curve the SQL pool now truncates under — times a small cross-spectrum
+    // bonus per occupied L/C/R bucket beyond the first (spectrumBuckets is
+    // derived at the API boundary from framings' AllSides ratings).
+    const STORY_BOOST = 0.8;
+    const SPECTRUM_BOOST = 0.1;
     // Age against the fetch timestamp, not wall clock — ranking must be a pure
     // function of the data snapshot, and the snapshot carries its own "now".
     const now = lastUpdated ? lastUpdated.getTime() : 0;
@@ -305,11 +312,12 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
       const decay = Math.exp(-ageHours / 24);
 
       if (item.type === "story") {
-        const sourceBoost = Math.min((item.data.articleCount - 1), 4) * 0.5;
+        const sourceScore = 3 + STORY_BOOST * Math.log(1 + item.data.articleCount);
+        const spectrum = 1 + SPECTRUM_BOOST * Math.max(0, (item.data.spectrumBuckets ?? 1) - 1);
         // Corroboration is the story-level analog of importance: a
         // two-outlet grim story dampens, a five-outlet disaster does not.
         const damp = item.data.tone === "grim" && item.data.articleCount <= 2 ? GRIM_DAMPENER : 1;
-        return (3 + sourceBoost) * decay * damp;
+        return sourceScore * decay * spectrum * damp;
       }
       const importance = item.data.importanceScore ?? 3;
       const damp = item.data.tone === "grim" && importance <= 3 ? GRIM_DAMPENER : 1;
