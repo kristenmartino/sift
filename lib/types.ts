@@ -43,6 +43,8 @@ export interface Article {
   tone?: ArticleTone;
   /** Outlet-declared opinion piece (migrations/023); absent = reported. */
   isOpinion?: boolean;
+  /** Program-episode or daily-brief container (migrations/024). */
+  isRoundup?: boolean;
   /**
    * AI-generated "What you should know first" panel — civic-literacy MVP.
    * Populated by sift-api's primer_generator. Null/undefined when the article

@@ -356,6 +356,8 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     // Stage 4 (mirrors OPINION_DAMPENER in lib/db.ts): outlet-declared
     // opinion ranks x0.6 at any importance - op-eds are not top stories.
     const OPINION_DAMPENER = 0.6;
+    // Stage 5: program episodes and briefs are containers, not stories.
+    const ROUNDUP_DAMPENER = 0.4;
     // Age against the fetch timestamp, not wall clock — ranking must be a pure
     // function of the data snapshot, and the snapshot carries its own "now".
     const now = lastUpdated ? lastUpdated.getTime() : 0;
@@ -384,8 +386,9 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
       const importance = item.data.importanceScore ?? 3;
       const damp = item.data.tone === "grim" && importance <= 3 ? GRIM_DAMPENER : 1;
       const opDamp = item.data.isOpinion ? OPINION_DAMPENER : 1;
+      const roundDamp = item.data.isRoundup ? ROUNDUP_DAMPENER : 1;
       const civic = civicBoost(weightedCivicLinks(item.data.entityLinks));
-      return importance * decay * damp * civic * opDamp;
+      return importance * decay * damp * civic * opDamp * roundDamp;
     }
 
     items.sort((a, b) => rankScore(b) - rankScore(a));

@@ -34,6 +34,28 @@ corroboration). The response, deterministic and $0:
 - Known residual: opinion not declared in URL/title. An LLM genre key on
   the context call is the named follow-up if the residual matters; the
   second labeling session will say.
+
+## Stage 5 — roundup containers are not stories (added from eval evidence)
+
+Session 2 of the eval (sift-api#204, pairs drawn from the live top feed)
+found program episodes and daily briefs sitting near the top of 'top':
+"Morning news brief" at importance 4, Bloomberg show episodes, NYT's "The
+Evening". They are **containers** — their summaries recite the day's
+biggest events, so the importance model scores the events rather than the
+item. The original doom-feed session's pinned #1, "D4vd Charged with
+Murder | Case by Case", was the same defect wearing a crime headline.
+
+- `articles.is_roundup` (migration 024), set at store time by
+  `services/genre.py:detect_roundup` from title patterns measured on prod
+  first: `| <Show> M/D/YYYY` episodes, `| <Show>` segment suffixes, named
+  briefs, dated program titles, NPR's `X. And, Y` two-part brief. Fox's
+  "MORNING GLORY:" is excluded — an op-ed column, already `is_opinion`.
+- Ranking: × `ROUNDUP_DAMPENER` (0.4) in the SQL pools and the client
+  re-rank; never takes the hero. Harder than the opinion dampener because
+  a container is never the best version of a story — the underlying event
+  is also in the feed, reported directly.
+- Not applied to stories: clustering works on articles, and a container
+  rarely clusters. Revisit if one ever leads a story.
 **Owns:** what the feed ranking is allowed to value, and why. Companion to
 [`DECISIONS.md`](./DECISIONS.md) D45 (rank by civic impact) and D48 (cap and
 dampen, never hide).

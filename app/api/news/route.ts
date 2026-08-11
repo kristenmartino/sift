@@ -103,6 +103,7 @@ export async function GET(request: NextRequest) {
         ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
         ...(isArticleTone(row.tone) ? { tone: row.tone } : {}),
         ...(row.is_opinion ? { isOpinion: true } : {}),
+        ...(row.is_roundup ? { isRoundup: true } : {}),
         ...(primer ? { contextPrimer: primer } : {}),
         ...(outlet ? { outlet } : {}),
         ...(entityLinks.length > 0 ? { entityLinks } : {}),

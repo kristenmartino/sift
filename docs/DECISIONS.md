@@ -55,6 +55,7 @@
 | D47 | Q8 closed: global civic content | Sift covers non-US civic institutions. Entry point is IGOs sourced to founding treaties, not more foreign heads of state | $0 to decide | SETTLED (Aug 2026) |
 | D48 | Feed balance: cap and dampen, never hide | One outlet caps at 6 of the 50-article pool; low-importance grim items (tone=grim, importance ≤3) rank ×0.6 (≈12h older); importance 4–5 somber news ranks untouched. Answer to the doom-stacked 'top' feed (NYP held 23/50) | ~$0.05/day (tone tag rides the existing Haiku call) | SETTLED (Aug 2026); fully live 2026-08-10 — cap, dampener, non-grim hero, tone backfilled (sift#211/#212, sift-api#186/#187/#188) |
 | D49 | Opinion is not news ranking | Outlet-declared opinion (URL/title markers, deterministic) ranks ×0.6 at any importance, never takes the hero, and doesn't count toward the cross-spectrum bonus. Evidence: first labeled ranking eval (sift-api#200) — half the overrules rejected op-eds ranked as news | $0 (no LLM) | SETTLED (Aug 2026) |
+| D50 | Roundup containers are not stories | Program episodes and daily briefs (title-pattern detected, deterministic) rank ×0.4 and never take the hero — they inherit importance from events they only mention. Evidence: labeled eval session 2 (sift-api#204) | $0 (no LLM) | SETTLED (Aug 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
