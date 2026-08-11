@@ -78,6 +78,15 @@ export const COPY = {
     newsprint: "Newsprint",
     lateEdition: "Late Edition",
   },
+  // ── First-run coaching ────────────────────────────────
+  // One sentence, once, dismissible. Points at the two things visitors
+  // don't discover on their own (the footnotes on story cards, compare in
+  // the header). No tour, no spotlight — the reader is smart; one pointer.
+  coach: {
+    body: "New here? Every story carries its civic footnotes — and Compare reads the same story across outlets, side by side.",
+    dismiss: "Got it",
+    dismissAria: "Dismiss this note",
+  },
   error: {
     title: "We hit a snag pulling today's stories",
     body: "Our AI is having a slow morning. Give it another shot \u2014 it usually sorts itself out.",
@@ -93,9 +102,9 @@ export const COPY = {
     emptyTitle: "Nothing saved yet",
     emptyBody: "Star any article to keep it here. Your reading list, your pace.",
   },
-  // \u2500\u2500 Share & cite \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ── Share & cite ─────────────────────────────────────
   // Two verbs for the same instinct: "Share" hands a page to a person,
-  // "Cite" hands it to a bibliography. The swapped labels confirm quietly \u2014
+  // "Cite" hands it to a bibliography. The swapped labels confirm quietly —
   // copying a link is not an achievement, so no celebration.
   share: {
     share: "Share",
@@ -107,7 +116,7 @@ export const COPY = {
     // One citation shape, no style toggle: enough for a works-cited line or a
     // reference email, which is what a librarian or staffer actually pastes.
     citation: (entry: string, address: string, accessed: string, sources: string[]) =>
-      `\u201c${entry}.\u201d Sift, ${address}. Accessed ${accessed}.` +
+      `“${entry}.” Sift, ${address}. Accessed ${accessed}.` +
       (sources.length > 0 ? ` Underlying data: ${sources.join(", ")}.` : ""),
   },
   compare: {
@@ -156,6 +165,12 @@ export const COPY = {
     signInTitle: "Sign in to compare",
     signInBody:
       "Source comparison uses AI to cross-reference multiple outlets. Sign in to run your own.",
+    // The anonymous door: one real comparison per day, always dated, never
+    // presented as live output. Replaces hitting a wall with seeing the
+    // actual product — the honest version of a demo.
+    dailyTitle: "Today's example",
+    dailyBody: (when: string) => `A real comparison from the tool, generated ${when}.`,
+    dailySignIn: "Sign in to run your own",
   },
   search: {
     // Visible label on the /news header pill, matching compare.entry.
@@ -660,6 +675,15 @@ export const COPY = {
       ],
       noteLine:
         "Same event, three emphases. Sift puts them side by side and lets you draw the line.",
+      // Live-example variants — used when the daily compare example exists
+      // (sift-api writes one real comparison per UTC day, migration 021).
+      // The static Fed frames above stay as the fallback before the first
+      // generation ever runs, still labeled honestly by noteLine.
+      liveTitleIt: "side by side.",
+      liveTopicLabel: "Today's comparison",
+      liveDisputedVs: " vs ",
+      liveNote: (date: string) =>
+        `Generated ${date} by the compare tool — one real comparison a day, straight from the product.`,
     },
     sources: {
       eyebrow: "Curated & cited",

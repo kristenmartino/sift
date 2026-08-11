@@ -15,18 +15,20 @@ import SourceColophon, {
 } from "./landing/SourceColophon";
 import CtaBand from "./landing/CtaBand";
 import LandingFooter from "./landing/LandingFooter";
-import type { Article } from "@/lib/types";
+import type { Article, DailyCompareExample } from "@/lib/types";
 
 interface LandingPageProps {
   /** Server-fetched lead story (ISR @ 600s in app/page.tsx). Null = DB miss. */
   leadStory: Article | null;
   /** Curated outlets from `outlet_profiles` (ISR @ 600s). Empty = DB miss/empty. */
   outlets: SourceColophonOutlet[];
+  /** The daily compare example (ISR @ 600s). Null = not generated yet / DB miss. */
+  dailyCompare: DailyCompareExample | null;
 }
 
 const HERO = COPY.landingReskin.hero;
 
-export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
+export default function LandingPage({ leadStory, outlets, dailyCompare }: LandingPageProps) {
   // Live spectrum stats from the server-fetched outlet list — drives every
   // outlet-count surface on the landing (issue #153). Pure + already-fetched,
   // so no extra round-trip; an empty list (DB miss) degrades to count-free copy.
@@ -126,7 +128,7 @@ export default function LandingPage({ leadStory, outlets }: LandingPageProps) {
         <PrincipleStrip count={stats.total} />
         <Manifesto stats={stats} />
         <WhatSiftAdds />
-        <ComparisonDemo />
+        <ComparisonDemo example={dailyCompare} />
         <SourceColophon outlets={outlets} />
         <CtaBand count={stats.total} />
       </main>

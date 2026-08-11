@@ -132,6 +132,9 @@ export const STORAGE_KEYS = {
   bookmarks: "sift-bookmarks",
   theme: "sift-theme",
   customTopics: "sift-custom-topics",
+  // First-run coach strip (components/CoachStrip.tsx). Versioned so a future
+  // strip with genuinely new content can reappear once by bumping the suffix.
+  seenIntro: "sift-seen-intro-v1",
 } as const;
 
 // ─── Custom Topic Colors ────────────────────────────────
