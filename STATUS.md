@@ -1,6 +1,6 @@
 # Sift — STATUS
 
-**Updated:** 2026-08-07
+**Updated:** 2026-08-11
 **Tier:** v1.5 (civic-literacy pivot) — **feature work active** (un-paused 2026-08-05)
 **Velocity:** **27 PRs merged 2026-08-05** (24 `sift-api`, 3 `sift`) — the largest single day in the project's history, against a six-week gap that ended 2026-07-30. By month: Mar 44 · Apr 39 · May 51 · Jun 13 · Jul 3. This line has twice been wrong in the *optimistic* direction (it read "High (10+ PRs / week)" through eight weeks of near-zero — see [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) §2.5); treat a single day as a day, not a baseline.
 
@@ -206,6 +206,8 @@ Both found while applying migration 012 to prod. Neither blocks the week-one tes
 - Triage of `sift-api` #62 (merge) and #63 (Ask Sift + Refined Compare) into the sequenced roadmap
 
 ## Recent decisions
+
+- **2026-08-11** — **Clerk migrated to siftnews.io; sign-in works on the canonical domain.** Closes the deferral recorded in `WEEK_ONE_OUTREACH.md` ("someone who lands on `siftnews.io` and clicks Sign in hits a broken flow") before the week-one send. It was a domain change on the existing Clerk production instance — new publishable key in Vercel, CNAMEs on Vercel DNS, three CSP entries in `next.config.js` — not the 4–6-hour new-instance rebuild the launch memo costed. Auth on the old subdomain stops working; `siftnews.io` is canonical. sift-api's CORS list also swapped the never-registered `siftnews.ai` entries for `siftnews.io` in the same pass.
 
 - **2026-08-10** — **The D45 ranking signal model is written down** ([`docs/RANKING_SIGNALS.md`](./docs/RANKING_SIGNALS.md)). Five signals in trust order — corroboration, novelty of change, decision-relevance (civic-entity density, the signal only Sift has), durability, accountability — plus the three anti-signals today's doom-feed fix suppressed (emotional intensity, virality, outlet volume). Includes a staged, deterministic v2 plan: saturating story corroboration with a cross-spectrum bonus, a capped civic-entity-density boost, and an empirical gate (replay harness + hand-ranked pairs + feed_health tripwire) before any of it ships. Nothing implemented yet — the doc exists so v2 argues with a model, not a mood.
 

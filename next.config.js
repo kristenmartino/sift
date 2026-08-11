@@ -104,7 +104,7 @@ const nextConfig = {
     const csp = [
       "default-src 'self'",
       // 'unsafe-inline' required for: theme init script (layout.tsx), Tailwind styles, Clerk UI
-      `script-src 'self' 'unsafe-inline'${devEval} https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai https://challenges.cloudflare.com`,
+      `script-src 'self' 'unsafe-inline'${devEval} https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.io https://challenges.cloudflare.com`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // font-src: Google Fonts CDN
       "font-src 'self' https://fonts.gstatic.com data:",
@@ -112,9 +112,9 @@ const nextConfig = {
       "img-src 'self' https: data:",
       // connect-src: API calls to self, Clerk, server-side proxied services,
       // and the Sentry ingest endpoint (only used when NEXT_PUBLIC_SENTRY_DSN is set)
-      "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai https://*.sentry.io",
+      "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.io https://*.sentry.io",
       // Clerk auth iframes
-      "frame-src https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai https://challenges.cloudflare.com",
+      "frame-src https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.io https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
       "form-action 'self'",
       "base-uri 'self'",

@@ -2,7 +2,7 @@
 
 **The news, with footnotes.** An AI-powered news aggregator with a civic-literacy layer on top. Sift reads from 70+ vetted outlets across the political spectrum, AI-summarizes the day's stories across 10 categories, lets you search any topic or compare coverage across sources — *and* adds the civic footnotes the news assumes you already have: an adaptive *"what you should know first"* primer, inline glossary tooltips, structured dossiers on every politician / organization / bill / outlet, cross-spectrum framing — all sourced from public records.
 
-**Live:** [siftnews.kristenmartino.ai](https://siftnews.kristenmartino.ai)
+**Live:** [siftnews.io](https://siftnews.io)
 
 > **Direction:** Sift is mid-pivot from a general-audience news aggregator to a civic-literacy news app. See [`plans/sift-civic-literacy.md`](../../.claude/plans/sift-civic-literacy.md) for the active plan. The pre-pivot product is preserved at git tag `v1-general-audience`. A possible future "Sift Pro" tier (paid power-user / professional intelligence) is documented but deferred — see [`plans/sift-ib-pivot.md`](../../.claude/plans/sift-ib-pivot.md).
 
