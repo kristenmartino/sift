@@ -41,6 +41,8 @@ export interface Article {
   whyItMatters?: string;
   importanceScore?: number;
   tone?: ArticleTone;
+  /** Outlet-declared opinion piece (migrations/023); absent = reported. */
+  isOpinion?: boolean;
   /**
    * AI-generated "What you should know first" panel — civic-literacy MVP.
    * Populated by sift-api's primer_generator. Null/undefined when the article
@@ -661,6 +663,8 @@ export interface Story {
    * Feeds the D48 dampener for thinly-corroborated grim stories.
    */
   tone?: ArticleTone;
+  /** Derived at the API boundary: >= half the members are opinion pieces. */
+  isOpinion?: boolean;
   /**
    * Distinct L/C/R AllSides buckets occupied by this story's framings (1-3;
    * absent when none are bucketable). Derived at the API boundary via

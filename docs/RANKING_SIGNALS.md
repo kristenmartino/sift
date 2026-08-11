@@ -5,8 +5,35 @@ corroboration + cross-spectrum bonus) and 2 (civic-entity-density boost)
 implemented 2026-08-10; stage 3 implemented 2026-08-11 — the drift tripwire
 lives in sift-api's `services/feed_balance.py` (daily snapshots to the
 `feed_balance` table, migration 022) and the blind-pairs eval in
-`scripts/eval_ranking_pairs.py` (first 25-pair sheet committed; labeling
-pending).
+`scripts/eval_ranking_pairs.py`; first labeling session scored 2026-08-11
+(sift-api#200: pre-v2 13/25, v2 13/25 — a tie by the harness's own banding);
+stage 4 (opinion genre) implemented 2026-08-11 from that session's overrule
+patterns.
+
+## Stage 4 — opinion is not a top story (added from eval evidence)
+
+The first labeling session's clearest pattern: in half the overrules the
+labeler rejected op-eds and horse-race commentary the formulas had ranked
+as news, and the spectrum bonus actively *rewarded* opinion roundups
+(op-eds across lanes trivially span L/C/R buckets — disagreement, not
+corroboration). The response, deterministic and $0:
+
+- `articles.is_opinion` (migration 023), set at store time by sift-api's
+  `services/genre.py` from **outlet-declared markers only** — URL path
+  segments (`/opinion/`, `/commentary/`, `/editorial(s)/`, `/op-ed/`,
+  `/commentisfree/`) and title prefixes ("Opinion:", "Editorial |").
+  Precision-first: "Analysis:" is deliberately unflagged, and the flag is
+  `NOT NULL DEFAULT FALSE` — no marker IS the reported verdict.
+  Retroactive via `scripts/backfill_opinion.py` (lockstep SQL patterns).
+- Ranking: opinion ranks × `OPINION_DAMPENER` (0.6) at any importance, in
+  the SQL pools and the client re-rank; stories inherit it when ≥ half
+  their members are opinion; opinion never takes the landing hero.
+- Spectrum bonus counts only framings whose outlet contributed at least
+  one *reported* member article.
+- `feed_balance.opinion_share_top10` records the policy's effect, untripped.
+- Known residual: opinion not declared in URL/title. An LLM genre key on
+  the context call is the named follow-up if the residual matters; the
+  second labeling session will say.
 **Owns:** what the feed ranking is allowed to value, and why. Companion to
 [`DECISIONS.md`](./DECISIONS.md) D45 (rank by civic impact) and D48 (cap and
 dampen, never hide).
