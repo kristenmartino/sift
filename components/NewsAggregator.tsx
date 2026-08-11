@@ -37,6 +37,10 @@ function useInitialParams() {
       return param && VALID_CATEGORIES.has(param as CategoryId) ? param as CategoryId : "top";
     })(),
     view: searchParams.get("view"),
+    // Shared compare links: ?compare=<topic>&sources=<key,key>. Read once —
+    // the URL-sync effect below owns the address bar from then on.
+    compare: searchParams.get("compare"),
+    compareSources: searchParams.get("sources"),
   }));
   return initial;
 }
@@ -91,6 +95,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     loading: compareLoading,
     error: compareError,
     slow: compareSlow,
+    stage: compareStage,
     compare: runCompare,
     clear: clearCompare,
   } = useCompare();
@@ -99,10 +104,37 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     loadCategory(activeCategory);
   }, [activeCategory, loadCategory]);
 
-  // Sync state to URL (shallow replace, no scroll)
+  // Run a shared ?compare= link on arrival. Once only — after this, compare
+  // state belongs to the user's own clicks. Signed-out visitors land on the
+  // sign-in empty state via the 401 path, which is the funnel until the
+  // anonymous daily example covers them.
+  const compareFromUrlRan = useRef(false);
+  useEffect(() => {
+    if (compareFromUrlRan.current) return;
+    compareFromUrlRan.current = true;
+    const topic = initialParams.compare?.trim();
+    if (!topic || topic.length < 3) return;
+    const validKeys = (initialParams.compareSources ?? "")
+      .split(",")
+      .filter((key) => COMPARE_SOURCES.some((s) => s.key === key));
+    const sources =
+      validKeys.length >= 2 ? validKeys.slice(0, 5) : [...DEFAULT_COMPARE_SOURCES];
+    setSelectedSources(sources);
+    setCompareMode(true);
+    setShowBookmarks(false);
+    setSearchMode(false);
+    runCompare(topic, sources);
+  }, [initialParams, runCompare]);
+
+  // Sync state to URL (shallow replace, no scroll). Compare wins the address
+  // bar while active so the result screen is linkable — the single most
+  // impressive artifact the product makes should be able to leave it.
   useEffect(() => {
     const params = new URLSearchParams();
-    if (showBookmarks) {
+    if (compareMode && compareTopic) {
+      params.set("compare", compareTopic);
+      if (selectedSources.length > 0) params.set("sources", selectedSources.join(","));
+    } else if (showBookmarks) {
       params.set("view", "bookmarks");
     } else if (activeCategory !== "top") {
       params.set("category", activeCategory);
@@ -110,7 +142,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     const newUrl = params.toString() ? `/news?${params.toString()}` : "/news";
     // Use history API directly to avoid triggering re-renders from router
     window.history.replaceState(null, "", newUrl);
-  }, [activeCategory, showBookmarks]);
+  }, [activeCategory, showBookmarks, compareMode, compareTopic, selectedSources]);
 
   // Category switch with fade-out/fade-in
   const switchCategory = useCallback((catId: CategoryId) => {
@@ -640,7 +672,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 className="text-xs text-(--text-tertiary) cursor-pointer bg-transparent border-none p-0 transition-colors duration-200"
                 style={{ color: sourcesExpanded ? "var(--accent)" : undefined }}
               >
-                Comparing: {selectedLabels} {sourcesExpanded ? "▴" : "▾"}
+                {COPY.compare.comparing(selectedLabels)} {sourcesExpanded ? "▴" : "▾"}
               </button>
               {sourcesExpanded && (
                 <div className="flex flex-wrap gap-1.5 mt-2 animate-fade-slide-in">
@@ -694,15 +726,32 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         {/* Compare mode */}
         {compareMode ? (
           <>
-            {/* Compare loading */}
+            {/* Compare loading — staged progress instead of a bare spinner.
+                The stage lines track the workflow's real shape on elapsed
+                time; the source chips shimmer as a set (no per-source
+                checkmarks until the streaming path can make them true). */}
             {compareLoading && (
               <div className="text-center py-20 px-5 animate-fade-slide-in">
                 <div className="text-4xl mb-5 animate-sift-refresh inline-block text-(--accent)">◆</div>
-                <p className="text-base font-semibold text-(--text-secondary)">
-                  {COPY.compare.loading}
+                <p className="text-base font-semibold text-(--text-secondary)" aria-live="polite">
+                  {compareStage === 0
+                    ? COPY.compare.stageSearch(selectedSources.length)
+                    : compareStage === 1
+                      ? COPY.compare.stageClaims
+                      : COPY.compare.stageSummary}
                 </p>
+                <div className="flex flex-wrap justify-center gap-1.5 mt-5 max-w-[560px] mx-auto">
+                  {selectedSources.map((key) => (
+                    <span
+                      key={key}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-medium border border-(--border) text-(--text-tertiary) animate-shimmer"
+                    >
+                      {COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key}
+                    </span>
+                  ))}
+                </div>
                 {compareSlow && (
-                  <p className="text-sm mt-3 text-(--text-tertiary) animate-fade-slide-in">
+                  <p className="text-sm mt-4 text-(--text-tertiary) animate-fade-slide-in">
                     {COPY.compare.slow}
                   </p>
                 )}
@@ -713,8 +762,8 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
             {compareError && !compareLoading && (
               compareError === "Unauthorized" ? (
                 <EmptyState
-                  title="Sign in to compare"
-                  body="Source comparison uses AI to cross-reference multiple outlets. Sign in to access this feature."
+                  title={COPY.compare.signInTitle}
+                  body={COPY.compare.signInBody}
                 />
               ) : (
                 <ErrorState
