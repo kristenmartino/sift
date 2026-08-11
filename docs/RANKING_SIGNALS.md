@@ -2,8 +2,11 @@
 
 **Status:** signal model adopted 2026-08-10; stages 1 (saturating
 corroboration + cross-spectrum bonus) and 2 (civic-entity-density boost)
-implemented 2026-08-10; stage 3 (hand-ranked eval + feed_health tripwire)
-planned.
+implemented 2026-08-10; stage 3 implemented 2026-08-11 — the drift tripwire
+lives in sift-api's `services/feed_balance.py` (daily snapshots to the
+`feed_balance` table, migration 022) and the blind-pairs eval in
+`scripts/eval_ranking_pairs.py` (first 25-pair sheet committed; labeling
+pending).
 **Owns:** what the feed ranking is allowed to value, and why. Companion to
 [`DECISIONS.md`](./DECISIONS.md) D45 (rank by civic impact) and D48 (cap and
 dampen, never hide).
