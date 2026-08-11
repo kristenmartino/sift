@@ -48,6 +48,7 @@ const MOCK_DB_ROWS: DbArticle[] = [
     why_it_matters: null,
     importance_score: null,
     tone: null,
+    is_opinion: false,
     context_primer: null,
     reading_levels: null,
     created_at: new Date("2026-03-28T10:00:00Z"),
@@ -65,6 +66,7 @@ const MOCK_DB_ROWS: DbArticle[] = [
     why_it_matters: null,
     importance_score: null,
     tone: null,
+    is_opinion: false,
     context_primer: null,
     reading_levels: null,
     created_at: new Date("2026-03-28T08:00:00Z"),
@@ -248,6 +250,7 @@ describe("GET /api/news", () => {
           entities: [{ people: ["Alice"], organizations: ["Acme"], locations: ["NYC"], event_description: "test event" }],
           article_count: 2,
           grim_share: null,
+          opinion_share: null,
           representative_image_url: null,
           published_date: new Date("2026-03-28T10:00:00Z"),
           synthesis_status: "complete",
@@ -285,6 +288,7 @@ describe("GET /api/news", () => {
           article_count: 2,
           // pg returns AVG() as a numeric string.
           grim_share: "0.5",
+          opinion_share: "0.5",
           representative_image_url: null,
           published_date: new Date("2026-03-28T10:00:00Z"),
           synthesis_status: "complete",
@@ -292,7 +296,7 @@ describe("GET /api/news", () => {
         storyArticles: {},
         standaloneArticles: [
           { ...MOCK_DB_ROWS[0], tone: "grim" },
-          { ...MOCK_DB_ROWS[1], tone: "invalid-value" },
+          { ...MOCK_DB_ROWS[1], tone: "invalid-value", is_opinion: true },
         ],
       });
 
@@ -304,6 +308,11 @@ describe("GET /api/news", () => {
       expect(body.articles[1].tone).toBeUndefined();
       // grim_share >= 0.5 → the story itself is grim.
       expect(body.stories[0].tone).toBe("grim");
+      // opinion_share >= 0.5 → the story is opinion (stage 4).
+      expect(body.stories[0].isOpinion).toBe(true);
+      // reported articles carry no isOpinion key at all.
+      expect(body.articles[0].isOpinion).toBeUndefined();
+      expect(body.articles[1].isOpinion).toBe(true);
     });
   });
 

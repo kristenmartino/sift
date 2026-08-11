@@ -102,6 +102,7 @@ export async function GET(request: NextRequest) {
         ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
         ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
         ...(isArticleTone(row.tone) ? { tone: row.tone } : {}),
+        ...(row.is_opinion ? { isOpinion: true } : {}),
         ...(primer ? { contextPrimer: primer } : {}),
         ...(outlet ? { outlet } : {}),
         ...(entityLinks.length > 0 ? { entityLinks } : {}),
@@ -169,7 +170,16 @@ export async function GET(request: NextRequest) {
       // framings (0-3). The client re-rank applies a small corroboration
       // bonus per bucket beyond the first — cross-spectrum coverage is
       // stronger evidence a story matters than three same-lane outlets.
-      const spectrumBuckets = countOccupiedBuckets(framings);
+      // Stage 4: opinion-backed framings don't count toward the spectrum
+      // bonus. A framing counts only when its outlet contributed at least
+      // one REPORTED member article — op-eds across lanes are disagreement,
+      // not corroboration (sift-api#200, overrule pattern one).
+      const reportedSources = new Set(
+        childRows.filter((r) => !r.is_opinion).map((r) => r.source_name)
+      );
+      const spectrumBuckets = countOccupiedBuckets(
+        framings.filter((f) => reportedSources.has(f.sourceName))
+      );
 
       return {
         id: s.id,
@@ -184,6 +194,7 @@ export async function GET(request: NextRequest) {
         articles: childArticles,
         // A story is grim when at least half its live members are (D48).
         ...(Number(s.grim_share ?? 0) >= 0.5 ? { tone: "grim" as const } : {}),
+        ...(Number(s.opinion_share ?? 0) >= 0.5 ? { isOpinion: true } : {}),
         ...(spectrumBuckets > 0 ? { spectrumBuckets } : {}),
       };
     });

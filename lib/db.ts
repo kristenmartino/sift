@@ -75,6 +75,17 @@ const CIVIC_WEIGHT_SQL = `COALESCE((
 ), 0)`;
 const CIVIC_BOOST_SQL = `(1 + ${CIVIC_BOOST} * LEAST(${CIVIC_WEIGHT_SQL}, 3))`;
 
+// Ranking v2 stage 4 (docs/RANKING_SIGNALS.md): opinion is not a top story.
+// Evidence: the first hand-labeled ranking eval (sift-api#200) — half the
+// overrules rejected op-eds the formulas ranked as news. Outlet-declared
+// opinion (articles.is_opinion, set at ingest from URL/title markers) ranks
+// ×0.6, and the API layer excludes opinion-backed framings from the
+// cross-spectrum bonus (op-eds across lanes are disagreement, not
+// corroboration). Flat, no importance gate: an op-ed is opinion at any
+// importance. Set to 1.0 to revert. Mirrored in NewsAggregator.tsx.
+const OPINION_DAMPENER = 0.6;
+const OPINION_DAMPENER_SQL = `CASE WHEN is_opinion THEN ${OPINION_DAMPENER} ELSE 1.0 END`;
+
 // Ranking v2 stage 1 (docs/RANKING_SIGNALS.md): stories rank on a SATURATING
 // corroboration curve, 3 + STORY_BOOST × ln(1 + sources), in both the SQL
 // pool and the client re-rank — previously the pool used raw count × decay
@@ -101,6 +112,7 @@ export interface DbArticle {
   why_it_matters: string | null;
   importance_score: number | null;
   tone: string | null; // grim | neutral | light | NULL (migrations/020); NULL = neutral
+  is_opinion: boolean; // outlet-declared opinion marker (migrations/023)
   created_at: Date;
   // Civic-literacy MVP additions. Both columns added in
   // sift-api/migrations/005_context_primer_and_reading_levels.sql.
@@ -126,7 +138,7 @@ export async function getArticlesByCategory(
 ): Promise<DbArticle[]> {
   const result = await pool.query<DbArticle>(
     `SELECT id, title, summary, source_url, source_name, image_url,
-            category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at
+            category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, context_primer, reading_levels, created_at
      FROM articles
      WHERE category = $1 AND from_search = false
        AND summary IS NOT NULL AND summary != ''
@@ -137,7 +149,8 @@ export async function getArticlesByCategory(
        COALESCE(importance_score, 3)::float *
        EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700)) *
        ${GRIM_DAMPENER_SQL} *
-       ${CIVIC_BOOST_SQL}
+       ${CIVIC_BOOST_SQL} *
+       ${OPINION_DAMPENER_SQL}
      DESC NULLS LAST
      LIMIT $2`,
     [category, limit]
@@ -161,6 +174,9 @@ export interface DbStory {
   // Fraction of live member articles tagged tone='grim' (0..1); the API
   // boundary derives Story.tone = 'grim' when >= 0.5. NULL tones count as 0.
   grim_share: string | number | null;
+  // Fraction of live member articles flagged is_opinion (0..1); the API
+  // boundary derives Story.isOpinion when >= 0.5.
+  opinion_share: string | number | null;
 }
 
 export interface DbStoryArticle extends DbArticle {
@@ -184,6 +200,7 @@ export async function getStoriesWithArticles(
       `SELECT s.id, s.headline, s.summary, s.category, s.framings, s.entities,
               COUNT(a.id)::int AS article_count,
               AVG(CASE WHEN a.tone = 'grim' THEN 1.0 ELSE 0 END) AS grim_share,
+              AVG(CASE WHEN a.is_opinion THEN 1.0 ELSE 0 END) AS opinion_share,
               s.representative_image_url, s.published_date, s.synthesis_status
        FROM stories s
        LEFT JOIN articles a
@@ -219,7 +236,7 @@ export async function getStoriesWithArticles(
     try {
       const storyArticlesResult = await pool.query<DbStoryArticle>(
         `SELECT id, title, summary, source_url, source_name, image_url,
-                category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at, story_id
+                category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, context_primer, reading_levels, created_at, story_id
          FROM articles
          WHERE story_id = ANY($1::text[])
            AND from_search = false
@@ -254,11 +271,12 @@ export async function getStoriesWithArticles(
     const standaloneResult = await pool.query<DbArticle>(
       `WITH scored AS (
          SELECT id, title, summary, source_url, source_name, image_url,
-                category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at,
+                category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, context_primer, reading_levels, created_at,
                 COALESCE(importance_score, 3)::float *
                 EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700)) *
                 ${GRIM_DAMPENER_SQL} *
-                ${CIVIC_BOOST_SQL}
+                ${CIVIC_BOOST_SQL} *
+                ${OPINION_DAMPENER_SQL}
                 AS rank_score
          FROM articles
          WHERE category = $1 AND from_search = false
@@ -276,7 +294,7 @@ export async function getStoriesWithArticles(
          FROM scored
        )
        SELECT id, title, summary, source_url, source_name, image_url,
-              category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at
+              category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, context_primer, reading_levels, created_at
        FROM capped
        WHERE source_rank <= ${MAX_ARTICLES_PER_SOURCE}
        ORDER BY rank_score DESC
@@ -290,11 +308,12 @@ export async function getStoriesWithArticles(
     const fallback = await pool.query<DbArticle>(
       `WITH scored AS (
          SELECT id, title, summary, source_url, source_name, image_url,
-                category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at,
+                category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, context_primer, reading_levels, created_at,
                 COALESCE(importance_score, 3)::float *
                 EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700)) *
                 ${GRIM_DAMPENER_SQL} *
-                ${CIVIC_BOOST_SQL}
+                ${CIVIC_BOOST_SQL} *
+                ${OPINION_DAMPENER_SQL}
                 AS rank_score
          FROM articles
          WHERE category = $1 AND from_search = false
@@ -311,7 +330,7 @@ export async function getStoriesWithArticles(
          FROM scored
        )
        SELECT id, title, summary, source_url, source_name, image_url,
-              category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at
+              category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, context_primer, reading_levels, created_at
        FROM capped
        WHERE source_rank <= ${MAX_ARTICLES_PER_SOURCE}
        ORDER BY rank_score DESC
@@ -343,13 +362,14 @@ export async function getTopStoryForLanding(): Promise<DbArticle | null> {
     const result = await pool.query<DbArticle>(
       `WITH ranked AS (
          SELECT id, title, summary, source_url, source_name, image_url,
-                category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at,
+                category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, context_primer, reading_levels, created_at,
                 COALESCE(importance_score, 3)::float *
                 EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700))
                 AS rank_score
          FROM articles
          WHERE category = 'top'
            AND from_search = false
+           AND is_opinion = false
            AND image_url IS NOT NULL
            AND summary IS NOT NULL AND summary != ''
            AND LOWER(summary) NOT LIKE 'unable to provide%'
@@ -359,7 +379,7 @@ export async function getTopStoryForLanding(): Promise<DbArticle | null> {
          LIMIT 12
        )
        SELECT id, title, summary, source_url, source_name, image_url,
-              category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at
+              category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, context_primer, reading_levels, created_at
        FROM ranked
        ORDER BY
          CASE WHEN tone IS DISTINCT FROM 'grim'

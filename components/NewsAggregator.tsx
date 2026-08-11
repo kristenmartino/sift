@@ -353,6 +353,9 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     // derived at the API boundary from framings' AllSides ratings).
     const STORY_BOOST = 0.8;
     const SPECTRUM_BOOST = 0.1;
+    // Stage 4 (mirrors OPINION_DAMPENER in lib/db.ts): outlet-declared
+    // opinion ranks x0.6 at any importance - op-eds are not top stories.
+    const OPINION_DAMPENER = 0.6;
     // Age against the fetch timestamp, not wall clock — ranking must be a pure
     // function of the data snapshot, and the snapshot carries its own "now".
     const now = lastUpdated ? lastUpdated.getTime() : 0;
@@ -370,17 +373,19 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         // Corroboration is the story-level analog of importance: a
         // two-outlet grim story dampens, a five-outlet disaster does not.
         const damp = item.data.tone === "grim" && item.data.articleCount <= 2 ? GRIM_DAMPENER : 1;
+        const opDamp = item.data.isOpinion ? OPINION_DAMPENER : 1;
         // Stage 2: a story is as decision-relevant as its most
         // civic-entity-dense member (mirrors CIVIC_BOOST_SQL layering).
         const civic = civicBoost(
           Math.max(0, ...item.data.articles.map((a) => weightedCivicLinks(a.entityLinks)))
         );
-        return sourceScore * decay * spectrum * damp * civic;
+        return sourceScore * decay * spectrum * damp * civic * opDamp;
       }
       const importance = item.data.importanceScore ?? 3;
       const damp = item.data.tone === "grim" && importance <= 3 ? GRIM_DAMPENER : 1;
+      const opDamp = item.data.isOpinion ? OPINION_DAMPENER : 1;
       const civic = civicBoost(weightedCivicLinks(item.data.entityLinks));
-      return importance * decay * damp * civic;
+      return importance * decay * damp * civic * opDamp;
     }
 
     items.sort((a, b) => rankScore(b) - rankScore(a));
