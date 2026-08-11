@@ -47,6 +47,7 @@ const MOCK_DB_ROWS: DbArticle[] = [
     read_time: 2,
     why_it_matters: null,
     importance_score: null,
+    tone: null,
     context_primer: null,
     reading_levels: null,
     created_at: new Date("2026-03-28T10:00:00Z"),
@@ -63,6 +64,7 @@ const MOCK_DB_ROWS: DbArticle[] = [
     read_time: 3,
     why_it_matters: null,
     importance_score: null,
+    tone: null,
     context_primer: null,
     reading_levels: null,
     created_at: new Date("2026-03-28T08:00:00Z"),
@@ -245,6 +247,7 @@ describe("GET /api/news", () => {
           framings: [{ source_name: "Reuters", framing: "Focuses on timeline", tone: "neutral" }],
           entities: [{ people: ["Alice"], organizations: ["Acme"], locations: ["NYC"], event_description: "test event" }],
           article_count: 2,
+          grim_share: null,
           representative_image_url: null,
           published_date: new Date("2026-03-28T10:00:00Z"),
           synthesis_status: "complete",
@@ -266,6 +269,41 @@ describe("GET /api/news", () => {
       expect(body.stories[0].framings[0].sourceName).toBe("Reuters");
       expect(body.stories[0].entities[0].people).toEqual(["Alice"]);
       expect(body.stories[0].articles).toHaveLength(2);
+      // grim_share null → no story tone (D48: absent = neutral, no penalty).
+      expect(body.stories[0].tone).toBeUndefined();
+    });
+
+    it("passes article tone through and derives story tone from grim_share", async () => {
+      mockGetStoriesWithArticles.mockResolvedValue({
+        stories: [{
+          id: "story1",
+          headline: "Grim Story",
+          summary: "A synthesized summary.",
+          category: "technology",
+          framings: [],
+          entities: [],
+          article_count: 2,
+          // pg returns AVG() as a numeric string.
+          grim_share: "0.5",
+          representative_image_url: null,
+          published_date: new Date("2026-03-28T10:00:00Z"),
+          synthesis_status: "complete",
+        }],
+        storyArticles: {},
+        standaloneArticles: [
+          { ...MOCK_DB_ROWS[0], tone: "grim" },
+          { ...MOCK_DB_ROWS[1], tone: "invalid-value" },
+        ],
+      });
+
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.articles[0].tone).toBe("grim");
+      // Unknown DB values never reach the API contract.
+      expect(body.articles[1].tone).toBeUndefined();
+      // grim_share >= 0.5 → the story itself is grim.
+      expect(body.stories[0].tone).toBe("grim");
     });
   });
 

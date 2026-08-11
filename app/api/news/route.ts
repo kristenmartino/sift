@@ -10,7 +10,11 @@ import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
 import { enrichLinksWithContext } from "@/lib/civicContext";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
-import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
+import type { CategoryId, Article, ArticleTone, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
+
+function isArticleTone(v: unknown): v is ArticleTone {
+  return v === "grim" || v === "neutral" || v === "light";
+}
 
 const BAD_SUMMARIES = ["unable to provide summary"];
 
@@ -96,6 +100,7 @@ export async function GET(request: NextRequest) {
         readTime: row.read_time || 1,
         ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
         ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
+        ...(isArticleTone(row.tone) ? { tone: row.tone } : {}),
         ...(primer ? { contextPrimer: primer } : {}),
         ...(outlet ? { outlet } : {}),
         ...(entityLinks.length > 0 ? { entityLinks } : {}),
@@ -170,6 +175,8 @@ export async function GET(request: NextRequest) {
         imageUrl: cleanImageUrl(s.representative_image_url),
         publishedDate: s.published_date ? s.published_date.toISOString() : null,
         articles: childArticles,
+        // A story is grim when at least half its live members are (D48).
+        ...(Number(s.grim_share ?? 0) >= 0.5 ? { tone: "grim" as const } : {}),
       };
     });
 
