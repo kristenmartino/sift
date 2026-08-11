@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import LandingPage from "@/components/LandingPage";
 import {
   getAllOutletProfiles,
+  getDailyCompareExample,
   getOutletProfilesMap,
   getTopStoryForLanding,
   resolveOutletForSourceName,
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 export const revalidate = 600;
 
 export default async function Home() {
-  const [lead, outletProfiles, outletMap] = await Promise.all([
+  const [lead, outletProfiles, outletMap, dailyCompare] = await Promise.all([
     getTopStoryForLanding(),
     // Curated outlet list for the source colophon. Guarded so an outlet-data
     // miss degrades to an empty list rather than breaking the landing (same
@@ -36,6 +37,9 @@ export default async function Home() {
     // cache. Guarded to an empty map so a miss degrades to a card without
     // rating chips, never a broken page.
     getOutletProfilesMap().catch((): Map<string, OutletProfile> => new Map()),
+    // Daily compare example for the comparison section. Null (not yet
+    // generated / DB miss) falls back to the static labeled illustration.
+    getDailyCompareExample().catch(() => null),
   ]);
   const outlets = outletProfiles.map((o) => ({
     slug: o.slug,
@@ -68,5 +72,11 @@ export default async function Home() {
       }
     : null;
 
-  return <LandingPage leadStory={leadStory} outlets={outlets} />;
+  return (
+    <LandingPage
+      leadStory={leadStory}
+      outlets={outlets}
+      dailyCompare={dailyCompare}
+    />
+  );
 }

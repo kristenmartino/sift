@@ -57,8 +57,20 @@ export async function POST(request: NextRequest) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), COMPARE_TIMEOUT_MS);
 
+    // Streaming pass-through: when the client asks for SSE, pipe the
+    // backend's /stream variant straight down (same wire format as the topic
+    // route). Errors before the stream opens (401/429/503) still surface as
+    // normal JSON below. Once piping starts the 55s timer is cleared by the
+    // finally — a hung upstream is then bounded by maxDuration (60s), and
+    // the backend's own 50s ceiling ends healthy streams well before either.
+    const wantsStream =
+      request.headers.get("accept")?.includes("text/event-stream") ?? false;
+
     try {
-      const res = await fetch(`${SIFT_API_URL}/v1/analyze/compare`, {
+      const upstreamPath = wantsStream
+        ? "/v1/analyze/compare/stream"
+        : "/v1/analyze/compare";
+      const res = await fetch(`${SIFT_API_URL}${upstreamPath}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -70,6 +82,17 @@ export async function POST(request: NextRequest) {
         }),
         signal: controller.signal,
       });
+
+      if (wantsStream && res.ok && res.body) {
+        return new Response(res.body, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache, no-transform",
+            Connection: "keep-alive",
+          },
+        });
+      }
 
       clearTimeout(timeout);
 

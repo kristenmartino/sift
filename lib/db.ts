@@ -19,6 +19,8 @@ import type {
   SelfDescribedOrg,
   BillListItem,
   BillProfile,
+  CompareResponse,
+  DailyCompareExample,
   OrgListItem,
   OrgProfile,
   OutletProfile,
@@ -1232,6 +1234,46 @@ export async function getRecentArticlesByOutletSlug(
   } catch (err) {
     const msg = String(err);
     if (msg.includes("does not exist")) return [];
+    throw err;
+  }
+}
+
+// ─── Daily compare example ─────────────────────────────
+
+/**
+ * The anonymous daily compare example — one real comparison per UTC day,
+ * written by sift-api after a pipeline run (daily_compare_example, migration
+ * 021). Read here (not proxied through Railway) because reads are the
+ * frontend's path; sift-api owns only the write. Returns null before the
+ * first generation or if the table doesn't exist yet.
+ */
+export async function getDailyCompareExample(): Promise<DailyCompareExample | null> {
+  try {
+    const result = await pool.query<{
+      payload: CompareResponse;
+      generated_at: string;
+    }>(
+      `SELECT payload, generated_at
+       FROM daily_compare_example
+       WHERE id = 1
+       LIMIT 1`
+    );
+    if (result.rows.length === 0) return null;
+    const { payload, generated_at } = result.rows[0];
+    if (!payload || typeof payload !== "object" || !payload.topic) return null;
+    return {
+      topic: String(payload.topic),
+      comparison: String(payload.comparison ?? ""),
+      sources_checked: Array.isArray(payload.sources_checked)
+        ? payload.sources_checked
+        : [],
+      claims: Array.isArray(payload.claims) ? payload.claims : [],
+      duration_ms: Number(payload.duration_ms ?? 0),
+      generatedAt: new Date(generated_at).toISOString(),
+    };
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return null;
     throw err;
   }
 }

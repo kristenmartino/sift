@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from "react";
 import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS, MAX_CUSTOM_TOPICS } from "./constants";
-import type { Article, ArticleCache, StoryCache, CategoryId, CustomTopic, NewsApiResponse, CompareResponse, CompareClaim, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
+import type { Article, ArticleCache, StoryCache, CategoryId, CustomTopic, NewsApiResponse, CompareResponse, CompareClaim, CompareSourceDone, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
 import { readSSE } from "./sse";
 
 // ─── useLocalStorage ────────────────────────────────────
@@ -586,6 +586,8 @@ interface CompareState {
   slow: boolean;
   /** 0 = searching sources, 1 = extracting claims, 2 = writing the summary. */
   stage: 0 | 1 | 2;
+  /** Real per-source completions from the SSE stream; empty on the JSON path. */
+  sourcesDone: CompareSourceDone[];
 }
 
 export function useCompare() {
@@ -599,6 +601,7 @@ export function useCompare() {
     error: null,
     slow: false,
     stage: 0,
+    sourcesDone: [],
   });
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -618,37 +621,30 @@ export function useCompare() {
       error: null,
       slow: false,
       stage: 0,
+      sourcesDone: [],
     });
+
+    // Once real SSE events arrive, the timed stage estimates stand down —
+    // the stream knows what the pipeline is actually doing.
+    const streamed = { current: false };
 
     const slowTimer = setTimeout(
       () => setState((s) => ({ ...s, slow: true })),
       COMPARE_SLOW_MS
     );
     const stageClaimsTimer = setTimeout(
-      () => setState((s) => (s.loading ? { ...s, stage: 1 } : s)),
+      () =>
+        setState((s) => (s.loading && !streamed.current ? { ...s, stage: 1 } : s)),
       COMPARE_STAGE_CLAIMS_MS
     );
     const stageSummaryTimer = setTimeout(
-      () => setState((s) => (s.loading ? { ...s, stage: 2 } : s)),
+      () =>
+        setState((s) => (s.loading && !streamed.current ? { ...s, stage: 2 } : s)),
       COMPARE_STAGE_SUMMARY_MS
     );
     const timeoutTimer = setTimeout(() => controller.abort(), COMPARE_TIMEOUT_MS);
 
-    try {
-      const res = await fetch("/api/compare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, sources }),
-        signal: controller.signal,
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `HTTP ${res.status}`);
-      }
-
-      const data: CompareResponse = await res.json();
-
+    const applyResults = (data: CompareResponse) => {
       setState({
         topic: data.topic,
         comparison: data.comparison,
@@ -659,9 +655,65 @@ export function useCompare() {
         error: null,
         slow: false,
         stage: 0,
+        sourcesDone: [],
       });
+    };
+
+    try {
+      const res = await fetch("/api/compare", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify({ topic, sources }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("text/event-stream") && res.body) {
+        // Streaming path: stage + per-source events are real, so the loading
+        // screen can show outlets finishing one by one.
+        let gotResults = false;
+        for await (const { event, data } of readSSE<Record<string, unknown>>(res)) {
+          streamed.current = true;
+          if (event === "stage") {
+            const stage = (data as { stage?: string }).stage;
+            setState((s) => ({
+              ...s,
+              stage: stage === "summary" ? 2 : stage === "claims" ? 1 : s.stage,
+            }));
+          } else if (event === "source-done") {
+            const done = data as unknown as CompareSourceDone;
+            setState((s) => ({ ...s, sourcesDone: [...s.sourcesDone, done] }));
+          } else if (event === "results") {
+            gotResults = true;
+            applyResults(data as unknown as CompareResponse);
+          } else if (event === "error") {
+            throw new Error(
+              String((data as { message?: string }).message || "Comparison failed")
+            );
+          }
+        }
+        if (!gotResults) {
+          throw new Error("Comparison failed");
+        }
+      } else {
+        // JSON fallback (older deploys, or the proxy declined to stream).
+        const data: CompareResponse = await res.json();
+        applyResults(data);
+      }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
+        // clear() nulls the ref and a rerun replaces it, both before this
+        // rejection lands; the timeout abort leaves it in place. A user
+        // exiting compare mode or starting over is not an error.
+        if (controllerRef.current !== controller) return;
         setState((s) => ({
           ...s,
           loading: false,
@@ -677,7 +729,9 @@ export function useCompare() {
       clearTimeout(stageClaimsTimer);
       clearTimeout(stageSummaryTimer);
       clearTimeout(timeoutTimer);
-      controllerRef.current = null;
+      // Only release the ref if this invocation still owns it — a superseding
+      // run's controller must not be nulled by the run it replaced.
+      if (controllerRef.current === controller) controllerRef.current = null;
     }
   }, []);
 
@@ -694,6 +748,7 @@ export function useCompare() {
       error: null,
       slow: false,
       stage: 0,
+      sourcesDone: [],
     });
   }, []);
 

@@ -9,12 +9,13 @@ import { civicBoost, weightedCivicLinks } from "@/lib/civicWeight";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare, useCustomTopics } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
+import CoachStrip from "./CoachStrip";
 import StoryCard from "./StoryCard";
 import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
 import SiftLogo from "./SiftLogo";
-import type { Article, CustomTopic, FeedItem, CategoryId } from "@/lib/types";
+import type { Article, CustomTopic, DailyCompareExample, FeedItem, CategoryId } from "@/lib/types";
 
 // Code-split: these surfaces only render on user intent (Cmd+K search,
 // "+" topic-create, async compare response). Deferring their JS shaves
@@ -97,9 +98,28 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     error: compareError,
     slow: compareSlow,
     stage: compareStage,
+    sourcesDone: compareSourcesDone,
     compare: runCompare,
     clear: clearCompare,
   } = useCompare();
+
+  // The anonymous daily example — fetched once, when a signed-out visitor
+  // opens compare mode (or anyone hits the 401 wall). One cached Postgres
+  // read; see app/api/compare/daily.
+  const [dailyExample, setDailyExample] = useState<DailyCompareExample | null>(null);
+  const dailyFetchedRef = useRef(false);
+  useEffect(() => {
+    const wantsDaily =
+      (compareMode && !userId) || compareError === "Unauthorized";
+    if (!wantsDaily || dailyFetchedRef.current) return;
+    dailyFetchedRef.current = true;
+    fetch("/api/compare/daily")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: DailyCompareExample | null) => setDailyExample(data))
+      .catch(() => {
+        // No example is a quiet degrade — the sign-in empty state stands in.
+      });
+  }, [compareMode, userId, compareError]);
 
   useEffect(() => {
     loadCategory(activeCategory);
@@ -730,6 +750,9 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
 
       {/* ── Main ────────────────────────────────────── */}
       <main id="main-content" className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-7 pb-20">
+        {/* First-run pointer — browse mode only, self-dismissing. */}
+        {!compareMode && !searchMode && !showBookmarks && <CoachStrip />}
+
         {/* Compare mode */}
         {compareMode ? (
           <>
@@ -748,14 +771,28 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                       : COPY.compare.stageSummary}
                 </p>
                 <div className="flex flex-wrap justify-center gap-1.5 mt-5 max-w-[560px] mx-auto">
-                  {selectedSources.map((key) => (
-                    <span
-                      key={key}
-                      className="px-2.5 py-1 rounded-full text-[11px] font-medium border border-(--border) text-(--text-tertiary) animate-shimmer"
-                    >
-                      {COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key}
-                    </span>
-                  ))}
+                  {selectedSources.map((key) => {
+                    const label = COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key;
+                    // On the SSE path each chip settles the moment its outlet
+                    // finishes — real progress, not simulated. On the JSON
+                    // fallback sourcesDone stays empty and all chips shimmer.
+                    const done = compareSourcesDone.find((d) => d.source === key);
+                    return (
+                      <span
+                        key={key}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+                          done
+                            ? done.found
+                              ? "border-(--accent) text-(--text-secondary)"
+                              : "border-(--border) text-(--text-tertiary) opacity-50"
+                            : "border-(--border) text-(--text-tertiary) animate-shimmer"
+                        }`}
+                      >
+                        {done ? (done.found ? "✓ " : "— ") : ""}
+                        {label}
+                      </span>
+                    );
+                  })}
                 </div>
                 {compareSlow && (
                   <p className="text-sm mt-4 text-(--text-tertiary) animate-fade-slide-in">
@@ -765,13 +802,25 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
               </div>
             )}
 
-            {/* Compare error */}
+            {/* Compare error. The 401 wall shows the daily example when one
+                exists — the visitor came to see a comparison, so show them a
+                real one, dated, with sign-in as the next step. */}
             {compareError && !compareLoading && (
               compareError === "Unauthorized" ? (
-                <EmptyState
-                  title={COPY.compare.signInTitle}
-                  body={COPY.compare.signInBody}
-                />
+                dailyExample ? (
+                  <DailyExampleBlock
+                    example={dailyExample}
+                    onCompareAnother={startCompare}
+                    onClose={exitCompareMode}
+                    selectedSources={selectedSources}
+                    onToggleSource={toggleSource}
+                  />
+                ) : (
+                  <EmptyState
+                    title={COPY.compare.signInTitle}
+                    body={COPY.compare.signInBody}
+                  />
+                )
               ) : (
                 <ErrorState
                   message={compareError}
@@ -795,12 +844,24 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
               />
             )}
 
-            {/* Compare empty state (input shown, no results yet) */}
+            {/* Compare empty state (input shown, no results yet). Signed-out
+                visitors get the daily example up front instead of typing a
+                topic just to hit the sign-in wall. */}
             {!compareLoading && !compareError && !compareComparison && (
-              <EmptyState
-                title={COPY.compare.emptyTitle}
-                body={COPY.compare.emptyBody}
-              />
+              !userId && dailyExample ? (
+                <DailyExampleBlock
+                  example={dailyExample}
+                  onCompareAnother={startCompare}
+                  onClose={exitCompareMode}
+                  selectedSources={selectedSources}
+                  onToggleSource={toggleSource}
+                />
+              ) : (
+                <EmptyState
+                  title={COPY.compare.emptyTitle}
+                  body={COPY.compare.emptyBody}
+                />
+              )
             )}
           </>
         ) : (
@@ -1004,6 +1065,58 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
           <a href="/terms" className="text-(--text-tertiary) no-underline hover:text-(--text-secondary) transition-colors">Terms</a>
         </div>
       </footer>
+    </div>
+  );
+}
+
+// ─── Daily example block ────────────────────────────────
+
+/**
+ * The anonymous daily compare example: a dated banner over the real result.
+ * Signed-out visitors see this instead of a wall — the actual product's
+ * output from this morning, labeled as exactly that, with sign-in as the
+ * next step rather than the price of entry.
+ */
+function DailyExampleBlock({
+  example,
+  onCompareAnother,
+  onClose,
+  selectedSources,
+  onToggleSource,
+}: {
+  example: DailyCompareExample;
+  onCompareAnother: (topic: string, sources: string[]) => void;
+  onClose: () => void;
+  selectedSources: string[];
+  onToggleSource: (key: string) => void;
+}) {
+  return (
+    <div className="animate-fade-slide-in">
+      <div className="mb-5 rounded-[12px] border border-(--border) bg-(--surface-raised) px-4 py-3 text-sm">
+        <span className="font-semibold text-(--text-primary)">
+          {COPY.compare.dailyTitle}
+        </span>{" "}
+        <span className="text-(--text-secondary)">
+          {COPY.compare.dailyBody(timeAgo(example.generatedAt))}
+        </span>{" "}
+        <a
+          href="/sign-in"
+          className="text-(--accent) no-underline hover:underline whitespace-nowrap"
+        >
+          {COPY.compare.dailySignIn} &rarr;
+        </a>
+      </div>
+      <CompareView
+        topic={example.topic}
+        comparison={example.comparison}
+        sourcesChecked={example.sources_checked}
+        claims={example.claims}
+        durationMs={example.duration_ms}
+        onCompareAnother={onCompareAnother}
+        onClose={onClose}
+        selectedSources={selectedSources}
+        onToggleSource={onToggleSource}
+      />
     </div>
   );
 }
