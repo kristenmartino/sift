@@ -56,6 +56,39 @@ Murder | Case by Case", was the same defect wearing a crime headline.
   is also in the feed, reported directly.
 - Not applied to stories: clustering works on articles, and a container
   rarely clusters. Revisit if one ever leads a story.
+
+## Stage 6 — the front page is for news (added from product direction)
+
+*"Sift should be showing important news, not so much entertainment."*
+Measured 2026-08-11 before building: **303 of 489 'top' articles in a week
+scored importance ≤ 2**, and only 8 carried `tone='light'`. The front page
+was not filling with celebrity content — it was filling with **crime
+spectacle** ("Naked champion swimmer accused of killing security guard",
+"Penthouse Pet calls ex-hubby from jail"), *correctly* scored 1–2 and
+surfacing purely on freshness. Two layers, because two different things
+were wrong:
+
+| Layer | Catches | Mechanism |
+|---|---|---|
+| Low-importance weight | Spectacle that importance already scores 1–2 | `category='top' AND importance ≤ 2` → × `LOW_IMPORTANCE_DAMPENER` (0.35) |
+| Genre | Non-news that legitimately scores 3+ | `genre IN ('feature','soft')` → × `NON_NEWS_DAMPENER` (0.5) |
+
+- **Scoped to 'top'.** An importance-2 sports result belongs in Sports; the
+  topical tabs remain complete coverage. Only the front page holds the bar.
+- **Set `LOW_IMPORTANCE_DAMPENER` to 0 for a hard floor** (importance ≤ 2
+  never appears in 'top'). 0.35 is the graceful version: the 2/3 boundary
+  is exactly where a mis-scored article would be silently lost, and
+  non-grim importance scores have not been re-scored under the
+  scope-of-consequence rubric.
+- **Genre applies to standalone articles only** — deliberately absent from
+  the stories query. Stories rank on corroboration, so a feature or
+  tabloid piece inside a multi-outlet story does not drag the story down
+  and still appears in its source list ("how this was covered"). A lone
+  soft article standing on its own is what gets demoted, never coverage of
+  a real event. Neither weight touches story ranking.
+- Genre is stored as three values (`news | feature | soft`) while the
+  policy treats feature and soft alike, so the two can be split later
+  without a re-backfill.
 **Owns:** what the feed ranking is allowed to value, and why. Companion to
 [`DECISIONS.md`](./DECISIONS.md) D45 (rank by civic impact) and D48 (cap and
 dampen, never hide).

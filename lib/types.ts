@@ -46,6 +46,13 @@ export interface Article {
   /** Program-episode or daily-brief container (migrations/024). */
   isRoundup?: boolean;
   /**
+   * Kind of writing (migrations/025): "feature" = magazine-style narrative,
+   * "soft" = curiosity/lifestyle/service. Absent = news. Distinct from
+   * importance — a feature can be consequential and still not be the front
+   * page's job. Ranking uses it for standalone articles only.
+   */
+  genre?: "news" | "feature" | "soft";
+  /**
    * AI-generated "What you should know first" panel — civic-literacy MVP.
    * Populated by sift-api's primer_generator. Null/undefined when the article
    * is short enough to need no context, or when the pipeline hasn't run for it

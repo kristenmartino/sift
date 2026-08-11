@@ -104,6 +104,7 @@ export async function GET(request: NextRequest) {
         ...(isArticleTone(row.tone) ? { tone: row.tone } : {}),
         ...(row.is_opinion ? { isOpinion: true } : {}),
         ...(row.is_roundup ? { isRoundup: true } : {}),
+        ...(row.genre && row.genre !== "news" ? { genre: row.genre as "feature" | "soft" } : {}),
         ...(primer ? { contextPrimer: primer } : {}),
         ...(outlet ? { outlet } : {}),
         ...(entityLinks.length > 0 ? { entityLinks } : {}),

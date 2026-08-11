@@ -358,6 +358,14 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     const OPINION_DAMPENER = 0.6;
     // Stage 5: program episodes and briefs are containers, not stories.
     const ROUNDUP_DAMPENER = 0.4;
+    // Stage 6 (mirrors lib/db.ts): 'top' is the front page, so
+    // low-consequence items are held back there and nowhere else; and
+    // non-news genres rank lower as standalone articles. Neither applies
+    // to stories — corroboration is the story-level judgment, so a
+    // feature or tabloid piece inside a multi-outlet story still shows
+    // under "how this was covered".
+    const LOW_IMPORTANCE_DAMPENER = 0.35;
+    const NON_NEWS_DAMPENER = 0.5;
     // Age against the fetch timestamp, not wall clock — ranking must be a pure
     // function of the data snapshot, and the snapshot carries its own "now".
     const now = lastUpdated ? lastUpdated.getTime() : 0;
@@ -387,8 +395,11 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
       const damp = item.data.tone === "grim" && importance <= 3 ? GRIM_DAMPENER : 1;
       const opDamp = item.data.isOpinion ? OPINION_DAMPENER : 1;
       const roundDamp = item.data.isRoundup ? ROUNDUP_DAMPENER : 1;
+      const lowDamp =
+        activeCategory === "top" && importance <= 2 ? LOW_IMPORTANCE_DAMPENER : 1;
+      const genreDamp = item.data.genre ? NON_NEWS_DAMPENER : 1;
       const civic = civicBoost(weightedCivicLinks(item.data.entityLinks));
-      return importance * decay * damp * civic * opDamp * roundDamp;
+      return importance * decay * damp * civic * opDamp * roundDamp * lowDamp * genreDamp;
     }
 
     items.sort((a, b) => rankScore(b) - rankScore(a));

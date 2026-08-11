@@ -50,6 +50,7 @@ const MOCK_DB_ROWS: DbArticle[] = [
     tone: null,
     is_opinion: false,
     is_roundup: false,
+    genre: null,
     context_primer: null,
     reading_levels: null,
     created_at: new Date("2026-03-28T10:00:00Z"),
@@ -69,6 +70,7 @@ const MOCK_DB_ROWS: DbArticle[] = [
     tone: null,
     is_opinion: false,
     is_roundup: false,
+    genre: null,
     context_primer: null,
     reading_levels: null,
     created_at: new Date("2026-03-28T08:00:00Z"),
@@ -298,7 +300,7 @@ describe("GET /api/news", () => {
         storyArticles: {},
         standaloneArticles: [
           { ...MOCK_DB_ROWS[0], tone: "grim" },
-          { ...MOCK_DB_ROWS[1], tone: "invalid-value", is_opinion: true, is_roundup: true },
+          { ...MOCK_DB_ROWS[1], tone: "invalid-value", is_opinion: true, is_roundup: true, genre: "soft" },
         ],
       });
 
@@ -317,6 +319,9 @@ describe("GET /api/news", () => {
       expect(body.articles[1].isOpinion).toBe(true);
       expect(body.articles[1].isRoundup).toBe(true);
       expect(body.articles[0].isRoundup).toBeUndefined();
+      expect(body.articles[1].genre).toBe("soft");
+      // "news" is the default and never travels on the wire.
+      expect(body.articles[0].genre).toBeUndefined();
     });
   });
 
