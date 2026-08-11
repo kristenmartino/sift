@@ -96,10 +96,15 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 7,
   },
   async headers() {
+    // 'unsafe-eval' in development only: Turbopack's dev-mode chunks and
+    // React's dev tooling need eval(), and a strictly CSP-enforcing browser
+    // can otherwise leave a route un-hydrated (#217). Production stays
+    // eval-free — this branch must never widen the deployed header.
+    const devEval = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
     const csp = [
       "default-src 'self'",
       // 'unsafe-inline' required for: theme init script (layout.tsx), Tailwind styles, Clerk UI
-      "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai https://challenges.cloudflare.com",
+      `script-src 'self' 'unsafe-inline'${devEval} https://*.clerk.accounts.dev https://*.clerk.services https://clerk.siftnews.kristenmartino.ai https://challenges.cloudflare.com`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // font-src: Google Fonts CDN
       "font-src 'self' https://fonts.gstatic.com data:",
