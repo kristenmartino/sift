@@ -13,7 +13,14 @@ const config: Config = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
   },
-  testPathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/node_modules/"],
+  // .claude/ holds git worktrees (stale repo copies) whose __tests__/ must not
+  // be collected as this repo's suites.
+  testPathIgnorePatterns: [
+    "<rootDir>/.next/",
+    "<rootDir>/node_modules/",
+    "<rootDir>/.claude/",
+  ],
+  modulePathIgnorePatterns: ["<rootDir>/.claude/"],
 
   // Without this, Jest only instruments files that a test happens to import,
   // so untested files are absent from the DENOMINATOR entirely. The 80%
