@@ -662,7 +662,15 @@ export interface Story {
   category: CategoryId;
   framings: StoryFraming[];
   entities: EntitySet[];
+  /** Member articles. What the card displays — "N articles" stays literal. */
   articleCount: number;
+  /**
+   * Distinct outlets among the members. What the corroboration curve ranks
+   * on, in both the SQL pool and the client re-rank. Separate from
+   * articleCount because one high-volume outlet filing four pieces is not
+   * four-outlet corroboration (see STORY_BOOST in lib/db.ts).
+   */
+  outletCount: number;
   imageUrl: string | null;
   publishedDate: string | null;
   articles: Article[];

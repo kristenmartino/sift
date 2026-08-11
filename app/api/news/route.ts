@@ -191,6 +191,7 @@ export async function GET(request: NextRequest) {
         framings,
         entities,
         articleCount: s.article_count,
+        outletCount: s.outlet_count,
         imageUrl: cleanImageUrl(s.representative_image_url),
         publishedDate: s.published_date ? s.published_date.toISOString() : null,
         articles: childArticles,

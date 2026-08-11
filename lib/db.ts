@@ -137,6 +137,30 @@ const NON_NEWS_SQL = `CASE WHEN genre IN ('feature', 'soft') THEN ${NON_NEWS_DAM
 // more headroom (10 sources → 4.9, vs the old hard cap at 5).
 const STORY_BOOST = 0.8;
 
+// "sources" in that curve means DISTINCT OUTLETS, not article rows. It counted
+// COUNT(a.id) until 2026-08-11, which is a different thing: measured over 7
+// days of complete stories, 29% had more articles than outlets and 18% were at
+// >=1.5x, because a single high-volume outlet can file four pieces on one event
+// (Sports Illustrated alone runs ~298 articles/day). Counting rows let one
+// outlet manufacture the corroboration the curve is supposed to measure — the
+// exact wire pile-up the ln was chosen to damp, entering through the variable
+// instead of the shape.
+//
+// EXPECT THIS TO CHANGE ALMOST NOTHING IN THE FEED, AND THAT IS THE FINDING.
+// Replayed against prod across all seven categories: 0/20 top-20 churn
+// everywhere except politics, which moved one story. The corroboration term
+// spans only 3.88 (2 sources) to 5.36 (18) — a 1.38x range — while decay is
+// EXP(-age_days). So the entire 2->18 range is worth 7.7 HOURS of freshness,
+// and the base constant 3 is 77% of the score at n=2. Corroboration is very
+// nearly not a ranking signal at all right now; recency is.
+//
+// That makes this change a correctness fix (the number means what it says, and
+// it stops one outlet inflating it) rather than the way to surface
+// well-covered stories. Doing that is a weighting decision — lower the base,
+// raise the boost, or slow decay for deep stories — and it is a product call
+// about how much corroboration should outweigh freshness, not a mechanical
+// one. docs/SOURCE_SCALING.md carries the measured trade-off curve.
+
 export interface DbArticle {
   id: string;
   title: string;
@@ -211,6 +235,11 @@ export interface DbStory {
   framings: unknown; // JSONB — parsed at API layer
   entities: unknown; // JSONB
   article_count: number;
+  // Distinct outlets among the live member articles. This is what the
+  // corroboration curve ranks on; `article_count` remains what the UI shows,
+  // because "N articles" is still literally true and is the more useful
+  // number to a reader looking at the source list.
+  outlet_count: number;
   representative_image_url: string | null;
   published_date: Date | null;
   synthesis_status: string;
@@ -242,6 +271,7 @@ export async function getStoriesWithArticles(
     const storiesResult = await pool.query<DbStory>(
       `SELECT s.id, s.headline, s.summary, s.category, s.framings, s.entities,
               COUNT(a.id)::int AS article_count,
+              COUNT(DISTINCT a.source_name)::int AS outlet_count,
               AVG(CASE WHEN a.tone = 'grim' THEN 1.0 ELSE 0 END) AS grim_share,
               AVG(CASE WHEN a.is_opinion THEN 1.0 ELSE 0 END) AS opinion_share,
               s.representative_image_url, s.published_date, s.synthesis_status
@@ -255,7 +285,7 @@ export async function getStoriesWithArticles(
        GROUP BY s.id
        HAVING COUNT(a.id) >= 2
        ORDER BY
-         (3 + ${STORY_BOOST} * LN(1 + COUNT(a.id)))::float *
+         (3 + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float *
          EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))), 0) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 20`,

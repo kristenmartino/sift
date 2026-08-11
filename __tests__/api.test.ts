@@ -253,6 +253,7 @@ describe("GET /api/news", () => {
           framings: [{ source_name: "Reuters", framing: "Focuses on timeline", tone: "neutral" }],
           entities: [{ people: ["Alice"], organizations: ["Acme"], locations: ["NYC"], event_description: "test event" }],
           article_count: 2,
+          outlet_count: 2,
           grim_share: null,
           opinion_share: null,
           representative_image_url: null,
@@ -280,6 +281,38 @@ describe("GET /api/news", () => {
       expect(body.stories[0].tone).toBeUndefined();
     });
 
+    it("exposes outletCount separately from articleCount", async () => {
+      // The corroboration curve ranks on distinct outlets, so the client
+      // re-rank needs that number at the API boundary — it cannot derive it
+      // from articleCount. A story where one outlet filed most of the pieces
+      // is exactly the case the two numbers must not collapse into one.
+      mockGetStoriesWithArticles.mockResolvedValue({
+        stories: [{
+          id: "story1",
+          headline: "Wire pile-up",
+          summary: "A synthesized summary.",
+          category: "technology",
+          framings: [],
+          entities: [],
+          article_count: 7,
+          outlet_count: 2,
+          grim_share: null,
+          opinion_share: null,
+          representative_image_url: null,
+          published_date: new Date("2026-03-28T10:00:00Z"),
+          synthesis_status: "complete",
+        }],
+        storyArticles: { story1: [] },
+        standaloneArticles: [],
+      });
+
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.stories[0].articleCount).toBe(7);
+      expect(body.stories[0].outletCount).toBe(2);
+    });
+
     it("passes article tone through and derives story tone from grim_share", async () => {
       mockGetStoriesWithArticles.mockResolvedValue({
         stories: [{
@@ -290,6 +323,7 @@ describe("GET /api/news", () => {
           framings: [],
           entities: [],
           article_count: 2,
+          outlet_count: 2,
           // pg returns AVG() as a numeric string.
           grim_share: "0.5",
           opinion_share: "0.5",

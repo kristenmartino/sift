@@ -159,6 +159,39 @@ spectrum_bonus = 1 + SPECTRUM_BOOST × (distinct AllSides buckets − 1)   # 1.0
 - Constants: `STORY_BOOST ≈ 0.8`, `SPECTRUM_BOOST ≈ 0.1`, both named, both
   revert to today's behavior at documented neutral values.
 
+**`sources` means distinct outlets, as of 2026-08-11.** Both formulas counted
+`COUNT(a.id)` — article rows — which is a different quantity: over 7 days of
+complete stories, 29% had more articles than outlets and 18% were at ≥1.5×,
+because one high-volume outlet can file several pieces on one event. That let a
+single outlet manufacture the corroboration this curve exists to measure — the
+same wire pile-up the `ln` was chosen to damp, arriving through the variable
+rather than the shape. `articleCount` is still what the card displays; the two
+are separate fields end to end now.
+
+**Corroboration is currently a very weak ranking signal, and that is the open
+question this raised.** The term spans only 3.88 (2 sources) to 5.36 (18) — a
+1.38× range — against `decay = EXP(-age_days)`. So **the entire 2 → 18 range is
+worth 7.7 hours of freshness**, and the base constant `3` is 77% of the score at
+n = 2. Replaying the switch to distinct outlets against prod moved 0 of 20 in
+every category except politics, which moved one story — not because the variable
+was wrong, but because the term barely orders anything.
+
+Making well-covered stories actually surface is therefore a **weighting**
+decision, not a variable one. Measured options, as "how many hours older an
+18-outlet story can be and still outrank a 2-outlet one":
+
+| base | boost | hours |
+|---:|---:|---:|
+| 3 | 0.8 | 7.7 *(today)* |
+| 3 | 1.6 | 11.6 |
+| 1 | 0.8 | 13.9 |
+| 1 | 1.6 | 17.5 |
+| 0 | 1.0 | 23.7 |
+
+For scale, decay halves a score every 16.6 hours. This is a product call about
+how much corroboration should outweigh recency — deliberately left unmade here.
+See `sift-api/docs/SOURCE_SCALING.md`.
+
 ### Stage 2 — civic-entity density (the D45 signal)
 
 Per article: `civic_links` = count of **distinct** dossier-resolved entities
