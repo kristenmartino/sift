@@ -1,7 +1,9 @@
 # Ranking signals — the model behind D45
 
-**Status:** signal model adopted 2026-08-10; stage 1 (saturating corroboration
-+ cross-spectrum bonus) implemented 2026-08-10; stages 2–3 planned.
+**Status:** signal model adopted 2026-08-10; stages 1 (saturating
+corroboration + cross-spectrum bonus) and 2 (civic-entity-density boost)
+implemented 2026-08-10; stage 3 (hand-ranked eval + feed_health tripwire)
+planned.
 **Owns:** what the feed ranking is allowed to value, and why. Companion to
 [`DECISIONS.md`](./DECISIONS.md) D45 (rank by civic impact) and D48 (cap and
 dampen, never hide).
