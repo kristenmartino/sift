@@ -87,7 +87,6 @@ async function main() {
 
   // 3. For each article, find the best-matching category
   //    Only move if the winner beats "top" by MIN_MARGIN
-  const topIdx = categories.indexOf("top");
   const moves: Record<string, string[]> = {};
   const unchanged: Record<string, number> = {};
   categories.forEach((c) => { moves[c] = []; unchanged[c] = 0; });

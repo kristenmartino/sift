@@ -14,6 +14,11 @@ const eslintConfig = defineConfig([
     // Git worktrees checked out under .claude/ are separate repo copies.
     ".claude/**",
   ]),
+  {
+    // CommonJS by design — Next.js loads this file directly in Node.
+    files: ["next.config.js"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
 ]);
 
 export default eslintConfig;

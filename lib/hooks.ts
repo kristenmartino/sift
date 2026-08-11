@@ -1,37 +1,74 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from "react";
 import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS, MAX_CUSTOM_TOPICS } from "./constants";
-import type { Article, Story, ArticleCache, StoryCache, CategoryId, CustomTopic, NewsApiResponse, CompareResponse, CompareClaim, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
+import type { Article, ArticleCache, StoryCache, CategoryId, CustomTopic, NewsApiResponse, CompareResponse, CompareClaim, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
 import { readSSE } from "./sse";
 
 // ─── useLocalStorage ────────────────────────────────────
 
-function useLocalStorage<T>(key: string, initialValue: T): [T, (val: T | ((prev: T) => T)) => void] {
-  // Always initialize with default to avoid SSR/client hydration mismatch.
-  // localStorage is read in useEffect after hydration.
-  const [stored, setStored] = useState<T>(initialValue);
+// localStorage is an external store, so the hook is built on
+// useSyncExternalStore: the server snapshot is the caller's default (matching
+// the SSR markup), and the first client snapshot after hydration reads the
+// real value. The cache keyed on the raw string keeps snapshots referentially
+// stable, which useSyncExternalStore's tear check requires.
+const lsListeners = new Set<() => void>();
+const lsCache = new Map<string, { raw: string | null; value: unknown }>();
 
-  // Sync from localStorage after hydration (client-only)
-  useEffect(() => {
+function subscribeLocalStorage(cb: () => void) {
+  lsListeners.add(cb);
+  return () => {
+    lsListeners.delete(cb);
+  };
+}
+
+function readLocalStorage<T>(key: string, initialValue: T): T {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(key);
+  } catch {}
+  const cached = lsCache.get(key);
+  if (cached && cached.raw === raw) return cached.value as T;
+  let value: T = initialValue;
+  if (raw !== null) {
     try {
-      const item = localStorage.getItem(key);
-      if (item !== null) setStored(JSON.parse(item));
+      value = JSON.parse(raw);
     } catch {}
-  }, [key]);
+  }
+  lsCache.set(key, { raw, value });
+  return value;
+}
+
+// Stable defaults for the call sites below — getServerSnapshot must return
+// one identity, not a fresh literal per render.
+const EMPTY_IDS: string[] = [];
+const EMPTY_TOPICS: CustomTopic[] = [];
+
+function useLocalStorage<T>(key: string, initialValue: T): [T, (val: T | ((prev: T) => T)) => void] {
+  const stored = useSyncExternalStore(
+    subscribeLocalStorage,
+    () => readLocalStorage(key, initialValue),
+    () => initialValue
+  );
 
   // Custom setter that also persists to localStorage
   const setValue = useCallback(
     (val: T | ((prev: T) => T)) => {
-      setStored((prev) => {
-        const next = val instanceof Function ? val(prev) : val;
-        try {
-          localStorage.setItem(key, JSON.stringify(next));
-        } catch {}
-        return next;
-      });
+      const prev = readLocalStorage(key, initialValue);
+      const next = val instanceof Function ? val(prev) : val;
+      try {
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch {}
+      // Cache against what storage actually holds, so a failed write still
+      // keeps `next` in memory for this session.
+      let raw: string | null = null;
+      try {
+        raw = localStorage.getItem(key);
+      } catch {}
+      lsCache.set(key, { raw, value: next });
+      lsListeners.forEach((l) => l());
     },
-    [key]
+    [key, initialValue]
   );
 
   return [stored, setValue];
@@ -41,34 +78,29 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (val: T | ((prev:
 
 export function useBookmarks(userId?: string | null) {
   // localStorage fallback for signed-out users
-  const [localIds, setLocalIds] = useLocalStorage<string[]>(STORAGE_KEYS.bookmarks, []);
+  const [localIds, setLocalIds] = useLocalStorage<string[]>(STORAGE_KEYS.bookmarks, EMPTY_IDS);
 
-  // Server-synced state for signed-in users
-  const [serverIds, setServerIds] = useState<string[]>([]);
-  const [synced, setSynced] = useState(false);
+  // Server truth, keyed by the user it was fetched for — sign-out (or a user
+  // switch) makes it derive as unsynced instead of resetting state in an effect.
+  const [serverState, setServerState] = useState<{ userId: string; ids: string[] } | null>(null);
 
   const isSignedIn = !!userId;
 
   // Fetch bookmarks from API on mount when signed in
   useEffect(() => {
-    if (!isSignedIn) {
-      setSynced(false);
-      return;
-    }
+    if (!userId) return;
     let cancelled = false;
     fetch("/api/bookmarks")
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data: { ids: string[] }) => {
-        if (!cancelled) {
-          setServerIds(data.ids);
-          setSynced(true);
-        }
+        if (!cancelled) setServerState({ userId, ids: data.ids });
       })
       .catch((err) => console.error("Failed to fetch bookmarks:", err));
     return () => { cancelled = true; };
-  }, [isSignedIn]);
+  }, [userId]);
 
-  const ids = isSignedIn && synced ? serverIds : localIds;
+  const server = userId && serverState !== null && serverState.userId === userId ? serverState : null;
+  const ids = server ? server.ids : localIds;
   const bookmarkSet = useMemo(() => new Set(ids), [ids]);
 
   const pendingRef = useRef<Set<string>>(new Set());
@@ -80,17 +112,21 @@ export function useBookmarks(userId?: string | null) {
         if (pendingRef.current.has(id)) return;
         pendingRef.current.add(id);
 
-        // Optimistic update
         const wasBookmarked = bookmarkSet.has(id);
-        setServerIds((prev) => {
-          const set = new Set(prev);
-          if (wasBookmarked) {
-            set.delete(id);
-          } else {
-            set.add(id);
-          }
-          return [...set];
-        });
+        const applyToServer = (add: boolean) =>
+          setServerState((prev) => {
+            if (!prev) return prev;
+            const set = new Set(prev.ids);
+            if (add) {
+              set.add(id);
+            } else {
+              set.delete(id);
+            }
+            return { ...prev, ids: [...set] };
+          });
+
+        // Optimistic update
+        applyToServer(!wasBookmarked);
         // Fire API call in background — revert on failure
         fetch("/api/bookmarks", {
           method: wasBookmarked ? "DELETE" : "POST",
@@ -103,15 +139,7 @@ export function useBookmarks(userId?: string | null) {
           .catch((err) => {
             console.error("Bookmark sync error:", err);
             // Revert optimistic update
-            setServerIds((prev) => {
-              const set = new Set(prev);
-              if (wasBookmarked) {
-                set.add(id);
-              } else {
-                set.delete(id);
-              }
-              return [...set];
-            });
+            applyToServer(wasBookmarked);
           })
           .finally(() => pendingRef.current.delete(id));
       } else {
@@ -134,28 +162,37 @@ export function useBookmarks(userId?: string | null) {
 
 // ─── useTheme ───────────────────────────────────────────
 
-export function useTheme() {
-  // Always initialize as dark to match server render — prevents hydration mismatch.
-  // The blocking script in <head> already set the correct data-theme on <html>,
-  // so CSS variables are correct from first paint. This state only drives the toggle icon.
-  const [dark, setDark] = useState(true);
-  const [mounted, setMounted] = useState(false);
+// The theme lives outside React: the blocking script in <head> stamps
+// data-theme on <html> before first paint, and toggling rewrites that
+// attribute plus localStorage. useSyncExternalStore reads that external
+// state; the server snapshot stays dark to match the server render.
+const themeListeners = new Set<() => void>();
 
-  // After hydration, read actual theme from the DOM (set by blocking script)
-  useEffect(() => {
-    setDark(document.documentElement.dataset.theme !== "light");
-    setMounted(true);
-  }, []);
+function subscribeTheme(cb: () => void) {
+  themeListeners.add(cb);
+  return () => {
+    themeListeners.delete(cb);
+  };
+}
+
+function readDarkFromDom(): boolean {
+  return document.documentElement.dataset.theme !== "light";
+}
+
+// Never fires — `mounted` only distinguishes server (false) from client (true).
+const subscribeMounted = () => () => {};
+
+export function useTheme() {
+  const dark = useSyncExternalStore(subscribeTheme, readDarkFromDom, () => true);
+  const mounted = useSyncExternalStore(subscribeMounted, () => true, () => false);
 
   const toggle = useCallback(() => {
-    setDark((prev) => {
-      const next = !prev;
-      document.documentElement.dataset.theme = next ? "dark" : "light";
-      try {
-        localStorage.setItem(STORAGE_KEYS.theme, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+    const next = document.documentElement.dataset.theme === "light";
+    document.documentElement.dataset.theme = next ? "dark" : "light";
+    try {
+      localStorage.setItem(STORAGE_KEYS.theme, JSON.stringify(next));
+    } catch {}
+    themeListeners.forEach((l) => l());
   }, []);
 
   return { dark, toggle, mounted };
@@ -184,11 +221,11 @@ export function useNewsLoader() {
   const fetchedRef = useRef(new Set<string>());
   const inflightRef = useRef(new Map<string, AbortController>());
 
-  // Ensure refs are the correct type (HMR can preserve stale values)
-  if (!(fetchedRef.current instanceof Set)) fetchedRef.current = new Set();
-  if (!(inflightRef.current instanceof Map)) inflightRef.current = new Map();
-
   const loadCategory = useCallback(async (category: CategoryId, force = false) => {
+    // Ensure refs are the correct type (HMR can preserve stale values)
+    if (!(fetchedRef.current instanceof Set)) fetchedRef.current = new Set();
+    if (!(inflightRef.current instanceof Map)) inflightRef.current = new Map();
+
     if (!force && fetchedRef.current.has(category)) return;
 
     const existingController = inflightRef.current.get(category);
@@ -423,40 +460,35 @@ export function useTopicSearch() {
 export function useCustomTopics(userId?: string | null) {
   const [localTopics, setLocalTopics] = useLocalStorage<CustomTopic[]>(
     STORAGE_KEYS.customTopics,
-    []
+    EMPTY_TOPICS
   );
-  const [serverTopics, setServerTopics] = useState<CustomTopic[]>([]);
-  const [synced, setSynced] = useState(false);
+  // Server truth, keyed by user — same derived-sync shape as useBookmarks.
+  const [serverState, setServerState] = useState<{ userId: string; topics: CustomTopic[] } | null>(null);
 
   const isSignedIn = !!userId;
 
   // Fetch from server on mount when signed in
   useEffect(() => {
-    if (!isSignedIn) {
-      setSynced(false);
-      return;
-    }
+    if (!userId) return;
     let cancelled = false;
     fetch("/api/topics")
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data: { topics: CustomTopic[] }) => {
-        if (!cancelled) {
-          setServerTopics(data.topics);
-          setSynced(true);
-        }
+        if (!cancelled) setServerState({ userId, topics: data.topics });
       })
       .catch((err) => console.error("Failed to fetch custom topics:", err));
     return () => { cancelled = true; };
-  }, [isSignedIn]);
+  }, [userId]);
 
-  const topics = isSignedIn && synced ? serverTopics : localTopics;
+  const server = userId && serverState !== null && serverState.userId === userId ? serverState : null;
+  const topics = server ? server.topics : localTopics;
 
   const add = useCallback(
     (topic: CustomTopic) => {
       if (topics.length >= MAX_CUSTOM_TOPICS) return;
 
       if (isSignedIn) {
-        setServerTopics((prev) => [...prev, topic]);
+        setServerState((prev) => (prev ? { ...prev, topics: [...prev.topics, topic] } : prev));
         fetch("/api/topics", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -472,7 +504,7 @@ export function useCustomTopics(userId?: string | null) {
   const remove = useCallback(
     (id: string) => {
       if (isSignedIn) {
-        setServerTopics((prev) => prev.filter((t) => t.id !== id));
+        setServerState((prev) => (prev ? { ...prev, topics: prev.topics.filter((t) => t.id !== id) } : prev));
         fetch("/api/topics", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },

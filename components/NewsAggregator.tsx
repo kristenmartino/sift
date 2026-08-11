@@ -22,6 +22,10 @@ const TopicSearch = dynamic(() => import("./TopicSearch"), { ssr: false });
 const TopicModal = dynamic(() => import("./TopicModal"), { ssr: false });
 const CompareView = dynamic(() => import("./CompareView"), { ssr: false });
 
+// Stable empty list — keeps the derived bookmarked-articles value referentially
+// equal across renders while the bookmarks view is closed.
+const NO_ARTICLES: Article[] = [];
+
 // ─── Component ──────────────────────────────────────────
 
 // Read URL params once on mount (avoids re-reading on every render)
@@ -60,8 +64,6 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
   const [refreshed, setRefreshed] = useState(false);
   const pillContainerRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
-  const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
-  const [loadingBookmarks, setLoadingBookmarks] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<{ topic: CustomTopic; timer: ReturnType<typeof setTimeout> } | null>(null);
 
   const { articles, stories, loading, error, slow, lastUpdated, loadCategory } = useNewsLoader();
@@ -152,6 +154,12 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     updateIndicator();
   }, [activeCategory, activeCustomTopic, showBookmarks, searchMode, compareMode, updateIndicator]);
 
+  const exitCompareMode = () => {
+    setCompareMode(false);
+    setCompareInputValue("");
+    clearCompare();
+  };
+
   // Cmd+K / Ctrl+K keyboard shortcut for search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -169,23 +177,32 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     return () => window.removeEventListener("keydown", handler);
   }, [clearTopicSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch full bookmarked articles from DB when viewing bookmarks (signed in)
+  // Fetch full bookmarked articles from DB when viewing bookmarks (signed in).
+  // The key derives from view + user + bookmark set, so closing the view or
+  // toggling a bookmark invalidates the last fetch; the list and the loading
+  // flag then derive from whether the stored result matches the current key.
+  const bookmarksKey = useMemo(
+    () => (showBookmarks && userId ? Array.from(bookmarks).sort().join("\n") : null),
+    [showBookmarks, userId, bookmarks]
+  );
+  const [bookmarkFetch, setBookmarkFetch] = useState<{ key: string; articles: Article[] } | null>(null);
   useEffect(() => {
-    if (!showBookmarks || !userId) {
-      setBookmarkedArticles([]);
-      return;
-    }
+    if (bookmarksKey === null) return;
     let cancelled = false;
-    setLoadingBookmarks(true);
     fetch("/api/bookmarks?full=1")
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data: { articles: Article[] }) => {
-        if (!cancelled) setBookmarkedArticles(data.articles);
+        if (!cancelled) setBookmarkFetch({ key: bookmarksKey, articles: data.articles });
       })
-      .catch((err) => console.error("Failed to fetch bookmarked articles:", err))
-      .finally(() => { if (!cancelled) setLoadingBookmarks(false); });
+      .catch((err) => {
+        console.error("Failed to fetch bookmarked articles:", err);
+        if (!cancelled) setBookmarkFetch({ key: bookmarksKey, articles: [] });
+      });
     return () => { cancelled = true; };
-  }, [showBookmarks, userId, bookmarks]);
+  }, [bookmarksKey]);
+  const bookmarkedArticles =
+    bookmarkFetch !== null && bookmarkFetch.key === bookmarksKey ? bookmarkFetch.articles : NO_ARTICLES;
+  const loadingBookmarks = bookmarksKey !== null && bookmarkFetch?.key !== bookmarksKey;
 
   const handleRefresh = async () => {
     if (activeCustomTopic) {
@@ -242,12 +259,6 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     startCompare(topic, sources);
   };
 
-  const exitCompareMode = () => {
-    setCompareMode(false);
-    setCompareInputValue("");
-    clearCompare();
-  };
-
   const customTopicMode = !!activeCustomTopic;
 
   const currentArticles = useMemo((): Article[] => {
@@ -282,7 +293,9 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     // untagged items are untouched — de-stack tabloid crime, never hide
     // major news.
     const GRIM_DAMPENER = 0.6;
-    const now = Date.now();
+    // Age against the fetch timestamp, not wall clock — ranking must be a pure
+    // function of the data snapshot, and the snapshot carries its own "now".
+    const now = lastUpdated ? lastUpdated.getTime() : 0;
     function rankScore(item: FeedItem): number {
       const pubDate = item.data.publishedDate;
       // Clamp at 0: a future-dated article must not get decay > 1 and pin
@@ -306,7 +319,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     items.sort((a, b) => rankScore(b) - rankScore(a));
 
     return items;
-  }, [currentArticles, stories, activeCategory, searchMode, showBookmarks, customTopicMode]);
+  }, [currentArticles, stories, activeCategory, searchMode, showBookmarks, customTopicMode, lastUpdated]);
 
   const hasData = feedItems.length > 0;
   const activeCatLabel = CATEGORIES.find((c) => c.id === activeCategory)?.label;

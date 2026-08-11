@@ -121,7 +121,7 @@ export default async function MethodologyPage() {
             // The page still reads as a methodology doc; the missing list is
             // an acceptable empty state rather than a broken section.
             <p className="font-body text-[14px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed">
-              The curated outlet list will appear here once it's seeded.
+              The curated outlet list will appear here once it&apos;s seeded.
             </p>
           )}
         </section>

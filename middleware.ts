@@ -1,6 +1,6 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import type { NextFetchEvent, NextRequest } from "next/server";
 
 const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const clerkEnabled = !!clerkPk && clerkPk.startsWith("pk_");
@@ -10,8 +10,8 @@ const clerk = clerkEnabled ? clerkMiddleware() : undefined;
 // Paths that require auth — fail-closed if Clerk is misconfigured
 const PROTECTED_PREFIXES = ["/api/bookmarks", "/api/topics", "/api/compare"];
 
-export default function middleware(request: NextRequest) {
-  if (clerk) return clerk(request, {} as any);
+export default function middleware(request: NextRequest, event: NextFetchEvent) {
+  if (clerk) return clerk(request, event);
 
   // Fail-closed: block protected API routes when Clerk is not configured
   const path = request.nextUrl.pathname;
