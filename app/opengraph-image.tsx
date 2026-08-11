@@ -1,16 +1,22 @@
 import { ImageResponse } from "next/og";
 
+import { loadOgFonts, OG } from "@/lib/og";
+
 // Updated 2026-05: the original card baked in three stale claims —
 // "100+ sources" (true count is ~58), "Updated every 10 min" (pipeline
 // runs every 30 min after the cost-cut bump), and an "AI-Curated News"
 // positioning that doesn't communicate the actual differentiator (civic
 // context / cross-spectrum framing / money trail). The current version
 // uses the live product tagline and avoids numeric claims that go stale.
+// Updated 2026-08: retired the pre-reskin indigo + Georgia for the current
+// brand — warm dark surface, vermillion mark, Fraunces/DM Mono (vendored
+// static cuts via lib/og.tsx, shared with the dossier OG routes).
 export const alt = "Sift — The news, with footnotes";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OGImage() {
+export default async function OGImage() {
+  const fonts = await loadOgFonts();
   return new ImageResponse(
     (
       <div
@@ -21,8 +27,7 @@ export default function OGImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0c0a09",
-          fontFamily: "Georgia, serif",
+          background: OG.bg,
         }}
       >
         {/* Diamond mark */}
@@ -30,7 +35,7 @@ export default function OGImage() {
           width="48"
           height="48"
           viewBox="0 0 24 24"
-          fill="#818cf8"
+          fill={OG.accent}
           style={{ marginBottom: 24 }}
         >
           <path d="M12 2L22 12L12 22L2 12Z" />
@@ -39,9 +44,10 @@ export default function OGImage() {
         {/* Wordmark */}
         <span
           style={{
+            fontFamily: "Fraunces",
             fontSize: 96,
-            fontWeight: 700,
-            color: "#ffffff",
+            fontWeight: 600,
+            color: OG.ink,
             lineHeight: 1,
             letterSpacing: "-0.02em",
           }}
@@ -52,12 +58,12 @@ export default function OGImage() {
         {/* Tagline — matches COPY.header.tagline */}
         <span
           style={{
-            fontSize: 32,
-            color: "rgba(255,255,255,0.75)",
-            marginTop: 24,
-            fontFamily: "Georgia, serif",
+            fontSize: 34,
+            color: OG.secondary,
+            marginTop: 26,
+            fontFamily: "Fraunces",
             fontStyle: "italic",
-            fontWeight: 400,
+            fontWeight: 500,
           }}
         >
           The news, with footnotes.
@@ -68,7 +74,7 @@ export default function OGImage() {
           style={{
             width: 96,
             height: 1,
-            background: "rgba(255,255,255,0.2)",
+            background: OG.border,
             marginTop: 40,
             marginBottom: 28,
           }}
@@ -78,9 +84,9 @@ export default function OGImage() {
         <span
           style={{
             display: "flex",
-            fontSize: 18,
-            color: "rgba(255,255,255,0.55)",
-            fontFamily: "sans-serif",
+            fontSize: 19,
+            color: OG.tertiary,
+            fontFamily: "DM Mono",
             letterSpacing: "0.04em",
             textAlign: "center",
           }}
@@ -89,6 +95,6 @@ export default function OGImage() {
         </span>
       </div>
     ),
-    { ...size },
+    { ...size, fonts },
   );
 }

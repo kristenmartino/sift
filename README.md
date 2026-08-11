@@ -1,6 +1,6 @@
 # Sift
 
-**The news, with footnotes.** An AI-powered news aggregator with a civic-literacy layer on top. Sift reads from ~50 vetted outlets across the political spectrum, AI-summarizes the day's stories across 10 categories, lets you search any topic or compare coverage across sources — *and* adds the civic footnotes the news assumes you already have: an adaptive *"what you should know first"* primer, inline glossary tooltips, structured dossiers on every politician / organization / bill / outlet, cross-spectrum framing — all sourced from public records.
+**The news, with footnotes.** An AI-powered news aggregator with a civic-literacy layer on top. Sift reads from 70+ vetted outlets across the political spectrum, AI-summarizes the day's stories across 10 categories, lets you search any topic or compare coverage across sources — *and* adds the civic footnotes the news assumes you already have: an adaptive *"what you should know first"* primer, inline glossary tooltips, structured dossiers on every politician / organization / bill / outlet, cross-spectrum framing — all sourced from public records.
 
 **Live:** [siftnews.kristenmartino.ai](https://siftnews.kristenmartino.ai)
 

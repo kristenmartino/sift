@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import LandingMasthead from "@/components/landing/LandingMasthead";
+import ShareActions from "@/components/ShareActions";
 import { PartyTag } from "@/components/primitives";
 import { COPY } from "@/lib/copy";
 import { formatPoliticianLede } from "@/lib/politician";
@@ -181,6 +182,19 @@ export default function PoliticianDossier({
               {lede}
             </p>
           )}
+          <ShareActions
+            citeEntry={`${politician.name}${
+              politician.party && politician.state
+                ? ` (${politician.party}-${politician.state})`
+                : ""
+            } — Politician dossier`}
+            citeSources={[
+              politician.externalLinks.govtrack ? "GovTrack" : null,
+              politician.externalLinks.opensecrets ? "OpenSecrets" : null,
+              politician.externalLinks.votesmart ? "Vote Smart" : null,
+              politician.externalLinks.ballotpedia ? "Ballotpedia" : null,
+            ].filter((s): s is string => s !== null)}
+          />
         </header>
 
         <hr className="border-0 border-t border-(--border) my-10" />

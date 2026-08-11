@@ -383,14 +383,18 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 if (searchMode) clearTopicSearch();
               }}
               aria-label="Search topics"
-              className="flex items-center justify-center w-9 h-9 rounded-full border text-base cursor-pointer transition-all duration-200"
+              title="Search topics"
+              className="flex items-center justify-center gap-1.5 h-9 w-9 sm:w-auto sm:px-3.5 rounded-full border text-base cursor-pointer transition-all duration-200"
               style={{
                 background: searchMode ? "var(--accent)" : "transparent",
                 color: searchMode ? "#fff" : "var(--text-secondary)",
                 borderColor: searchMode ? "var(--accent)" : "var(--border)",
               }}
             >
-              ⌕
+              <span aria-hidden>⌕</span>
+              <span className="hidden sm:inline font-body text-[13px] font-medium">
+                {COPY.search.entry}
+              </span>
             </button>
 
             <button
@@ -406,14 +410,18 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 }
               }}
               aria-label="Compare coverage"
-              className="flex items-center justify-center w-9 h-9 rounded-full border text-base cursor-pointer transition-all duration-200"
+              title="Compare coverage"
+              className="flex items-center justify-center gap-1.5 h-9 w-9 sm:w-auto sm:px-3.5 rounded-full border text-base cursor-pointer transition-all duration-200"
               style={{
                 background: compareMode ? "var(--accent)" : "transparent",
                 color: compareMode ? "#fff" : "var(--text-secondary)",
                 borderColor: compareMode ? "var(--accent)" : "var(--border)",
               }}
             >
-              ⇌
+              <span aria-hidden>⇌</span>
+              <span className="hidden sm:inline font-body text-[13px] font-medium">
+                {COPY.compare.entry}
+              </span>
             </button>
 
             <button
@@ -436,9 +444,19 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
               <button
                 onClick={toggleDark}
                 aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-                className="flex items-center justify-center w-9 h-9 rounded-full border border-(--border) bg-transparent text-(--text-secondary) text-base cursor-pointer transition-all duration-200"
+                title={
+                  darkMode
+                    ? `Switch to ${COPY.theme.newsprint}`
+                    : `Switch to ${COPY.theme.lateEdition}`
+                }
+                className="flex items-center justify-center gap-1.5 h-9 w-9 sm:w-auto sm:px-3.5 rounded-full border border-(--border) bg-transparent text-(--text-secondary) text-base cursor-pointer transition-all duration-200"
               >
-                {darkMode ? "☀" : "☾"}
+                <span aria-hidden>{darkMode ? "☀" : "☾"}</span>
+                {/* The edition you'd switch to, named — same move as the
+                    landing masthead, which had the personality /news lost. */}
+                <span className="hidden sm:inline font-body text-[11px] uppercase tracking-wider">
+                  {darkMode ? COPY.theme.newsprint : COPY.theme.lateEdition}
+                </span>
               </button>
             )}
 
@@ -911,6 +929,19 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
       <footer className="border-t border-(--border) py-6 px-6 text-center text-xs text-(--text-tertiary) max-w-[1200px] mx-auto">
         <SiftLogo variant="full" size={18} />
         <span className="mx-2">&mdash;</span>{COPY.footer.main()}
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
+          {COPY.footer.explore.map((link, i) => (
+            <span key={link.href} className="inline-flex items-center gap-3">
+              {i > 0 && <span aria-hidden className="opacity-30">&middot;</span>}
+              <a
+                href={link.href}
+                className="text-(--text-secondary) no-underline hover:text-(--accent) transition-colors"
+              >
+                {link.label}
+              </a>
+            </span>
+          ))}
+        </div>
         <div className="mt-2 flex items-center justify-center gap-3">
           <a href="/privacy" className="text-(--text-tertiary) no-underline hover:text-(--text-secondary) transition-colors">Privacy</a>
           <span className="opacity-30">&middot;</span>

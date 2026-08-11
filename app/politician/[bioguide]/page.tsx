@@ -24,8 +24,8 @@ export async function generateMetadata({
   if (!politician) return { title: "Politician not found" };
 
   // Per-route metadata override so shared dossier links carry the
-  // politician's name, not the homepage's generic title. og:image still
-  // inherits the homepage OG — route-specific images are a Phase 2 polish.
+  // politician's name, not the homepage's generic title. og:image comes from
+  // the sibling opengraph-image.tsx (shared card factory in lib/og.tsx).
   const partyState =
     politician.party && politician.state
       ? ` (${politician.party}-${politician.state})`

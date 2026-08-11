@@ -6,8 +6,10 @@ import AuthButtons from "@/components/AuthButtons";
 
 export const metadata: Metadata = {
   title: "News",
+  // Post-pivot positioning — the old "AI-curated news summaries" line
+  // predated the civic-literacy layer and undersold the differentiator.
   description:
-    "AI-curated news summaries across technology, business, science, energy, world, and health.",
+    "Today's stories with the footnotes: civic context, cross-spectrum framing, and the money behind each story. Every link goes to the original.",
 };
 
 const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;

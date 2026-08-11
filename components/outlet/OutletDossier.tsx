@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import LandingMasthead from "@/components/landing/LandingMasthead";
+import ShareActions from "@/components/ShareActions";
 import { LeanGlyph, FactualChip } from "@/components/primitives";
 import {
   formatAllSidesLabel,
@@ -89,6 +90,13 @@ export default function OutletDossier({
               {ledeBits.join(" · ")}
             </p>
           )}
+          <ShareActions
+            citeEntry={`${outlet.name} — Outlet dossier`}
+            citeSources={[
+              outlet.allSidesUrl ? "AllSides" : null,
+              outlet.mbfcUrl ? "Media Bias/Fact Check" : null,
+            ].filter((s): s is string => s !== null)}
+          />
         </header>
 
         <hr className="border-0 border-t border-(--border) my-10" />

@@ -23,7 +23,8 @@ export async function generateMetadata({
   const display = formatBillIdDisplay(bill.billId);
 
   // Per-route metadata override so shared bill links carry the bill's
-  // name in the unfurl card. og:image inherits the site default.
+  // name in the unfurl card. og:image comes from the sibling
+  // opengraph-image.tsx (shared card factory in lib/og.tsx).
   const fullTitle = `${display} (${bill.shortTitle ?? "Bill"}) — Sift`;
   const description = `Sponsor, cosponsors, status, and lobbying spend for ${
     bill.shortTitle ?? display

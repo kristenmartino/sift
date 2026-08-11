@@ -60,6 +60,23 @@ export const COPY = {
     // Shared with landingReskin.footer.blurb via siftBlurb. The /news footer
     // calls it with no count (count-free); the landing passes the live count.
     main: siftBlurb,
+    // Routes out of /news into the civic layer. Before these, the product's
+    // main surface dead-ended at Privacy/Terms — the dossier corpus (the
+    // whole pivot) was unreachable except through an inline entity chip.
+    explore: [
+      { label: "Civic dossiers", href: "/civic" },
+      { label: "Agencies", href: "/agencies" },
+      { label: "Think tanks", href: "/think-tanks" },
+      { label: "Methodology", href: "/methodology" },
+      { label: "Colophon", href: "/colophon" },
+    ] as const,
+  },
+  // ── Theme names ───────────────────────────────────────
+  // The themes are named, and the names are the personality: the toggle
+  // shows the edition you'd switch to, same as the landing masthead.
+  theme: {
+    newsprint: "Newsprint",
+    lateEdition: "Late Edition",
   },
   error: {
     title: "We hit a snag pulling today's stories",
@@ -76,7 +93,27 @@ export const COPY = {
     emptyTitle: "Nothing saved yet",
     emptyBody: "Star any article to keep it here. Your reading list, your pace.",
   },
+  // \u2500\u2500 Share & cite \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // Two verbs for the same instinct: "Share" hands a page to a person,
+  // "Cite" hands it to a bibliography. The swapped labels confirm quietly \u2014
+  // copying a link is not an achievement, so no celebration.
+  share: {
+    share: "Share",
+    shared: "Link copied",
+    shareAria: "Share this page",
+    cite: "Cite",
+    cited: "Citation copied",
+    citeAria: "Copy a citation for this page",
+    // One citation shape, no style toggle: enough for a works-cited line or a
+    // reference email, which is what a librarian or staffer actually pastes.
+    citation: (entry: string, address: string, accessed: string, sources: string[]) =>
+      `\u201c${entry}.\u201d Sift, ${address}. Accessed ${accessed}.` +
+      (sources.length > 0 ? ` Underlying data: ${sources.join(", ")}.` : ""),
+  },
   compare: {
+    // Visible label on the /news header pill \u2014 the \u21cc glyph alone made the
+    // flagship feature the hardest one to find.
+    entry: "Compare",
     loading: "Comparing coverage across sources\u2026",
     slow: "Searching multiple outlets \u2014 this takes 10\u201320 seconds",
     emptyTitle: "Multi-Source Comparison",
@@ -87,6 +124,8 @@ export const COPY = {
     button: "Compare coverage",
   },
   search: {
+    // Visible label on the /news header pill, matching compare.entry.
+    entry: "Search",
     placeholder: "What are you looking for?",
     resultsFor: (query: string) => `Results for \u201c${query}\u201d`,
     noResults: "No matches found",
@@ -118,6 +157,11 @@ export const COPY = {
       center: "Center",
       right: "Right",
     } as const,
+    // Shown under the framing header only when the outlets actually span 2+
+    // lean buckets — the rows are always sorted L→C→R, but the note should
+    // only claim a spectrum when one is present. This ordering is the
+    // product's best ambient feature; one line makes it legible.
+    spectrumNote: "Sorted left to center to right — read down and watch the framing shift.",
     compareRow: "Compare coverage",
     moreFromOutlet: (count: number, outlet: string) =>
       `+${count} more from ${outlet}`,
@@ -149,6 +193,7 @@ export const COPY = {
   topics: {
     modalTitle: "What do you want to track?",
     modalPlaceholder: "e.g. Florida utilities, AI in healthcare, Series A funding",
+    generate: "Generate preview",
     generating: "Interpreting your topic\u2026",
     previewTitle: "Here\u2019s what I\u2019ll track",
     previewQueries: "Search queries",

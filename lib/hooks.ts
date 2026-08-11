@@ -74,6 +74,43 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (val: T | ((prev:
   return [stored, setValue];
 }
 
+// ─── useCopyToClipboard ─────────────────────────────────
+
+/**
+ * Clipboard write plus a self-clearing "copied" flag for button label swaps.
+ * `copy` resolves false when the Clipboard API is unavailable (plain http,
+ * old WebViews) so callers can leave their label alone rather than claim a
+ * copy that didn't happen.
+ */
+export function useCopyToClipboard(resetMs = 2000) {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
+
+  const copy = useCallback(
+    async (text: string): Promise<boolean> => {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        return false;
+      }
+      setCopied(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), resetMs);
+      return true;
+    },
+    [resetMs]
+  );
+
+  return { copied, copy };
+}
+
 // ─── useBookmarks ───────────────────────────────────────
 
 export function useBookmarks(userId?: string | null) {
