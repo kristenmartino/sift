@@ -280,7 +280,10 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     const now = Date.now();
     function rankScore(item: FeedItem): number {
       const pubDate = item.data.publishedDate;
-      const ageHours = pubDate ? (now - new Date(pubDate).getTime()) / 3_600_000 : 48;
+      // Clamp at 0: a future-dated article must not get decay > 1 and pin
+      // itself above everything fresh. (No pubDate → flat 48h penalty; the
+      // SQL side falls back to created_at instead, which the API doesn't expose.)
+      const ageHours = pubDate ? Math.max(0, (now - new Date(pubDate).getTime()) / 3_600_000) : 48;
       const decay = Math.exp(-ageHours / 24);
 
       if (item.type === "story") {
