@@ -133,9 +133,40 @@ const NON_NEWS_SQL = `CASE WHEN genre IN ('feature', 'soft') THEN ${NON_NEWS_DAM
 // applied at the API/client layer only (it needs framings' outlet ratings);
 // its ≤1.2× range cannot meaningfully change a 20-deep pool truncation.
 // STORY_BOOST = 0.5/ln(2) ≈ 0.72 would reproduce the old client score for a
-// 2-source story; 0.8 sits close to that while giving big stories a little
+// 2-source story; 0.8 sat close to that while giving big stories a little
 // more headroom (10 sources → 4.9, vs the old hard cap at 5).
-const STORY_BOOST = 0.8;
+//
+// RAISED 0.8 → 2.0 AND THE BASE DROPPED 3 → 1 ON 2026-08-11, TOGETHER.
+//
+// At (3, 0.8) corroboration barely ordered anything: the term spanned 3.88 (2
+// outlets) to 5.36 (18) — a 1.38× range — against decay = EXP(-age_days), so
+// the entire 2 → 18 range was worth **7.7 hours of freshness** and the base
+// constant was 77% of the score at n=2. Recency was the ranking signal;
+// coverage was rounding error.
+//
+// The base has to move with the boost, because these two numbers do different
+// jobs and only one of them is about coverage. `STORY_BASE` sets where stories
+// sit against STANDALONE ARTICLES, which score `importance × decay` on a 1-5
+// scale — so raising the boost alone lifts every story against every article
+// at once. Replayed against prod over six categories:
+//
+//   base boost | avg stories in top-20 | story-vs-story reordering | 2→18
+//   3    0.8   | 5.8                   | —                         |  7.7h
+//   3    1.6   | 8.5  ← floods         | 32                        | 11.6h
+//   1    2.0   | 5.8  ← unchanged      | 53                        | 18.4h
+//
+// Bumping the boost alone bought reordering by crowding articles out (sports
+// went 9 → 14 of 20, and 19 of 20 at 2.5). Lowering the base in step buys
+// *more* reordering at an identical story/article mix. Coverage now moves the
+// feed; the mix does not move at all, which is the point.
+//
+// Sanity at the new constants: a 2-outlet story scores 3.20 (just over an
+// importance-3 article), an 18-outlet story 6.89 (over the importance-5
+// ceiling). A thinly-covered grim story still lands under D48's dampener at
+// 1.92. The `ln` still saturates, so a wire pile-up cannot lap a 6-outlet
+// story — that guard was never the problem.
+const STORY_BASE = 1;
+const STORY_BOOST = 2.0;
 
 // "sources" in that curve means DISTINCT OUTLETS, not article rows. It counted
 // COUNT(a.id) until 2026-08-11, which is a different thing: measured over 7
@@ -285,7 +316,7 @@ export async function getStoriesWithArticles(
        GROUP BY s.id
        HAVING COUNT(a.id) >= 2
        ORDER BY
-         (3 + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float *
+         (${STORY_BASE} + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float *
          EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))), 0) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 20`,

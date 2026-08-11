@@ -168,29 +168,49 @@ same wire pile-up the `ln` was chosen to damp, arriving through the variable
 rather than the shape. `articleCount` is still what the card displays; the two
 are separate fields end to end now.
 
-**Corroboration is currently a very weak ranking signal, and that is the open
-question this raised.** The term spans only 3.88 (2 sources) to 5.36 (18) — a
-1.38× range — against `decay = EXP(-age_days)`. So **the entire 2 → 18 range is
-worth 7.7 hours of freshness**, and the base constant `3` is 77% of the score at
-n = 2. Replaying the switch to distinct outlets against prod moved 0 of 20 in
-every category except politics, which moved one story — not because the variable
-was wrong, but because the term barely orders anything.
+**Corroboration was a very weak ranking signal until 2026-08-11.** At the
+original `(base 3, boost 0.8)` the term spanned only 3.88 (2 outlets) to 5.36
+(18) — a 1.38× range — against `decay = EXP(-age_days)`. So **the entire 2 → 18
+range was worth 7.7 hours of freshness**, and the base constant was 77% of the
+score at n = 2. Replaying the switch to distinct outlets moved 0 of 20 in every
+category except politics, which moved one story — not because the variable was
+wrong, but because the term barely ordered anything.
 
-Making well-covered stories actually surface is therefore a **weighting**
-decision, not a variable one. Measured options, as "how many hours older an
-18-outlet story can be and still outrank a 2-outlet one":
+### The weighting: `(1, 2.0)`, and why the base had to move too
 
-| base | boost | hours |
-|---:|---:|---:|
-| 3 | 0.8 | 7.7 *(today)* |
-| 3 | 1.6 | 11.6 |
-| 1 | 0.8 | 13.9 |
-| 1 | 1.6 | 17.5 |
-| 0 | 1.0 | 23.7 |
+**These two constants do different jobs, and only one of them is about
+coverage.** `STORY_BASE` sets where stories sit against **standalone articles**,
+which score `importance × decay` on a 1–5 scale — so raising `STORY_BOOST`
+alone lifts every story against every article at once. That reorders the feed,
+but mostly by crowding articles out, not by ranking stories on coverage.
 
-For scale, decay halves a score every 16.6 hours. This is a product call about
-how much corroboration should outweigh recency — deliberately left unmade here.
-See `sift-api/docs/SOURCE_SCALING.md`.
+Replayed against prod over six categories (`top`, `politics`, `world`,
+`business`, `technology`, `sports`), scoring stories and standalone articles in
+one list exactly as `NewsAggregator.rankScore` does:
+
+| base | boost | avg stories in top 20 | story-vs-story reordering | 2 → 18 |
+|---:|---:|---:|---:|---:|
+| 3 | 0.8 | 5.8 | — | 7.7h |
+| 3 | 1.6 | **8.5** | 32 | 11.6h |
+| 2.5 | 1.6 | 7.5 | 36 | 12.6h |
+| 2 | 1.6 | 6.8 | 42 | 13.9h |
+| 2 | 2.0 | 7.7 | 46 | 15.1h |
+| 1.5 | 2.0 | 7.2 | 50 | 16.6h |
+| **1** | **2.0** | **5.8** | **53** | **18.4h** |
+
+Boost-only at 1.6 buys 32 units of reordering by pushing the story share from
+5.8 to 8.5 per top-20 — sports went 9 → 14, and 19 of 20 at boost 2.5. `(1, 2.0)`
+buys **53** at a story share **identical to today's**. Coverage moves the feed;
+the story/article mix does not move at all.
+
+Sanity at the shipped constants: a 2-outlet story scores 3.20 (just over an
+importance-3 article), an 18-outlet story 6.89 (above the importance-5 ceiling),
+and a thinly-covered grim story lands at 1.92 under D48's dampener. The `ln`
+still saturates, so a wire pile-up cannot lap a 6-outlet story — that guard was
+never what was wrong.
+
+For scale, decay halves a score every 16.6 hours. See
+`sift-api/docs/SOURCE_SCALING.md`.
 
 ### Stage 2 — civic-entity density (the D45 signal)
 
