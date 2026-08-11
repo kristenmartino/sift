@@ -1,5 +1,6 @@
 import {
   bucketize,
+  countOccupiedBuckets,
   groupFramingsByBucket,
   shouldRenderCrossSpectrum,
   CROSS_SPECTRUM_BUCKETS,
@@ -222,5 +223,45 @@ describe("shouldRenderCrossSpectrum", () => {
         makeFraming("WSJ", "right"),
       ]),
     ).toBe(true);
+  });
+});
+
+// ─── countOccupiedBuckets (ranking v2 stage 1) ─────────────
+
+describe("countOccupiedBuckets", () => {
+  it("counts distinct buckets, not framings", () => {
+    expect(
+      countOccupiedBuckets([
+        makeFraming("Vox", "left"),
+        makeFraming("Guardian", "lean-left"),
+        makeFraming("WSJ", "right"),
+      ]),
+    ).toBe(2);
+  });
+
+  it("spans all three buckets at most", () => {
+    expect(
+      countOccupiedBuckets([
+        makeFraming("Vox", "left"),
+        makeFraming("AP", "center"),
+        makeFraming("WSJ", "right"),
+        makeFraming("Fox", "right"),
+      ]),
+    ).toBe(3);
+  });
+
+  it("unbucketable framings count toward nothing", () => {
+    // Absence of a rating is never evidence of spectrum spread — a story
+    // covered only by unrated outlets must not earn the spectrum bonus.
+    expect(
+      countOccupiedBuckets([
+        makeFraming("Unrated Blog", null),
+        makeFraming("Another", null),
+      ]),
+    ).toBe(0);
+  });
+
+  it("returns 0 for an empty array", () => {
+    expect(countOccupiedBuckets([])).toBe(0);
   });
 });

@@ -55,6 +55,19 @@ const GRIM_DAMPENER = 0.6;
 // SQL fragment appended to the importance × recency rank product.
 const GRIM_DAMPENER_SQL = `CASE WHEN tone = 'grim' AND COALESCE(importance_score, 3) <= 3 THEN ${GRIM_DAMPENER} ELSE 1.0 END`;
 
+// Ranking v2 stage 1 (docs/RANKING_SIGNALS.md): stories rank on a SATURATING
+// corroboration curve, 3 + STORY_BOOST × ln(1 + sources), in both the SQL
+// pool and the client re-rank — previously the pool used raw count × decay
+// while the client showed readers a different formula, so the LIMIT 20
+// truncation happened under an order nobody saw. ln keeps an 18-member wire
+// pile-up from lapping a 6-outlet story 3×. The cross-spectrum bonus is
+// applied at the API/client layer only (it needs framings' outlet ratings);
+// its ≤1.2× range cannot meaningfully change a 20-deep pool truncation.
+// STORY_BOOST = 0.5/ln(2) ≈ 0.72 would reproduce the old client score for a
+// 2-source story; 0.8 sits close to that while giving big stories a little
+// more headroom (10 sources → 4.9, vs the old hard cap at 5).
+const STORY_BOOST = 0.8;
+
 export interface DbArticle {
   id: string;
   title: string;
@@ -161,7 +174,7 @@ export async function getStoriesWithArticles(
        GROUP BY s.id
        HAVING COUNT(a.id) >= 2
        ORDER BY
-         COUNT(a.id)::float *
+         (3 + ${STORY_BOOST} * LN(1 + COUNT(a.id)))::float *
          EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))), 0) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 20`,
