@@ -378,11 +378,18 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
       const decay = Math.exp(-ageHours / 24);
 
       if (item.type === "story") {
-        const sourceScore = 3 + STORY_BOOST * Math.log(1 + item.data.articleCount);
+        // Distinct OUTLETS, mirroring the pool's ORDER BY in lib/db.ts. These
+        // two formulas must move together — v2 stage 1 exists because they
+        // once disagreed, and the LIMIT 20 truncation then happened under an
+        // order no reader ever saw.
+        const sourceScore = 3 + STORY_BOOST * Math.log(1 + item.data.outletCount);
         const spectrum = 1 + SPECTRUM_BOOST * Math.max(0, (item.data.spectrumBuckets ?? 1) - 1);
         // Corroboration is the story-level analog of importance: a
         // two-outlet grim story dampens, a five-outlet disaster does not.
-        const damp = item.data.tone === "grim" && item.data.articleCount <= 2 ? GRIM_DAMPENER : 1;
+        // This said `articleCount <= 2` while describing outlets, so one
+        // outlet filing three pieces on a grim story lifted the dampener that
+        // D48 put there. Now it counts what the comment always claimed.
+        const damp = item.data.tone === "grim" && item.data.outletCount <= 2 ? GRIM_DAMPENER : 1;
         const opDamp = item.data.isOpinion ? OPINION_DAMPENER : 1;
         // Stage 2: a story is as decision-relevant as its most
         // civic-entity-dense member (mirrors CIVIC_BOOST_SQL layering).
