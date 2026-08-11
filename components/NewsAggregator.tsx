@@ -277,6 +277,11 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     ];
 
     // Rank by composite score: (importance + source_boost) * recency_decay
+    // D48 grim dampener (mirrors GRIM_DAMPENER in lib/db.ts): low-importance
+    // grim items rank as if ~12h older; importance 4-5 somber news and
+    // untagged items are untouched — de-stack tabloid crime, never hide
+    // major news.
+    const GRIM_DAMPENER = 0.6;
     const now = Date.now();
     function rankScore(item: FeedItem): number {
       const pubDate = item.data.publishedDate;
@@ -288,10 +293,14 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
 
       if (item.type === "story") {
         const sourceBoost = Math.min((item.data.articleCount - 1), 4) * 0.5;
-        return (3 + sourceBoost) * decay;
+        // Corroboration is the story-level analog of importance: a
+        // two-outlet grim story dampens, a five-outlet disaster does not.
+        const damp = item.data.tone === "grim" && item.data.articleCount <= 2 ? GRIM_DAMPENER : 1;
+        return (3 + sourceBoost) * decay * damp;
       }
       const importance = item.data.importanceScore ?? 3;
-      return importance * decay;
+      const damp = item.data.tone === "grim" && importance <= 3 ? GRIM_DAMPENER : 1;
+      return importance * decay * damp;
     }
 
     items.sort((a, b) => rankScore(b) - rankScore(a));

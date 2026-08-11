@@ -18,6 +18,16 @@ export interface Category {
   icon: string;
 }
 
+/**
+ * Article-level tone (migrations/020) — NOT the same concept as
+ * StoryFraming["tone"], which describes an outlet's coverage style. This
+ * describes the underlying event: "grim" = death/violent crime/fatal
+ * disaster; "light" = feel-good/culture/achievement; "neutral" = everything
+ * else including serious-but-not-deadly news. Absent = unclassified,
+ * treated as neutral by every ranking site (D48).
+ */
+export type ArticleTone = "grim" | "neutral" | "light";
+
 export interface Article {
   id: string;
   title: string;
@@ -30,6 +40,7 @@ export interface Article {
   readTime: number;
   whyItMatters?: string;
   importanceScore?: number;
+  tone?: ArticleTone;
   /**
    * AI-generated "What you should know first" panel — civic-literacy MVP.
    * Populated by sift-api's primer_generator. Null/undefined when the article
@@ -644,6 +655,12 @@ export interface Story {
   imageUrl: string | null;
   publishedDate: string | null;
   articles: Article[];
+  /**
+   * Derived at the API boundary: "grim" when ≥ half the member articles are
+   * tagged grim (see ArticleTone — distinct from StoryFraming["tone"]).
+   * Feeds the D48 dampener for thinly-corroborated grim stories.
+   */
+  tone?: ArticleTone;
 }
 
 export type FeedItem =
