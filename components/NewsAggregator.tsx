@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
+import { civicBoost, weightedCivicLinks } from "@/lib/civicWeight";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare, useCustomTopics } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
@@ -349,11 +350,17 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         // Corroboration is the story-level analog of importance: a
         // two-outlet grim story dampens, a five-outlet disaster does not.
         const damp = item.data.tone === "grim" && item.data.articleCount <= 2 ? GRIM_DAMPENER : 1;
-        return sourceScore * decay * spectrum * damp;
+        // Stage 2: a story is as decision-relevant as its most
+        // civic-entity-dense member (mirrors CIVIC_BOOST_SQL layering).
+        const civic = civicBoost(
+          Math.max(0, ...item.data.articles.map((a) => weightedCivicLinks(a.entityLinks)))
+        );
+        return sourceScore * decay * spectrum * damp * civic;
       }
       const importance = item.data.importanceScore ?? 3;
       const damp = item.data.tone === "grim" && importance <= 3 ? GRIM_DAMPENER : 1;
-      return importance * decay * damp;
+      const civic = civicBoost(weightedCivicLinks(item.data.entityLinks));
+      return importance * decay * damp * civic;
     }
 
     items.sort((a, b) => rankScore(b) - rankScore(a));

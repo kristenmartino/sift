@@ -55,6 +55,24 @@ const GRIM_DAMPENER = 0.6;
 // SQL fragment appended to the importance × recency rank product.
 const GRIM_DAMPENER_SQL = `CASE WHEN tone = 'grim' AND COALESCE(importance_score, 3) <= 3 THEN ${GRIM_DAMPENER} ELSE 1.0 END`;
 
+// Ranking v2 stage 2 (docs/RANKING_SIGNALS.md): civic-entity-density boost —
+// the D45 decision-relevance signal. Weighted DISTINCT dossier links (bill
+// and politician 1.0, org 0.5, outlet 0), capped at 3, ×0.1 per point:
+// civic density re-orders within a tier but tops out at +30%, so it can
+// never promote a routine item over a disaster. Weights, cap, and constant
+// mirror lib/civicWeight.ts (the client re-rank) — keep them in lockstep.
+// Applied to the three article pool queries; the hero query keeps its own
+// tone-preference mechanic, and stories derive their boost client-side from
+// member articles (same layering as the stage-1 spectrum bonus). Verified
+// against prod before shipping: worst pool shape 163 ms, unchanged.
+const CIVIC_BOOST = 0.1;
+const CIVIC_WEIGHT_SQL = `COALESCE((
+  SELECT SUM(CASE t WHEN 'bill' THEN 1.0 WHEN 'politician' THEN 1.0 WHEN 'org' THEN 0.5 ELSE 0 END)
+  FROM (SELECT DISTINCT el->>'type' AS t, el->>'canonical_id' AS cid
+        FROM jsonb_array_elements(CASE WHEN jsonb_typeof(entity_links) = 'array' THEN entity_links ELSE '[]'::jsonb END) el) links
+), 0)`;
+const CIVIC_BOOST_SQL = `(1 + ${CIVIC_BOOST} * LEAST(${CIVIC_WEIGHT_SQL}, 3))`;
+
 // Ranking v2 stage 1 (docs/RANKING_SIGNALS.md): stories rank on a SATURATING
 // corroboration curve, 3 + STORY_BOOST × ln(1 + sources), in both the SQL
 // pool and the client re-rank — previously the pool used raw count × decay
@@ -116,7 +134,8 @@ export async function getArticlesByCategory(
      ORDER BY
        COALESCE(importance_score, 3)::float *
        EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700)) *
-       ${GRIM_DAMPENER_SQL}
+       ${GRIM_DAMPENER_SQL} *
+       ${CIVIC_BOOST_SQL}
      DESC NULLS LAST
      LIMIT $2`,
     [category, limit]
@@ -236,7 +255,8 @@ export async function getStoriesWithArticles(
                 category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at,
                 COALESCE(importance_score, 3)::float *
                 EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700)) *
-                ${GRIM_DAMPENER_SQL}
+                ${GRIM_DAMPENER_SQL} *
+                ${CIVIC_BOOST_SQL}
                 AS rank_score
          FROM articles
          WHERE category = $1 AND from_search = false
@@ -271,7 +291,8 @@ export async function getStoriesWithArticles(
                 category, published_date, read_time, why_it_matters, importance_score, tone, context_primer, reading_levels, created_at,
                 COALESCE(importance_score, 3)::float *
                 EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700)) *
-                ${GRIM_DAMPENER_SQL}
+                ${GRIM_DAMPENER_SQL} *
+                ${CIVIC_BOOST_SQL}
                 AS rank_score
          FROM articles
          WHERE category = $1 AND from_search = false
