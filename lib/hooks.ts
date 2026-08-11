@@ -568,6 +568,12 @@ export function useCustomTopics(userId?: string | null) {
 // by ~55s. Compare runs ~20–30s, up to ~55s before the proxy gives up.
 const COMPARE_TIMEOUT_MS = 65_000;
 const COMPARE_SLOW_MS = 8_000;
+// Elapsed-time stage cuts matched to the workflow's typical shape: per-source
+// search fans out first (~20s), claim extraction next, response formatting
+// last. The lines describe what the pipeline does at that point — they never
+// claim a specific outlet finished, which the client can't know pre-SSE.
+const COMPARE_STAGE_CLAIMS_MS = 22_000;
+const COMPARE_STAGE_SUMMARY_MS = 38_000;
 
 interface CompareState {
   topic: string | null;
@@ -578,6 +584,8 @@ interface CompareState {
   loading: boolean;
   error: string | null;
   slow: boolean;
+  /** 0 = searching sources, 1 = extracting claims, 2 = writing the summary. */
+  stage: 0 | 1 | 2;
 }
 
 export function useCompare() {
@@ -590,6 +598,7 @@ export function useCompare() {
     loading: false,
     error: null,
     slow: false,
+    stage: 0,
   });
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -608,11 +617,20 @@ export function useCompare() {
       loading: true,
       error: null,
       slow: false,
+      stage: 0,
     });
 
     const slowTimer = setTimeout(
       () => setState((s) => ({ ...s, slow: true })),
       COMPARE_SLOW_MS
+    );
+    const stageClaimsTimer = setTimeout(
+      () => setState((s) => (s.loading ? { ...s, stage: 1 } : s)),
+      COMPARE_STAGE_CLAIMS_MS
+    );
+    const stageSummaryTimer = setTimeout(
+      () => setState((s) => (s.loading ? { ...s, stage: 2 } : s)),
+      COMPARE_STAGE_SUMMARY_MS
     );
     const timeoutTimer = setTimeout(() => controller.abort(), COMPARE_TIMEOUT_MS);
 
@@ -640,6 +658,7 @@ export function useCompare() {
         loading: false,
         error: null,
         slow: false,
+        stage: 0,
       });
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -655,6 +674,8 @@ export function useCompare() {
       setState((s) => ({ ...s, loading: false, error: message, slow: false }));
     } finally {
       clearTimeout(slowTimer);
+      clearTimeout(stageClaimsTimer);
+      clearTimeout(stageSummaryTimer);
       clearTimeout(timeoutTimer);
       controllerRef.current = null;
     }
@@ -672,6 +693,7 @@ export function useCompare() {
       loading: false,
       error: null,
       slow: false,
+      stage: 0,
     });
   }, []);
 

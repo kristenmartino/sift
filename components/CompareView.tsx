@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { ShareButton } from "@/components/ShareActions";
 import { COMPARE_SOURCES } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import type { CompareClaim } from "@/lib/types";
@@ -20,35 +21,42 @@ interface CompareViewProps {
   onToggleSource: (key: string) => void;
 }
 
-const AGREEMENT_STYLES: Record<string, { label: string; bg: string; color: string; border: string; dot: string }> = {
+// Agreement chips ride the status tokens (globals.css) so both themes hold \u2014
+// claim agreement is a different axis from political lean, so color is fine
+// here. For/Against below stays neutral ink: coloring outlets green/red on a
+// disputed claim would visually score them right/wrong, the exact move the
+// no-hue-coding rule exists to prevent.
+const AGREEMENT_STYLES: Record<string, { label: string; color: string; dot: string }> = {
   unanimous: {
-    label: "All agree",
-    bg: "rgba(5,150,105,0.1)",
-    color: "#059669",
-    border: "rgba(5,150,105,0.2)",
+    label: COPY.compare.agreement.unanimous,
+    color: "var(--success)",
     dot: "\u25CF",
   },
   majority: {
-    label: "Mostly agree",
-    bg: "rgba(37,99,235,0.1)",
-    color: "#2563eb",
-    border: "rgba(37,99,235,0.2)",
+    label: COPY.compare.agreement.majority,
+    color: "var(--info)",
     dot: "\u25D2",
   },
   disputed: {
-    label: "Disputed",
-    bg: "rgba(217,119,6,0.1)",
-    color: "#d97706",
-    border: "rgba(217,119,6,0.2)",
+    label: COPY.compare.agreement.disputed,
+    color: "var(--warning)",
     dot: "\u25C6",
   },
   unique: {
-    label: "Unique angle",
-    bg: "rgba(107,114,128,0.1)",
-    color: "#6b7280",
-    border: "rgba(107,114,128,0.2)",
+    label: COPY.compare.agreement.unique,
+    color: "var(--text-tertiary)",
     dot: "\u25CB",
   },
+};
+
+// Disputed first \u2014 the cross-spectrum disagreement is the whole point of the
+// feature, so it leads. The backend sorts the same way; this is the defensive
+// mirror for cached or older responses.
+const AGREEMENT_ORDER: Record<string, number> = {
+  disputed: 0,
+  majority: 1,
+  unanimous: 2,
+  unique: 3,
 };
 
 export default function CompareView({
@@ -75,6 +83,10 @@ export default function CompareView({
     .map((key) => COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key)
     .join(", ");
 
+  const sortedClaims = [...claims].sort(
+    (a, b) => (AGREEMENT_ORDER[a.agreement] ?? 4) - (AGREEMENT_ORDER[b.agreement] ?? 4)
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = inputValue.trim();
@@ -90,35 +102,43 @@ export default function CompareView({
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
+            {/* bookmark-pop is the completion moment — the user just waited
+                ~20 seconds; the badge landing with a spring is the "done". */}
             <span
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide animate-bookmark-pop"
               style={{
-                background: "rgba(99,102,241,0.1)",
+                background: "color-mix(in srgb, var(--accent) 10%, transparent)",
                 color: "var(--accent)",
-                border: "1px solid rgba(99,102,241,0.2)",
+                border: "1px solid color-mix(in srgb, var(--accent) 25%, transparent)",
               }}
             >
-              {COPY.compare.emptyTitle}
+              {COPY.compare.badge}
             </span>
           </div>
           <h2 className="font-heading text-[22px] font-bold text-(--text-primary) tracking-tight">
             {topic}
           </h2>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-(--text-tertiary)">
-            <span>{sourcesChecked.length} sources checked</span>
+            <span>{COPY.compare.metaSources(sourcesChecked.length)}</span>
             <span className="opacity-30">&middot;</span>
             <span>{(durationMs / 1000).toFixed(1)}s</span>
             <span className="opacity-30">&middot;</span>
-            <span>{claims.length} claims analyzed</span>
+            <span>{COPY.compare.metaClaims(claims.length)}</span>
           </div>
+          <p className="text-[11px] text-(--text-tertiary) mt-1.5 italic">
+            {COPY.compare.liveNote}
+          </p>
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Close comparison"
-          className="flex items-center justify-center w-9 h-9 rounded-full border border-(--border) bg-transparent text-(--text-secondary) text-base cursor-pointer transition-all duration-200 shrink-0 mt-1"
-        >
-          &times;
-        </button>
+        <div className="flex items-center gap-2 shrink-0 mt-1">
+          <ShareButton title={topic} />
+          <button
+            onClick={onClose}
+            aria-label="Close comparison"
+            className="flex items-center justify-center w-9 h-9 rounded-full border border-(--border) bg-transparent text-(--text-secondary) text-base cursor-pointer transition-all duration-200 shrink-0"
+          >
+            &times;
+          </button>
+        </div>
       </div>
 
       {/* Sources */}
@@ -147,7 +167,7 @@ export default function CompareView({
         }}
       >
         <h3 className="text-xs font-bold uppercase tracking-widest text-(--text-tertiary) mb-3">
-          Summary
+          {COPY.compare.summary}
         </h3>
         <p className="text-[15px] leading-relaxed text-(--text-secondary)">
           {comparison}
@@ -157,9 +177,9 @@ export default function CompareView({
       {/* Claims */}
       <div className="space-y-3 mb-8">
         <h3 className="text-xs font-bold uppercase tracking-widest text-(--text-tertiary) mb-1">
-          Key Claims
+          {COPY.compare.keyClaims}
         </h3>
-        {claims.map((claim, i) => {
+        {sortedClaims.map((claim, i) => {
           const style = AGREEMENT_STYLES[claim.agreement] || AGREEMENT_STYLES.unique;
           const isDisputed = claim.agreement === "disputed";
           const isExpanded = expandedClaim === i;
@@ -173,6 +193,10 @@ export default function CompareView({
                 background: "var(--surface-raised)",
                 border: "1px solid var(--border)",
                 cursor: hasDetails ? "pointer" : "default",
+                // Staggered entrance — the claims land one after another,
+                // the earned payoff after a 20-second wait.
+                animation: "fade-slide-in 0.5s var(--ease-out-expo) both",
+                animationDelay: `${i * 60}ms`,
               }}
               onClick={() => hasDetails && setExpandedClaim(isExpanded ? null : i)}
             >
@@ -181,9 +205,9 @@ export default function CompareView({
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide shrink-0 mt-0.5"
                   style={{
                     fontSize: "10px",
-                    background: style.bg,
+                    background: `color-mix(in srgb, ${style.color} 10%, transparent)`,
                     color: style.color,
-                    border: `1px solid ${style.border}`,
+                    border: `1px solid color-mix(in srgb, ${style.color} 22%, transparent)`,
                   }}
                 >
                   {style.dot} {style.label}
@@ -210,9 +234,15 @@ export default function CompareView({
                     overflow: "hidden",
                   }}
                 >
+                  {/* Neutral ink on both labels — green-For/red-Against
+                      visually scored outlets right/wrong on a disputed
+                      claim. Label + position carry the difference, same
+                      rule as LeanGlyph. */}
                   {claim.sources_for && claim.sources_for.length > 0 && (
                     <div className="flex items-start gap-2">
-                      <span className="font-semibold" style={{ color: "#059669" }}>For:</span>
+                      <span className="font-semibold text-(--text-primary)">
+                        {COPY.compare.for}
+                      </span>
                       <span className="text-(--text-secondary)">
                         {claim.sources_for.join(", ")}
                       </span>
@@ -220,7 +250,9 @@ export default function CompareView({
                   )}
                   {claim.sources_against && claim.sources_against.length > 0 && (
                     <div className="flex items-start gap-2">
-                      <span className="font-semibold" style={{ color: "#dc2626" }}>Against:</span>
+                      <span className="font-semibold text-(--text-primary)">
+                        {COPY.compare.against}
+                      </span>
                       <span className="text-(--text-secondary)">
                         {claim.sources_against.join(", ")}
                       </span>

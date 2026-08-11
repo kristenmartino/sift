@@ -116,12 +116,46 @@ export const COPY = {
     entry: "Compare",
     loading: "Comparing coverage across sources\u2026",
     slow: "Searching multiple outlets \u2014 this takes 10\u201320 seconds",
-    emptyTitle: "Multi-Source Comparison",
-    emptyBody: "Enter a topic above to compare how different outlets cover it",
+    // Stage lines mirror the real pipeline (search each outlet \u2192 extract
+    // claims \u2192 write the summary) on typical timings. Honesty rule: they say
+    // what the pipeline is doing, never which outlet has finished \u2014 the
+    // client can't see that until the streaming path lands.
+    stageSearch: (n: number) => `Searching ${n} outlet${n !== 1 ? "s" : ""}\u2026`,
+    stageClaims: "Lining up the claims\u2026",
+    stageSummary: "Writing the summary\u2026",
+    // Results-header badge. Was reusing emptyTitle ("Multi-Source
+    // Comparison"), which read like a menu item on the payoff screen.
+    badge: "Multi-source compare",
+    emptyTitle: "Compare the coverage",
+    emptyBody:
+      "Pick a topic and up to five outlets \u2014 Sift lines up where they agree, where they split, and what only one of them reports.",
     placeholder: "Compare coverage across sources\u2026 e.g. \u201cFederal Reserve rate decision\u201d",
     another: "Compare Another Topic",
     anotherPlaceholder: "Enter a topic to compare across sources\u2026",
     button: "Compare coverage",
+    comparing: (labels: string) => `Comparing: ${labels}`,
+    summary: "Summary",
+    keyClaims: "Key Claims",
+    // Agreement labels for claim chips. Rendered with status tokens
+    // (success/info/warning + neutral) \u2014 claim agreement is a different axis
+    // from political lean, but For/Against below stays neutral ink because
+    // coloring outlets green/red visually scores them right/wrong.
+    agreement: {
+      unanimous: "All agree",
+      majority: "Mostly agree",
+      disputed: "Disputed",
+      unique: "Unique angle",
+    },
+    for: "For:",
+    against: "Against:",
+    metaSources: (n: number) => `${n} source${n !== 1 ? "s" : ""} checked`,
+    metaClaims: (n: number) => `${n} claim${n !== 1 ? "s" : ""} analyzed`,
+    // Honesty caption for shared links \u2014 a ?compare= URL reruns the
+    // comparison live rather than replaying a stored result.
+    liveNote: "Generated live \u2014 opening a shared link runs the comparison fresh, so results can differ slightly.",
+    signInTitle: "Sign in to compare",
+    signInBody:
+      "Source comparison uses AI to cross-reference multiple outlets. Sign in to run your own.",
   },
   search: {
     // Visible label on the /news header pill, matching compare.entry.
