@@ -22,6 +22,8 @@
  * when prod is mid-migration.
  */
 import pool from "./db";
+import { isMissingSchemaObject } from "./dbErrors";
+import { reportError } from "./observability";
 import { asTopIndustries } from "./politician";
 import type { EntityLink, IndustryDonation } from "./types";
 
@@ -60,9 +62,13 @@ export async function enrichLinksWithContext(
     );
     rows = result.rows;
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return; // pre-Phase-3.A prod
-    throw err;
+    // pre-Phase-3.A prod: the table isn't there yet. Any other failure is the
+    // caller's to handle (they log and render chips without tooltips).
+    if (!isMissingSchemaObject(err, "politician_profiles")) throw err;
+    reportError("civicContext.enrichLinksWithContext", err, {
+      level: "warning",
+    });
+    return;
   }
 
   const byBioguide = new Map<string, IndustryDonation[]>();

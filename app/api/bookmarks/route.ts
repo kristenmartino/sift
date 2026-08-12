@@ -14,6 +14,7 @@ import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
 import { enrichLinksWithContext } from "@/lib/civicContext";
 import type { Article, CategoryId } from "@/lib/types";
+import { reportError } from "@/lib/observability";
 import { checkCsrf } from "@/lib/security";
 
 const bookmarkSchema = z.object({
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
         try {
           await enrichLinksWithContext(allLinks);
         } catch (err) {
-          console.warn("civicContext enrichment failed:", err);
+          reportError("api.bookmarks.civicContext", err, { level: "warning" });
         }
       }
       return NextResponse.json({ articles });
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
     const ids = await getBookmarks(userId);
     return NextResponse.json({ ids });
   } catch (err) {
-    console.error("Bookmarks GET error:", err);
+    reportError("api.bookmarks.GET", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     await addBookmark(userId, body.articleId);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("Bookmarks POST error:", err);
+    reportError("api.bookmarks.POST", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -124,7 +125,7 @@ export async function DELETE(request: NextRequest) {
     await removeBookmark(userId, body.articleId);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("Bookmarks DELETE error:", err);
+    reportError("api.bookmarks.DELETE", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

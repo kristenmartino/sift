@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import OrgDossier from "@/components/org/OrgDossier";
 import { getFundingEdgesForOrg, getOrgBySlug } from "@/lib/db";
+import { reportError } from "@/lib/observability";
 import { einFromOrgLinks } from "@/lib/org";
 import { dossierRobotsMeta, isPublishableOrg } from "@/lib/publishFloor";
 import { jsonLdString, orgJsonLd } from "@/lib/structuredData";
@@ -60,7 +61,10 @@ export default async function OrgDossierPage({ params }: OrgRouteProps) {
   // sections rather than a broken page — same posture as the lead-story
   // and outlet-map fetches on the landing route.
   const funding = await getFundingEdgesForOrg(einFromOrgLinks(org.externalLinks))
-    .catch(() => undefined);
+    .catch((err) => {
+      reportError("page.orgDossier.fundingEdges", err, { extra: { slug } });
+      return undefined;
+    });
   return (
     <>
       <script

@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { TopicGenerateResponse } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkCsrf } from "@/lib/security";
+import { reportError } from "@/lib/observability";
 import { logUsage } from "@/lib/usage-tracker";
 
 const generateSchema = z.object({
@@ -117,7 +118,7 @@ Respond with ONLY valid JSON, no explanation:
 
     return NextResponse.json(parsed);
   } catch (err) {
-    console.error("Topic generation error:", err);
+    reportError("api.topics.generate", err);
     return NextResponse.json(
       { error: "Failed to generate topic" },
       { status: 500 }

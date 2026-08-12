@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
+import { reportError } from "@/lib/observability";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkCsrf } from "@/lib/security";
 
@@ -98,7 +99,13 @@ export async function POST(request: NextRequest) {
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => ({}));
-        console.error("Compare service error:", res.status, errorBody.detail);
+        // The upstream `detail` can embed connection strings, so it stays in
+        // the server log and out of the Sentry event (and the response body —
+        // see __tests__/compare.test.ts).
+        console.error("Compare service detail:", errorBody.detail);
+        reportError("api.compare.upstream", new Error(`compare service ${res.status}`), {
+          extra: { status: res.status },
+        });
         const status = res.status >= 400 && res.status < 500 ? 400 : 502;
         return NextResponse.json(
           { error: "Comparison service unavailable" },
@@ -118,7 +125,7 @@ export async function POST(request: NextRequest) {
         { status: 504 }
       );
     }
-    console.error("Compare proxy error:", err);
+    reportError("api.compare.proxy", err);
     return NextResponse.json(
       { error: "Failed to connect to comparison service" },
       { status: 502 }

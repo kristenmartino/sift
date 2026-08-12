@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 
 import { COPY } from "@/lib/copy";
+import { reportError } from "@/lib/observability";
 
 /**
  * Global error boundary — catches uncaught throws below the root layout.
@@ -14,10 +15,12 @@ import { COPY } from "@/lib/copy";
  * if a downstream component or DB read panics, the user sees this card
  * instead of Next.js's stock dev/prod error UI.
  *
- * Visual register matches `app/not-found.tsx` for consistency. Speed Insights
- * + Vercel Analytics in `layout.tsx` will still log the navigation; no
- * additional client-side event reporting here (Vercel reports unhandled
- * errors automatically in the runtime telemetry).
+ * Visual register matches `app/not-found.tsx` for consistency.
+ *
+ * The error is reported to Sentry from here too. `app/global-error.tsx` only
+ * runs for throws that escape the root layout, so anything this boundary
+ * catches — which is the whole dossier surface — used to reach nothing but the
+ * browser console on the client side.
  */
 export default function GlobalError({
   error,
@@ -27,10 +30,9 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Surface to the browser console for dev visibility. In prod this is a
-    // best-effort log — Vercel's runtime telemetry already captured it
-    // server-side with full stack + digest.
-    console.error("sift error boundary:", error);
+    reportError("errorBoundary.route", error, {
+      extra: { digest: error.digest },
+    });
   }, [error]);
 
   return (

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from "react";
 import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS, MAX_CUSTOM_TOPICS } from "./constants";
 import type { Article, ArticleCache, StoryCache, CategoryId, CustomTopic, NewsApiResponse, CompareResponse, CompareClaim, CompareSourceDone, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
+import { reportError } from "./observability";
 import { readSSE } from "./sse";
 
 // ─── useLocalStorage ────────────────────────────────────
@@ -15,6 +16,28 @@ import { readSSE } from "./sse";
 const lsListeners = new Set<() => void>();
 const lsCache = new Map<string, { raw: string | null; value: unknown }>();
 
+// Storage failures were swallowed entirely. They are not cosmetic: for a
+// signed-out reader, bookmarks and custom topics live only in localStorage, so
+// a rejected write (Safari private mode, quota exhausted) loses data the UI has
+// already told them was saved. Reported once per key + operation, because the
+// failing conditions repeat on every access and a per-keystroke event stream is
+// worse than no signal at all.
+const reportedStorageFailures = new Set<string>();
+
+function reportStorageFailure(
+  operation: "read" | "write" | "parse",
+  key: string,
+  err: unknown,
+): void {
+  const dedupeKey = `${operation}:${key}`;
+  if (reportedStorageFailures.has(dedupeKey)) return;
+  reportedStorageFailures.add(dedupeKey);
+  reportError(`hooks.localStorage.${operation}`, err, {
+    level: "warning",
+    extra: { key },
+  });
+}
+
 function subscribeLocalStorage(cb: () => void) {
   lsListeners.add(cb);
   return () => {
@@ -26,14 +49,20 @@ function readLocalStorage<T>(key: string, initialValue: T): T {
   let raw: string | null = null;
   try {
     raw = localStorage.getItem(key);
-  } catch {}
+  } catch (err) {
+    reportStorageFailure("read", key, err);
+  }
   const cached = lsCache.get(key);
   if (cached && cached.raw === raw) return cached.value as T;
   let value: T = initialValue;
   if (raw !== null) {
     try {
       value = JSON.parse(raw);
-    } catch {}
+    } catch (err) {
+      // Corrupt entry: the caller silently gets the default, which for
+      // bookmarks reads as "all your bookmarks vanished". Worth knowing about.
+      reportStorageFailure("parse", key, err);
+    }
   }
   lsCache.set(key, { raw, value });
   return value;
@@ -58,13 +87,17 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (val: T | ((prev:
       const next = val instanceof Function ? val(prev) : val;
       try {
         localStorage.setItem(key, JSON.stringify(next));
-      } catch {}
+      } catch (err) {
+        reportStorageFailure("write", key, err);
+      }
       // Cache against what storage actually holds, so a failed write still
       // keeps `next` in memory for this session.
       let raw: string | null = null;
       try {
         raw = localStorage.getItem(key);
-      } catch {}
+      } catch (err) {
+        reportStorageFailure("read", key, err);
+      }
       lsCache.set(key, { raw, value: next });
       lsListeners.forEach((l) => l());
     },
@@ -132,7 +165,7 @@ export function useBookmarks(userId?: string | null) {
       .then((data: { ids: string[] }) => {
         if (!cancelled) setServerState({ userId, ids: data.ids });
       })
-      .catch((err) => console.error("Failed to fetch bookmarks:", err));
+      .catch((err) => reportError("hooks.useBookmarks.fetch", err));
     return () => { cancelled = true; };
   }, [userId]);
 
@@ -174,7 +207,7 @@ export function useBookmarks(userId?: string | null) {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
           })
           .catch((err) => {
-            console.error("Bookmark sync error:", err);
+            reportError("hooks.useBookmarks.sync", err);
             // Revert optimistic update
             applyToServer(wasBookmarked);
           })
@@ -228,7 +261,9 @@ export function useTheme() {
     document.documentElement.dataset.theme = next ? "dark" : "light";
     try {
       localStorage.setItem(STORAGE_KEYS.theme, JSON.stringify(next));
-    } catch {}
+    } catch (err) {
+      reportStorageFailure("write", STORAGE_KEYS.theme, err);
+    }
     themeListeners.forEach((l) => l());
   }, []);
 
@@ -513,7 +548,7 @@ export function useCustomTopics(userId?: string | null) {
       .then((data: { topics: CustomTopic[] }) => {
         if (!cancelled) setServerState({ userId, topics: data.topics });
       })
-      .catch((err) => console.error("Failed to fetch custom topics:", err));
+      .catch((err) => reportError("hooks.useCustomTopics.fetch", err));
     return () => { cancelled = true; };
   }, [userId]);
 
@@ -526,11 +561,25 @@ export function useCustomTopics(userId?: string | null) {
 
       if (isSignedIn) {
         setServerState((prev) => (prev ? { ...prev, topics: [...prev.topics, topic] } : prev));
+        // A non-2xx response resolves the promise, so `.catch` alone let every
+        // rejected save (over-limit, invalid, 500) look like a success until the
+        // next page load dropped the topic. Check the status and roll back.
         fetch("/api/topics", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ topic }),
-        }).catch((err) => console.error("Topic save error:", err));
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          })
+          .catch((err) => {
+            reportError("hooks.useCustomTopics.add", err);
+            setServerState((prev) =>
+              prev
+                ? { ...prev, topics: prev.topics.filter((t) => t.id !== topic.id) }
+                : prev
+            );
+          });
       } else {
         setLocalTopics((prev) => [...prev, topic]);
       }
@@ -541,17 +590,33 @@ export function useCustomTopics(userId?: string | null) {
   const remove = useCallback(
     (id: string) => {
       if (isSignedIn) {
+        const removed = topics.find((t) => t.id === id);
         setServerState((prev) => (prev ? { ...prev, topics: prev.topics.filter((t) => t.id !== id) } : prev));
         fetch("/api/topics", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id }),
-        }).catch((err) => console.error("Topic delete error:", err));
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          })
+          .catch((err) => {
+            reportError("hooks.useCustomTopics.remove", err);
+            // Put it back: the row still exists server-side, and hiding it
+            // means the topic reappears unexplained on the next load.
+            if (removed) {
+              setServerState((prev) =>
+                prev && !prev.topics.some((t) => t.id === id)
+                  ? { ...prev, topics: [...prev.topics, removed] }
+                  : prev
+              );
+            }
+          });
       } else {
         setLocalTopics((prev) => prev.filter((t) => t.id !== id));
       }
     },
-    [isSignedIn, setLocalTopics]
+    [isSignedIn, setLocalTopics, topics]
   );
 
   return {

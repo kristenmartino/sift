@@ -10,6 +10,7 @@ import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
 import { enrichLinksWithContext } from "@/lib/civicContext";
 import { countOccupiedBuckets } from "@/lib/crossSpectrum";
+import { reportError } from "@/lib/observability";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { CategoryId, Article, ArticleTone, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
@@ -221,7 +222,7 @@ export async function GET(request: NextRequest) {
       } catch (err) {
         // Don't break the feed if enrichment fails — chips just render
         // without tooltips.
-        console.warn("civicContext enrichment failed:", err);
+        reportError("api.news.civicContext", err, { level: "warning" });
       }
     }
 
@@ -232,7 +233,7 @@ export async function GET(request: NextRequest) {
       fetchedAt: lastRefreshed ? lastRefreshed.toISOString() : new Date().toISOString(),
     });
   } catch (err) {
-    console.error("Database query error:", err);
+    reportError("api.news", err, { extra: { category } });
     return NextResponse.json<NewsApiError>(
       { error: "Internal server error" },
       { status: 500 }

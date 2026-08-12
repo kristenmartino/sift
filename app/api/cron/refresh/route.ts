@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 
+import { reportError } from "@/lib/observability";
+
 const SIFT_API_URL = process.env.SIFT_API_URL || "http://localhost:8000";
 try {
   const u = new URL(SIFT_API_URL);
@@ -61,7 +63,7 @@ export async function GET(request: NextRequest) {
       duration_ms: data.duration_ms,
     });
   } catch (err) {
-    console.error("Pipeline trigger failed:", err);
+    reportError("api.cron.refresh", err);
     return NextResponse.json(
       { triggered: false, error: "Pipeline trigger failed" },
       { status: 502 }

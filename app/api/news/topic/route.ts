@@ -20,6 +20,7 @@ import {
   normalizeQuery as normalizeQueryForLog,
 } from "@/lib/searchAnalytics";
 import { logSearchQuery } from "@/lib/searchAnalyticsLog";
+import { reportError } from "@/lib/observability";
 import { stableHash, estimateReadTime } from "@/lib/utils";
 import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
@@ -274,7 +275,9 @@ export async function GET(request: NextRequest) {
           try {
             await enrichLinksWithContext(allLinks);
           } catch (err) {
-            console.warn("civicContext enrichment failed:", err);
+            reportError("api.news.topic.civicContext", err, {
+              level: "warning",
+            });
           }
         }
 
@@ -320,7 +323,9 @@ export async function GET(request: NextRequest) {
               totalArticles += newArticles.length;
             }
           } catch (err) {
-            console.error("Web search fallback error:", err);
+            reportError("api.news.topic.webSearchFallback", err, {
+              extra: { query },
+            });
           } finally {
             latencyMsFallback = Date.now() - fallbackStartedAt;
           }
@@ -335,7 +340,7 @@ export async function GET(request: NextRequest) {
           sseEvent("done", { matchQuality, fallbackUsed, query })
         );
       } catch (err) {
-        console.error("Topic search error:", err);
+        reportError("api.news.topic", err, { extra: { query } });
         controller.enqueue(
           sseEvent("error", { message: "Topic search failed" })
         );
@@ -431,10 +436,9 @@ async function isUnderDailyAiBudget(): Promise<boolean> {
     }
     return true;
   } catch (err) {
-    console.error(
-      "AI budget unreadable; skipping paid fallback (fail-closed):",
-      err
-    );
+    reportError("api.news.topic.aiBudget", err, {
+      extra: { note: "budget unreadable; paid fallback skipped (fail-closed)" },
+    });
     return false;
   }
 }
@@ -485,7 +489,9 @@ If you truly cannot find any articles, respond with an empty array: []`,
       model: "claude-haiku-4-5",
       operation: "news.topic.webSearchFallback",
       costUsd: usage.cost_usd,
-    }).catch((err) => console.warn("recordAiUsage failed:", err));
+    }).catch((err) =>
+      reportError("api.news.topic.recordAiUsage", err, { level: "warning" })
+    );
   }
 
   // Extract JSON from response — Claude may return multiple text blocks
@@ -532,8 +538,18 @@ If you truly cannot find any articles, respond with an empty array: []`,
 
   if (!parsed) {
     if (sawEmptyArray) return [];
-    console.error("Failed to parse Claude web search response. Text blocks:", JSON.stringify(textBlocks.map(t => t.substring(0, 500))));
-    console.error("All content block types:", response.content.map(b => b.type));
+    reportError(
+      "api.news.topic.parseWebSearchResponse",
+      new Error("Failed to parse Claude web search response"),
+      {
+        extra: {
+          // Enough shape to tell "Claude returned prose" from "Claude returned
+          // nothing", without shipping whole web-search payloads to Sentry.
+          blockTypes: response.content.map((b) => b.type),
+          firstBlockPreview: textBlocks[0]?.slice(0, 200) ?? null,
+        },
+      }
+    );
     return [];
   }
 
@@ -560,7 +576,7 @@ If you truly cannot find any articles, respond with an empty array: []`,
       );
     }
   } catch (err) {
-    console.error("Failed to embed fallback articles:", err);
+    reportError("api.news.topic.embedFallback", err, { level: "warning" });
   }
 
   // Classify articles into proper categories using embeddings
@@ -569,7 +585,9 @@ If you truly cannot find any articles, respond with an empty array: []`,
     try {
       catData = await getCategoryEmbeddings();
     } catch (err) {
-      console.error("Failed to load category embeddings:", err);
+      reportError("api.news.topic.categoryEmbeddings", err, {
+        level: "warning",
+      });
     }
   }
 
@@ -617,7 +635,9 @@ If you truly cannot find any articles, respond with an empty array: []`,
         published_date: new Date(),
         read_time: estimateReadTime(safeSummary),
       }).catch((err) =>
-        console.error("Failed to store fallback article:", err)
+        reportError("api.news.topic.storeFallbackArticle", err, {
+          level: "warning",
+        })
       );
     }
   }

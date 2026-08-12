@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getCustomTopics, saveCustomTopic, deleteCustomTopic } from "@/lib/db";
 import type { CustomTopic } from "@/lib/types";
 import { MAX_CUSTOM_TOPICS } from "@/lib/constants";
+import { reportError } from "@/lib/observability";
 import { checkCsrf } from "@/lib/security";
 
 const topicSchema = z.object({
@@ -52,7 +53,7 @@ export async function GET() {
     });
     return NextResponse.json({ topics });
   } catch (err) {
-    console.error("Topics GET error:", err);
+    reportError("api.topics.GET", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     await saveCustomTopic(topic.id, userId, topic.shortLabel, JSON.stringify(topic));
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("Topics POST error:", err);
+    reportError("api.topics.POST", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -110,7 +111,7 @@ export async function DELETE(request: NextRequest) {
     await deleteCustomTopic(id, userId);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("Topics DELETE error:", err);
+    reportError("api.topics.DELETE", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
