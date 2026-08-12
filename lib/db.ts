@@ -1481,10 +1481,11 @@ export async function getFundingEdgesForOrg(
       form: string;
       filing_url: string;
       ein_name_agrees: string;
+      review_decision: string | null;
     }>(
       `SELECT target_ein, target_name_as_filed, target_name_irs, edge_kind,
               amount_usd, purpose, exempt_code, fiscal_period, form,
-              filing_url, ein_name_agrees
+              filing_url, ein_name_agrees, review_decision
        FROM funding_edges
        WHERE source_ein = $1
        ORDER BY amount_usd DESC NULLS LAST, target_name_as_filed ASC`,
@@ -1505,17 +1506,29 @@ export async function getFundingEdgesForOrg(
       filingUrl: r.filing_url,
     });
 
-    const publishable = result.rows.filter((r) => r.ein_name_agrees === "agrees");
+    // Publishable = the machine passed it, OR a person confirmed it — minus
+    // anything a person explicitly rejected. The two layers stay separate in
+    // the data (sift-api migration 028) so "the check fired and a human
+    // overruled it" remains visible; only this predicate merges them.
+    const publishable = result.rows.filter(
+      (r) =>
+        r.review_decision !== "rejected" &&
+        (r.ein_name_agrees === "agrees" || r.review_decision === "confirmed"),
+    );
+    const undecided = result.rows.filter(
+      (r) => r.ein_name_agrees !== "agrees" && r.review_decision === null,
+    );
     return {
       grants: publishable.filter((r) => r.edge_kind === "grant").map(toEdge),
       related: publishable
         .filter((r) => r.edge_kind === "related_org")
         .map(toEdge),
-      heldForReview: result.rows.filter((r) => r.ein_name_agrees === "review")
+      // Only *undecided* edges are reported as withheld. An edge a person
+      // has already ruled on is settled, and counting it again would tell a
+      // reader work is outstanding when it isn't.
+      heldForReview: undecided.filter((r) => r.ein_name_agrees === "review").length,
+      heldEinAbsent: undecided.filter((r) => r.ein_name_agrees === "ein_absent")
         .length,
-      heldEinAbsent: result.rows.filter(
-        (r) => r.ein_name_agrees === "ein_absent",
-      ).length,
       fiscalPeriods: [
         ...new Set(publishable.map((r) => r.fiscal_period)),
       ].sort((a, b) => b.localeCompare(a)),
