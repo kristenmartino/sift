@@ -15,6 +15,7 @@ import { parseEntityLinks } from "@/lib/entityLinks";
 import { enrichLinksWithContext } from "@/lib/civicContext";
 import type { Article, CategoryId } from "@/lib/types";
 import { checkCsrf } from "@/lib/security";
+import { sanitizeLinkUrl } from "@/lib/sanitize";
 
 const bookmarkSchema = z.object({
   articleId: z.string().min(1).max(200),
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
           id: row.id,
           title: row.title,
           summary: row.summary || "",
-          sourceUrl: row.source_url,
+          sourceUrl: sanitizeLinkUrl(row.source_url),
           sourceName: row.source_name,
           publishedDate: row.published_date ? row.published_date.toISOString() : null,
           imageUrl: row.image_url,

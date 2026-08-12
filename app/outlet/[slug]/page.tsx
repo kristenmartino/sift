@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import OutletDossier from "@/components/outlet/OutletDossier";
 import { getOutletBySlug, getRecentArticlesByOutletSlug } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
+import { sanitizeLinkUrl } from "@/lib/sanitize";
 import { dossierRobotsMeta, isPublishableOutlet } from "@/lib/publishFloor";
 import { jsonLdString, outletJsonLd } from "@/lib/structuredData";
 import type { Article, CategoryId } from "@/lib/types";
@@ -68,7 +69,7 @@ export default async function OutletDossierPage({ params }: DossierRouteProps) {
       id: row.id,
       title: row.title,
       summary: row.summary || "",
-      sourceUrl: row.source_url,
+      sourceUrl: sanitizeLinkUrl(row.source_url),
       sourceName: row.source_name,
       publishedDate: row.published_date ? row.published_date.toISOString() : null,
       imageUrl: row.image_url,

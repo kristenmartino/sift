@@ -21,7 +21,7 @@ import {
 } from "@/lib/searchAnalytics";
 import { logSearchQuery } from "@/lib/searchAnalyticsLog";
 import { stableHash, estimateReadTime } from "@/lib/utils";
-import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
+import { stripHtml, sanitizeUrl, sanitizeLinkUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import { logUsage } from "@/lib/usage-tracker";
@@ -250,7 +250,7 @@ export async function GET(request: NextRequest) {
             id: row.id,
             title: row.title,
             summary: cleanSummary(row.summary),
-            sourceUrl: row.source_url,
+            sourceUrl: sanitizeLinkUrl(row.source_url),
             sourceName: row.source_name,
             publishedDate: row.published_date
               ? row.published_date.toISOString()

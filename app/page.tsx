@@ -8,6 +8,7 @@ import {
   resolveOutletForSourceName,
 } from "@/lib/db";
 import { parseContextPrimer } from "@/lib/primer";
+import { sanitizeLinkUrl } from "@/lib/sanitize";
 import type { Article, CategoryId, OutletProfile } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -59,7 +60,7 @@ export default async function Home() {
         id: lead.id,
         title: lead.title,
         summary: lead.summary || "",
-        sourceUrl: lead.source_url,
+        sourceUrl: sanitizeLinkUrl(lead.source_url),
         sourceName: lead.source_name,
         publishedDate: lead.published_date?.toISOString() ?? null,
         imageUrl: lead.image_url,

@@ -10,7 +10,7 @@ import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
 import { parseEntityLinks } from "@/lib/entityLinks";
 import { enrichLinksWithContext } from "@/lib/civicContext";
 import { countOccupiedBuckets } from "@/lib/crossSpectrum";
-import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
+import { stripHtml, sanitizeUrl, sanitizeLinkUrl } from "@/lib/sanitize";
 import type { CategoryId, Article, ArticleTone, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
 function isArticleTone(v: unknown): v is ArticleTone {
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         id: row.id,
         title: row.title,
         summary: cleanSummary(row.summary),
-        sourceUrl: row.source_url,
+        sourceUrl: sanitizeLinkUrl(row.source_url),
         sourceName: row.source_name,
         publishedDate: row.published_date ? row.published_date.toISOString() : null,
         imageUrl: cleanImageUrl(row.image_url),
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
           id: row.id,
           title: row.title,
           summary: cleanSummary(row.summary),
-          sourceUrl: row.source_url,
+          sourceUrl: sanitizeLinkUrl(row.source_url),
           sourceName: row.source_name,
           publishedDate: row.published_date ? row.published_date.toISOString() : null,
           imageUrl: cleanImageUrl(row.image_url),

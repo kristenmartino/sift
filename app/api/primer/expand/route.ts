@@ -28,10 +28,14 @@ import {
 } from "@/lib/searchAnalytics";
 import { logPrimerExpand } from "@/lib/primerAnalyticsLog";
 import { rateLimit } from "@/lib/rate-limit";
+import { checkCsrf } from "@/lib/security";
 
 const VALID_SURFACES = new Set(["feed", "bookmarks"]);
 
 export async function POST(request: NextRequest) {
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
+
   // Kill switch: if analytics are disabled (env var), 204 silently.
   // Don't tell the client; the UI doesn't care either way.
   if (!isLoggingEnabled()) {
