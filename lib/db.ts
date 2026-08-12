@@ -168,6 +168,29 @@ const NON_NEWS_SQL = `CASE WHEN genre IN ('feature', 'soft') THEN ${NON_NEWS_DAM
 const STORY_BASE = 1;
 const STORY_BOOST = 2.0;
 
+// Ranking v2 stage 7: corroboration is a MULTIPLIER ON SIGNIFICANCE, not a
+// substitute for it. Until this landed, a story's score ignored importance
+// entirely — every story ranked on outlet count alone — so wire pickup of a
+// local tragedy was indistinguishable from a major event. Measured
+// 2026-08-11 at the (1, 2.0) constants: a New York Harbor drowning with 18
+// outlets and mean member importance 1.9 scored 6.78 against a 169-death
+// Colombian earthquake's 7.09. A 1.05x ratio. System-wide, 302 of 475
+// stories had max member importance <= 2.
+//
+// The story's base significance is the MEAN importance of its member
+// articles — what the outlets that covered it judged it to be, which is
+// exactly the wire-pickup counter: 18 outlets each scoring it a 2 is 18
+// votes for "minor", not one vote for "major".
+//
+// Centered on the observed mean (2.50 across six category pools, n=116) so
+// the transform is share-NEUTRAL: dividing every story by a constant cannot
+// reorder stories among themselves, it only shifts them against articles.
+// Swept 2.0/2.2/2.4/2.6/3.0 — reordering is 89 at every center, story share
+// runs 7.5/6.8/6.0/5.5/4.3 against a 5.7 baseline. 2.5 holds the mix that
+// #231 tuned while adding 89 units of story-vs-story reordering.
+const STORY_IMPORTANCE_CENTER = 2.5;
+const STORY_IMPORTANCE_SQL = `(COALESCE(AVG(a.importance_score), 3) / ${STORY_IMPORTANCE_CENTER})`;
+
 // "sources" in that curve means DISTINCT OUTLETS, not article rows. It counted
 // COUNT(a.id) until 2026-08-11, which is a different thing: measured over 7
 // days of complete stories, 29% had more articles than outlets and 18% were at
@@ -277,6 +300,9 @@ export interface DbStory {
   // Fraction of live member articles tagged tone='grim' (0..1); the API
   // boundary derives Story.tone = 'grim' when >= 0.5. NULL tones count as 0.
   grim_share: string | number | null;
+  // Mean importance of the live member articles (stage 7): the story's
+  // base significance, which corroboration multiplies rather than replaces.
+  avg_importance: string | number | null;
   // Fraction of live member articles flagged is_opinion (0..1); the API
   // boundary derives Story.isOpinion when >= 0.5.
   opinion_share: string | number | null;
@@ -304,6 +330,7 @@ export async function getStoriesWithArticles(
               COUNT(a.id)::int AS article_count,
               COUNT(DISTINCT a.source_name)::int AS outlet_count,
               AVG(CASE WHEN a.tone = 'grim' THEN 1.0 ELSE 0 END) AS grim_share,
+              COALESCE(AVG(a.importance_score), 3) AS avg_importance,
               AVG(CASE WHEN a.is_opinion THEN 1.0 ELSE 0 END) AS opinion_share,
               s.representative_image_url, s.published_date, s.synthesis_status
        FROM stories s
@@ -317,7 +344,8 @@ export async function getStoriesWithArticles(
        HAVING COUNT(a.id) >= 2
        ORDER BY
          (${STORY_BASE} + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float *
-         EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))), 0) / 86400.0, 700))
+         EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))), 0) / 86400.0, 700)) *
+         ${STORY_IMPORTANCE_SQL}
        DESC NULLS LAST
        LIMIT 20`,
       [category]

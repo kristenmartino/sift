@@ -256,6 +256,7 @@ describe("GET /api/news", () => {
           outlet_count: 2,
           grim_share: null,
           opinion_share: null,
+          avg_importance: 3,
           representative_image_url: null,
           published_date: new Date("2026-03-28T10:00:00Z"),
           synthesis_status: "complete",
@@ -298,6 +299,7 @@ describe("GET /api/news", () => {
           outlet_count: 2,
           grim_share: null,
           opinion_share: null,
+          avg_importance: 3,
           representative_image_url: null,
           published_date: new Date("2026-03-28T10:00:00Z"),
           synthesis_status: "complete",
@@ -327,6 +329,7 @@ describe("GET /api/news", () => {
           // pg returns AVG() as a numeric string.
           grim_share: "0.5",
           opinion_share: "0.5",
+          avg_importance: "1.9",
           representative_image_url: null,
           published_date: new Date("2026-03-28T10:00:00Z"),
           synthesis_status: "complete",
@@ -348,6 +351,9 @@ describe("GET /api/news", () => {
       expect(body.stories[0].tone).toBe("grim");
       // opinion_share >= 0.5 → the story is opinion (stage 4).
       expect(body.stories[0].isOpinion).toBe(true);
+      // Stage 7: mean member importance reaches the client as a number, so
+      // corroboration multiplies significance instead of replacing it.
+      expect(body.stories[0].avgImportance).toBeCloseTo(1.9);
       // reported articles carry no isOpinion key at all.
       expect(body.articles[0].isOpinion).toBeUndefined();
       expect(body.articles[1].isOpinion).toBe(true);

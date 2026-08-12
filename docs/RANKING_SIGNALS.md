@@ -57,6 +57,44 @@ Murder | Case by Case", was the same defect wearing a crime headline.
 - Not applied to stories: clustering works on articles, and a container
   rarely clusters. Revisit if one ever leads a story.
 
+## Stage 7 — corroboration multiplies significance, it does not replace it
+
+*"Still too many local news stories about deaths/tragedies."* Stories ranked
+on outlet count alone; **importance never entered the story formula at all**.
+Measured 2026-08-11 at the (1, 2.0) constants #231 tuned: a New York Harbor
+drowning with **18 outlets and mean member importance 1.9** scored 6.78
+against a 169-death Colombian earthquake's 7.09 — a **1.05× ratio**.
+System-wide, **302 of 475 stories had max member importance ≤ 2**. Wire
+pickup of a local tragedy was indistinguishable from a major event.
+
+The fix is one multiplier: a story's base significance is the **mean
+importance of its member articles** — 18 outlets each scoring a drowning a 2
+is 18 votes for "minor", not one vote for "major" — divided by
+`STORY_IMPORTANCE_CENTER`.
+
+**Centering is what keeps it honest.** Dividing every story by a constant
+cannot reorder stories among themselves; it only shifts stories against
+articles. Swept against six category pools, replaying the real query shapes:
+
+| center | avg stories in top 20 | story-vs-story reordering |
+|---:|---:|---:|
+| 2.0 | 7.5 ⚠️ floods | 89 |
+| 2.4 | 6.0 | 89 |
+| **2.5** (observed mean) | **~5.7** ✓ unchanged | **89** |
+| 2.6 | 5.5 | 89 |
+| 3.0 | 4.3 ⚠️ starves | 89 |
+
+Baseline share is 5.7. Reordering is 89 at *every* center — so the center is
+purely the mix knob, and 2.50 (the observed mean across 116 pooled stories)
+holds the mix #231 tuned while adding 89 units of reordering, against the 53
+that PR bought. The earthquake gains ×1.68, the drowning ×0.76: a 1.05 ratio
+becomes 2.3.
+
+Deliberately *not* a cliff at importance ≤2 (the article rule's shape). A
+continuous factor fixes the mid-range too — a 7-outlet wildfire evacuation at
+mean 3.7 now separates from a 6-outlet trial at mean 2.3, which a cliff
+leaves tied.
+
 ## Stage 6 — the front page is for news (added from product direction)
 
 *"Sift should be showing important news, not so much entertainment."*

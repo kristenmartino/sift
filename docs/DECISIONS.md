@@ -57,6 +57,7 @@
 | D49 | Opinion is not news ranking | Outlet-declared opinion (URL/title markers, deterministic) ranks ×0.6 at any importance, never takes the hero, and doesn't count toward the cross-spectrum bonus. Evidence: first labeled ranking eval (sift-api#200) — half the overrules rejected op-eds ranked as news | $0 (no LLM) | SETTLED (Aug 2026) |
 | D50 | Roundup containers are not stories | Program episodes and daily briefs (title-pattern detected, deterministic) rank ×0.4 and never take the hero — they inherit importance from events they only mention. Evidence: labeled eval session 2 (sift-api#204) | $0 (no LLM) | SETTLED (Aug 2026) |
 | D51 | The front page is for news | 'top' holds a higher bar than topical tabs: importance ≤2 ranks ×0.35 there (0 = hard floor), and non-news genres (feature/soft, LLM-tagged on the existing call) rank ×0.5 as standalone articles. Story ranking untouched — corroborated coverage keeps tabloid members visible under "how this was covered" | ~$0 (fourth key on an existing call) | SETTLED (Aug 2026) |
+| D52 | Corroboration multiplies significance | A story's base is the mean importance of its members ÷ 2.5 (the observed mean), not a constant — outlet count scales significance instead of standing in for it. Evidence: an 18-outlet local drowning scored 1.05× a 169-death earthquake. Centered to hold the story/article mix #231 tuned: +89 reordering units, share unchanged | $0 (existing data) | SETTLED (Aug 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
