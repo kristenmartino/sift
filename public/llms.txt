@@ -1,0 +1,57 @@
+# Sift
+
+> The news, with footnotes. Sift curates outlets across the political spectrum
+> and adds the civic context reporting assumes you already have — background,
+> the people and organizations involved, and how to read each source. Every
+> link goes to the original.
+
+Sift is a news reader with a civic-literacy layer. Alongside each story it
+surfaces structured dossiers on the politicians, organizations, bills and
+outlets named in it, each assembled from public records and citing them.
+
+## How to read what you find here
+
+- **Everything cited is filed or published elsewhere.** Sift does not rate
+  organizations, does not assign political lean to anyone, and does not
+  characterize living people. Where a page shows a rating, it names the rater
+  (AllSides, Media Bias/Fact Check), the date it was checked, and links to it.
+- **A self-description is quoted, never endorsed.** Organization dossiers
+  quote how an organization describes itself, sourced to its own site.
+- **Absence is deliberate.** Fields render only with a citation. A missing
+  budget, funder or primer means the sourced value was not available, not that
+  the value is zero.
+- **Money edges are self-reported.** Grants shown on an organization's dossier
+  come from that organization's own IRS Form 990 Schedule I. They show money
+  paid out. A public charity's donors are redacted from the public copy of its
+  return, so who funds an organization cannot be read from its own filing.
+- **Some rows are withheld on purpose.** Each filed edge is checked against the
+  IRS record for the EIN it was filed under; ones that disagree are held for
+  human review and the page says how many.
+
+## Surfaces
+
+- [Feed](https://siftnews.io/news): today's stories by category, with
+  cross-spectrum framing rows sorted left → center → right.
+- [Civic dossiers](https://siftnews.io/civic): index of politician,
+  organization and bill dossiers.
+- [Agencies](https://siftnews.io/agencies) and
+  [think tanks](https://siftnews.io/think-tanks): curated subsets with
+  governance and funding sourced to statute or filings.
+- [Methodology](https://siftnews.io/methodology): how stories are selected,
+  summarized and threaded; what the ratings mean and where they come from.
+- [Colophon](https://siftnews.io/colophon): the outlet list and how it was
+  chosen.
+
+## Machine access
+
+- [Sitemap](https://siftnews.io/sitemap.xml)
+- **MCP server** — `sift-mcp` exposes read-only tools over the same corpus
+  (search_articles, get_article, get_dossier, search_dossiers,
+  compare_outlets) for AI clients. Source:
+  https://github.com/kristenmartino/sift-mcp
+
+## Corrections
+
+Dossier pages carry a correction path. Sourcing errors are treated as defects:
+the project's history is largely a record of removing claims that could not be
+cited.
