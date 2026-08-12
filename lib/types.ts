@@ -683,6 +683,13 @@ export interface Story {
   /** Derived at the API boundary: >= half the members are opinion pieces. */
   isOpinion?: boolean;
   /**
+   * Mean importance of the live member articles (1-5) — the story's base
+   * significance since stage 7. Corroboration multiplies this rather than
+   * standing in for it, so wire pickup of a local tragedy no longer reads
+   * as a major event.
+   */
+  avgImportance?: number;
+  /**
    * Distinct L/C/R AllSides buckets occupied by this story's framings (1-3;
    * absent when none are bucketable). Derived at the API boundary via
    * countOccupiedBuckets. Ranking v2 stage 1: the client re-rank applies a
