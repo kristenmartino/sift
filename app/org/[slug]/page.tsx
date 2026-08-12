@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import OrgDossier from "@/components/org/OrgDossier";
-import { getOrgBySlug } from "@/lib/db";
+import { getFundingEdgesForOrg, getOrgBySlug } from "@/lib/db";
+import { einFromOrgLinks } from "@/lib/org";
 import { dossierRobotsMeta, isPublishableOrg } from "@/lib/publishFloor";
 import { jsonLdString, orgJsonLd } from "@/lib/structuredData";
 
@@ -54,13 +55,19 @@ export default async function OrgDossierPage({ params }: OrgRouteProps) {
   const { slug } = await params;
   const org = await getOrgBySlug(slug);
   if (!org) notFound();
+  // Filed 990 edges, matched by the EIN inside the org's ProPublica link.
+  // Guarded so a funding-table miss degrades to a dossier without the
+  // sections rather than a broken page — same posture as the lead-story
+  // and outlet-map fetches on the landing route.
+  const funding = await getFundingEdgesForOrg(einFromOrgLinks(org.externalLinks))
+    .catch(() => undefined);
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdString(orgJsonLd(org)) }}
       />
-      <OrgDossier org={org} />
+      <OrgDossier org={org} funding={funding} />
     </>
   );
 }

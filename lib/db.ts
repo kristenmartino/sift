@@ -21,6 +21,8 @@ import type {
   BillProfile,
   CompareResponse,
   DailyCompareExample,
+  FundingEdge,
+  OrgFundingEdges,
   OrgListItem,
   OrgProfile,
   OutletProfile,
@@ -1434,6 +1436,88 @@ export async function getDailyCompareExample(): Promise<DailyCompareExample | nu
   } catch (err) {
     const msg = String(err);
     if (msg.includes("does not exist")) return null;
+    throw err;
+  }
+}
+
+// ─── Funding edges (990 Schedule I / R) ────────────────
+
+/**
+ * Publishable outbound edges for one org, plus how many were withheld.
+ *
+ * Only `ein_name_agrees = 'agrees'` rows render. The counterparty EIN on a
+ * 990 is a join key a human typed at the filing organization, and in the
+ * first pull one was wrong (Brookings filed a grant to "Urban League of
+ * Louisiana" under The Urban Institute's EIN). sift-api's ingest stores that
+ * verdict per row; this query is the read side of the same rule that
+ * `publishFloor` applies to dossiers — a large catalog, a smaller advertised
+ * set. The withheld count comes back so the page can say so out loud.
+ *
+ * Returns empty when the table doesn't exist (local dev DBs predate
+ * migration 027) — same graceful-degrade posture as the profile getters.
+ */
+export async function getFundingEdgesForOrg(
+  ein: string | null,
+): Promise<OrgFundingEdges> {
+  const empty: OrgFundingEdges = {
+    grants: [],
+    related: [],
+    heldForReview: 0,
+    fiscalPeriods: [],
+  };
+  if (!ein || !/^\d{9}$/.test(ein)) return empty;
+
+  try {
+    const result = await pool.query<{
+      target_ein: string | null;
+      target_name_as_filed: string | null;
+      target_name_irs: string | null;
+      edge_kind: string;
+      amount_usd: string | number | null;
+      purpose: string | null;
+      exempt_code: string | null;
+      fiscal_period: string;
+      form: string;
+      filing_url: string;
+      ein_name_agrees: string;
+    }>(
+      `SELECT target_ein, target_name_as_filed, target_name_irs, edge_kind,
+              amount_usd, purpose, exempt_code, fiscal_period, form,
+              filing_url, ein_name_agrees
+       FROM funding_edges
+       WHERE source_ein = $1
+       ORDER BY amount_usd DESC NULLS LAST, target_name_as_filed ASC`,
+      [ein],
+    );
+
+    const toEdge = (r: (typeof result.rows)[number]): FundingEdge => ({
+      targetEin: r.target_ein,
+      targetNameAsFiled: r.target_name_as_filed,
+      targetNameIrs: r.target_name_irs,
+      // pg returns BIGINT as a string to avoid precision loss; grant amounts
+      // are far inside Number range, so coerce for display.
+      amountUsd: r.amount_usd === null ? null : Number(r.amount_usd),
+      purpose: r.purpose,
+      exemptCode: r.exempt_code,
+      fiscalPeriod: r.fiscal_period,
+      form: r.form,
+      filingUrl: r.filing_url,
+    });
+
+    const publishable = result.rows.filter((r) => r.ein_name_agrees === "agrees");
+    return {
+      grants: publishable.filter((r) => r.edge_kind === "grant").map(toEdge),
+      related: publishable
+        .filter((r) => r.edge_kind === "related_org")
+        .map(toEdge),
+      heldForReview: result.rows.length - publishable.length,
+      fiscalPeriods: [
+        ...new Set(publishable.map((r) => r.fiscal_period)),
+      ].sort((a, b) => b.localeCompare(a)),
+    };
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("does not exist")) return empty;
     throw err;
   }
 }

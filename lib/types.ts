@@ -758,6 +758,43 @@ export interface CompareSourceDone {
   found: boolean;
 }
 
+// ─── Funding edges (990 Schedule I / R) ────────────────
+
+/**
+ * One filed relationship between two organizations, from `funding_edges`
+ * (sift-api migration 027). Always self-reported by the payer/declarer —
+ * there are no inferred edges — and always carries the filing it came from.
+ */
+export interface FundingEdge {
+  targetEin: string | null;
+  /** Verbatim as filed. Never replaced with the IRS spelling. */
+  targetNameAsFiled: string | null;
+  /** The IRS's own name for that EIN, when the index knows it. */
+  targetNameIrs: string | null;
+  amountUsd: number | null;
+  purpose: string | null;
+  exemptCode: string | null;
+  /** YYYYMM of the filing's tax period. */
+  fiscalPeriod: string;
+  form: string;
+  filingUrl: string;
+}
+
+/**
+ * An org's outbound edges, already filtered to the publishable set.
+ *
+ * `heldForReview` is deliberately surfaced rather than hidden: the count is
+ * what makes the verdict gate visible to a reader, and a page that silently
+ * dropped rows would be the thing `ein_name_agrees` exists to prevent.
+ */
+export interface OrgFundingEdges {
+  grants: FundingEdge[];
+  related: FundingEdge[];
+  heldForReview: number;
+  /** Distinct fiscal periods represented, newest first. */
+  fiscalPeriods: string[];
+}
+
 // ─── SSE Event Types (topic search streaming) ──────────
 
 export interface SSEResultsEvent {
