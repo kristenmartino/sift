@@ -253,3 +253,34 @@ export function parseDbOrgProfile(
     })(),
   };
 }
+
+/**
+ * The org's EIN, recovered from its ProPublica link.
+ *
+ * `org_profiles` has no EIN column — the identifier lives inside the
+ * Nonprofit Explorer URL (`/nonprofits/organizations/530196577`), which the
+ * curation pass already records. Parsing it here keeps the funding-edge join
+ * working without a schema change in the sibling repo, and returns null for
+ * every org that has no such link (agencies, IGOs) so the caller skips them.
+ *
+ * Host-matched like `budgetSourceKind` above: a bare substring test would
+ * accept `evil.com/?u=projects.propublica.org/nonprofits/organizations/1`.
+ */
+export function einFromOrgLinks(
+  links: OrgProfile["externalLinks"] | null | undefined,
+): string | null {
+  const url = links?.propublica;
+  if (!url) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (host !== "projects.propublica.org" && !host.endsWith(".propublica.org")) {
+    return null;
+  }
+  const match = parsed.pathname.match(/\/organizations\/(\d{9})(?:\/|$)/);
+  return match ? match[1] : null;
+}

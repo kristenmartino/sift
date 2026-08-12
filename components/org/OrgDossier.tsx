@@ -8,10 +8,32 @@ import {
   formatBudgetUsd,
   formatOrgTypeLabel,
 } from "@/lib/org";
-import type { OrgProfile } from "@/lib/types";
+import type { OrgFundingEdges, OrgProfile } from "@/lib/types";
 
 interface OrgDossierProps {
   org: OrgProfile;
+  /** Filed edges to other orgs, already gated to the publishable set. */
+  funding?: OrgFundingEdges;
+}
+
+const NO_FUNDING: OrgFundingEdges = {
+  grants: [],
+  related: [],
+  heldForReview: 0,
+  heldEinAbsent: 0,
+  fiscalPeriods: [],
+};
+
+/** "202412" -> "the year ending December 2024". */
+function formatFiscalPeriod(period: string | undefined): string {
+  if (!period || period.length !== 6) return "that year";
+  const year = period.slice(0, 4);
+  const month = Number(period.slice(4, 6));
+  const name = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ][month - 1];
+  return name ? `the year ending ${name} ${year}` : `fiscal ${year}`;
 }
 
 /**
@@ -26,8 +48,13 @@ interface OrgDossierProps {
  * cited and linkable. Symmetric across the political spectrum — same
  * panel for Brookings (Qatar) as for any other registered org.
  */
-export default function OrgDossier({ org }: OrgDossierProps) {
+export default function OrgDossier({
+  org,
+  funding = NO_FUNDING,
+}: OrgDossierProps) {
   const c = COPY.orgDossier;
+  const fc = c.fundingEdges;
+  const grantTotal = funding.grants.reduce((sum, e) => sum + (e.amountUsd ?? 0), 0);
   const typeLabel = formatOrgTypeLabel(org.type);
   const budgetLabel = formatBudgetUsd(org.annualBudgetUsd);
 
@@ -236,6 +263,102 @@ export default function OrgDossier({ org }: OrgDossierProps) {
             )}
           </section>
         )}
+
+        {/* Grants paid — filed edges to other organizations (sift-api
+            migration 027). Only rows whose EIN and filed name agree with
+            the IRS record render; the rest are counted, not dropped. */}
+        {funding.grants.length > 0 && (
+          <section className="mb-12">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
+              {c.sections.grantsPaid}
+            </p>
+            <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] mb-4">
+              {fc.grantsIntro(
+                funding.grants.length,
+                formatBudgetUsd(grantTotal) ?? `$${grantTotal.toLocaleString()}`,
+                formatFiscalPeriod(funding.fiscalPeriods[0]),
+              )}
+            </p>
+            <ul className="space-y-2.5 mb-3">
+              {funding.grants.map((edge) => (
+                <li
+                  key={`${edge.targetEin}-${edge.amountUsd}-${edge.purpose}`}
+                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[1fr_auto] md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
+                >
+                  <span className="font-body text-[15px] text-(--text-secondary) leading-snug">
+                    {edge.targetNameAsFiled}
+                    {edge.purpose && (
+                      <span className="block font-body text-meta text-(--text-tertiary) mt-0.5">
+                        {edge.purpose}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-body text-[15px] text-(--text-primary) tabular-nums md:text-right shrink-0">
+                    {edge.amountUsd !== null
+                      ? formatBudgetUsd(edge.amountUsd)
+                      : fc.amountUnknown}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="font-body text-meta text-(--text-tertiary) max-w-[60ch] leading-relaxed">
+              {fc.inboundNote}
+            </p>
+          </section>
+        )}
+
+        {/* Related organizations — Schedule R Part II. A declared
+            relationship, carrying its own EIN and exempt code. Neutral ink:
+            a c4 affiliate is a filed fact, not a characterization. */}
+        {funding.related.length > 0 && (
+          <section className="mb-12">
+            <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
+              {c.sections.relatedOrgs}
+            </p>
+            <p className="font-body text-[15px] text-(--text-secondary) leading-relaxed max-w-[60ch] mb-4">
+              {fc.relatedIntro}
+            </p>
+            <ul className="space-y-2.5">
+              {funding.related.map((edge) => (
+                <li
+                  key={edge.targetEin}
+                  className="flex flex-col gap-y-1 md:grid md:grid-cols-[1fr_auto] md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
+                >
+                  <span className="font-body text-[15px] text-(--text-secondary)">
+                    {edge.targetNameAsFiled}
+                    {edge.purpose && (
+                      <span className="block font-body text-meta text-(--text-tertiary) mt-0.5">
+                        {edge.purpose}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-body text-outlet uppercase tracking-wider text-(--text-tertiary) shrink-0">
+                    {edge.exemptCode}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* The verdict gate, said out loud. Rendering the count is the
+            point: a page that silently dropped mismatched rows would be
+            the failure the check exists to prevent. */}
+        {(funding.heldForReview > 0 || funding.heldEinAbsent > 0) &&
+          (funding.grants.length > 0 || funding.related.length > 0) && (
+            <div className="max-w-[60ch] mb-12 -mt-6 space-y-1.5">
+              {funding.heldForReview > 0 && (
+                <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
+                  {fc.heldReviewNote(funding.heldForReview)}
+                </p>
+              )}
+              {funding.heldEinAbsent > 0 && (
+                <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
+                  {fc.heldUnmatchedNote(funding.heldEinAbsent)}
+                </p>
+              )}
+            </div>
+          )}
 
         {/* External links — public-record citations */}
         {externalLinkEntries.length > 0 && (

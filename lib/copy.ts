@@ -425,8 +425,36 @@ export const COPY = {
       finances: "Finances",
       majorFunders: "Major funders",
       fara: "Foreign-agent registration (FARA)",
+      // Filed relationships between organizations (sift-api migration 027).
+      // "Grants paid" and not "funding" — the 990 shows money this org sent
+      // out, never who paid in. A public charity's donors are redacted from
+      // the public copy of its own return, so the inbound side is genuinely
+      // not knowable from this filing and the heading must not imply it is.
+      grantsPaid: "Grants paid",
+      relatedOrgs: "Related organizations",
       links: "Where to read more",
       notes: "Notes",
+    },
+    // ── Funding edges ────────────────────────────────────
+    fundingEdges: {
+      grantsIntro: (count: number, total: string, period: string) =>
+        `${count} grant${count === 1 ? "" : "s"} of $5,000 or more, ${total} in total, as reported on the organization's own Form 990 for ${period}.`,
+      relatedIntro:
+        "Organizations this one declares as related on its Form 990. A declared relationship, not an inference by Sift.",
+      // The gate, said out loud — and split by reason, because they are not
+      // the same fact. Lumping them under one sentence told a reader that
+      // The Heritage Institute's *name* mismatched when the truth is its EIN
+      // simply is not in the e-filer index. A confident wrong explanation is
+      // the failure this whole check exists to prevent.
+      heldReviewNote: (count: number) =>
+        `${count} further ${count === 1 ? "entry is" : "entries are"} withheld: the recipient name on the filing doesn't match the IRS record for the EIN it was filed under, so a person needs to check it before it appears here.`,
+      heldUnmatchedNote: (count: number) =>
+        `${count} more ${count === 1 ? "recipient is" : "recipients are"} not shown: the EIN on the filing isn't in the IRS index of electronic filers — often a consultancy, an LLC, or an organization small enough not to file — so there's nothing to check the name against.`,
+      inboundNote:
+        "This shows money paid out. A public charity's own donors are redacted from the public copy of its return, so who funds this organization can't be read from this filing.",
+      sourceLink: (period: string) => `Source: Form 990, tax period ${period}`,
+      noEin: "No EIN on record for this organization, so filed grants can't be matched to it.",
+      amountUnknown: "Amount not stated",
     },
     // The caveat is not boilerplate — it is the whole reason this replaced a
     // Sift-assigned lean. A reader must not read a self-description as an

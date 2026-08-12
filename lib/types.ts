@@ -766,6 +766,48 @@ export interface CompareSourceDone {
   found: boolean;
 }
 
+// ─── Funding edges (990 Schedule I / R) ────────────────
+
+/**
+ * One filed relationship between two organizations, from `funding_edges`
+ * (sift-api migration 027). Always self-reported by the payer/declarer —
+ * there are no inferred edges — and always carries the filing it came from.
+ */
+export interface FundingEdge {
+  targetEin: string | null;
+  /** Verbatim as filed. Never replaced with the IRS spelling. */
+  targetNameAsFiled: string | null;
+  /** The IRS's own name for that EIN, when the index knows it. */
+  targetNameIrs: string | null;
+  amountUsd: number | null;
+  purpose: string | null;
+  exemptCode: string | null;
+  /** YYYYMM of the filing's tax period. */
+  fiscalPeriod: string;
+  form: string;
+  filingUrl: string;
+}
+
+/**
+ * An org's outbound edges, already filtered to the publishable set.
+ *
+ * The withheld counts are deliberately surfaced rather than hidden, and kept
+ * apart rather than summed: a name that disagrees with the IRS record and an
+ * EIN that isn't in the filer index are different facts, and a page that
+ * explains one as the other is the confident-but-wrong failure the
+ * `ein_name_agrees` check exists to prevent.
+ */
+export interface OrgFundingEdges {
+  grants: FundingEdge[];
+  related: FundingEdge[];
+  /** Filed name disagrees with the IRS record for that EIN — needs a human. */
+  heldForReview: number;
+  /** EIN absent from the IRS e-filer index — nothing to check against. */
+  heldEinAbsent: number;
+  /** Distinct fiscal periods represented, newest first. */
+  fiscalPeriods: string[];
+}
+
 // ─── SSE Event Types (topic search streaming) ──────────
 
 export interface SSEResultsEvent {
