@@ -441,10 +441,15 @@ export const COPY = {
         `${count} grant${count === 1 ? "" : "s"} of $5,000 or more, ${total} in total, as reported on the organization's own Form 990 for ${period}.`,
       relatedIntro:
         "Organizations this one declares as related on its Form 990. A declared relationship, not an inference by Sift.",
-      // The gate, said out loud. A page that quietly dropped rows would be
-      // the failure ein_name_agrees exists to prevent.
-      heldNote: (count: number) =>
+      // The gate, said out loud — and split by reason, because they are not
+      // the same fact. Lumping them under one sentence told a reader that
+      // The Heritage Institute's *name* mismatched when the truth is its EIN
+      // simply is not in the e-filer index. A confident wrong explanation is
+      // the failure this whole check exists to prevent.
+      heldReviewNote: (count: number) =>
         `${count} further ${count === 1 ? "entry is" : "entries are"} withheld: the recipient name on the filing doesn't match the IRS record for the EIN it was filed under, so a person needs to check it before it appears here.`,
+      heldUnmatchedNote: (count: number) =>
+        `${count} more ${count === 1 ? "recipient is" : "recipients are"} not shown: the EIN on the filing isn't in the IRS index of electronic filers — often a consultancy, an LLC, or an organization small enough not to file — so there's nothing to check the name against.`,
       inboundNote:
         "This shows money paid out. A public charity's own donors are redacted from the public copy of its return, so who funds this organization can't be read from this filing.",
       sourceLink: (period: string) => `Source: Form 990, tax period ${period}`,

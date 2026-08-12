@@ -783,14 +783,19 @@ export interface FundingEdge {
 /**
  * An org's outbound edges, already filtered to the publishable set.
  *
- * `heldForReview` is deliberately surfaced rather than hidden: the count is
- * what makes the verdict gate visible to a reader, and a page that silently
- * dropped rows would be the thing `ein_name_agrees` exists to prevent.
+ * The withheld counts are deliberately surfaced rather than hidden, and kept
+ * apart rather than summed: a name that disagrees with the IRS record and an
+ * EIN that isn't in the filer index are different facts, and a page that
+ * explains one as the other is the confident-but-wrong failure the
+ * `ein_name_agrees` check exists to prevent.
  */
 export interface OrgFundingEdges {
   grants: FundingEdge[];
   related: FundingEdge[];
+  /** Filed name disagrees with the IRS record for that EIN — needs a human. */
   heldForReview: number;
+  /** EIN absent from the IRS e-filer index — nothing to check against. */
+  heldEinAbsent: number;
   /** Distinct fiscal periods represented, newest first. */
   fiscalPeriods: string[];
 }

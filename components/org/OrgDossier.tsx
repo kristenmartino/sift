@@ -20,6 +20,7 @@ const NO_FUNDING: OrgFundingEdges = {
   grants: [],
   related: [],
   heldForReview: 0,
+  heldEinAbsent: 0,
   fiscalPeriods: [],
 };
 
@@ -343,11 +344,20 @@ export default function OrgDossier({
         {/* The verdict gate, said out loud. Rendering the count is the
             point: a page that silently dropped mismatched rows would be
             the failure the check exists to prevent. */}
-        {funding.heldForReview > 0 &&
+        {(funding.heldForReview > 0 || funding.heldEinAbsent > 0) &&
           (funding.grants.length > 0 || funding.related.length > 0) && (
-            <p className="font-body text-meta text-(--text-tertiary) max-w-[60ch] leading-relaxed mb-12 -mt-6">
-              {fc.heldNote(funding.heldForReview)}
-            </p>
+            <div className="max-w-[60ch] mb-12 -mt-6 space-y-1.5">
+              {funding.heldForReview > 0 && (
+                <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
+                  {fc.heldReviewNote(funding.heldForReview)}
+                </p>
+              )}
+              {funding.heldEinAbsent > 0 && (
+                <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
+                  {fc.heldUnmatchedNote(funding.heldEinAbsent)}
+                </p>
+              )}
+            </div>
           )}
 
         {/* External links — public-record citations */}

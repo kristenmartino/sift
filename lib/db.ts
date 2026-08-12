@@ -1463,6 +1463,7 @@ export async function getFundingEdgesForOrg(
     grants: [],
     related: [],
     heldForReview: 0,
+    heldEinAbsent: 0,
     fiscalPeriods: [],
   };
   if (!ein || !/^\d{9}$/.test(ein)) return empty;
@@ -1510,7 +1511,11 @@ export async function getFundingEdgesForOrg(
       related: publishable
         .filter((r) => r.edge_kind === "related_org")
         .map(toEdge),
-      heldForReview: result.rows.length - publishable.length,
+      heldForReview: result.rows.filter((r) => r.ein_name_agrees === "review")
+        .length,
+      heldEinAbsent: result.rows.filter(
+        (r) => r.ein_name_agrees === "ein_absent",
+      ).length,
       fiscalPeriods: [
         ...new Set(publishable.map((r) => r.fiscal_period)),
       ].sort((a, b) => b.localeCompare(a)),
