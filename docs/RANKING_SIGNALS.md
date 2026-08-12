@@ -8,7 +8,59 @@ lives in sift-api's `services/feed_balance.py` (daily snapshots to the
 `scripts/eval_ranking_pairs.py`; first labeling session scored 2026-08-11
 (sift-api#200: pre-v2 13/25, v2 13/25 — a tie by the harness's own banding);
 stage 4 (opinion genre) implemented 2026-08-11 from that session's overrule
-patterns.
+patterns. **Session 3 scored 2026-08-11** against the four changes that shipped
+that day — see [Session 3](#session-3--the-day-the-eval-earned-its-keep).
+
+## Session 3 — the day the eval earned its keep
+
+22 pairs scored, 3 skipped, blind, sampled where the current formula disagrees
+with the one it replaced.
+
+| formula | agrees with the labeler |
+|---|---:|
+| pre-v2 (importance × decay) | 10/22 (45%) |
+| v2 as of stages 1–5 | **7/22 (32%)** |
+| **current** (stages 1–7 + floor) | **14/22 (64%)** |
+
+On the 13 contested pairs the labeler sided with current **10 times (77%)** —
+past the ±2 band the harness refuses to call. The 2026-08-11 changes earned
+their keep.
+
+**The win is entirely in stories, which is the change under test confirming
+itself rather than a diffuse improvement:**
+
+| | contested | current correct |
+|---|---:|---:|
+| stories | 6 | **6/6** |
+| articles | 7 | 4/7 |
+
+Stages 1, 7 and the floor all touch story ranking. Nothing else moved.
+
+### Two results that are not good news
+
+**On the 9 control pairs all three formulas scored 4/9** — below chance. Where
+the formulas *agree*, the labeler disagreed with them more often than not. The
+sample is tiny, but nothing shipped on 2026-08-11 touched the shared core
+(`importance × decay`), and this is the first evidence that core is the weak
+part. Session 4 should sample controls deliberately rather than as filler.
+
+**All three misses were `world`, and they are one pattern:**
+
+| labeler picked | current picked |
+|---|---|
+| Afghanistan's 20m girls and women | a beach-trespasser arrest |
+| Ukrainians helping a traumatized generation | a stray cat covered in red dye |
+| Raúl Castro's grandson as power broker | a Chicago murder-suicide |
+
+That is the spectacle-over-consequence failure stage 6 exists to fix — but
+`LOW_IMPORTANCE_DAMPENER` is **scoped to `top` only**, and **46% of `world`
+articles score importance ≤ 2**. The topical tabs were left as complete
+coverage by design (stage 6); this is the first evidence that the design costs
+something real in `world`.
+
+Underneath it sits a **classifier** defect, not a ranking one: a Texas stray
+cat and a Chicago murder-suicide are categorised as `world` at all. Ranking
+cannot recover from that. Both are filed rather than fixed here.
 
 ## Stage 4 — opinion is not a top story (added from eval evidence)
 
