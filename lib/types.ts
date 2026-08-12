@@ -690,6 +690,14 @@ export interface Story {
    */
   avgImportance?: number;
   /**
+   * Highest member importance (1-5). Floors the stage-7 significance so one
+   * genuinely important article is not averaged into invisibility by minor
+   * co-members — gated at 4, because an unconditional floor would restore the
+   * single-outlet leverage the mean was chosen to remove. See
+   * STORY_FLOOR_MIN_IMPORTANCE in lib/db.ts.
+   */
+  maxImportance?: number;
+  /**
    * Distinct L/C/R AllSides buckets occupied by this story's framings (1-3;
    * absent when none are bucketable). Derived at the API boundary via
    * countOccupiedBuckets. Ranking v2 stage 1: the client re-rank applies a

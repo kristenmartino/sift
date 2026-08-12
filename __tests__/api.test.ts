@@ -257,6 +257,7 @@ describe("GET /api/news", () => {
           grim_share: null,
           opinion_share: null,
           avg_importance: 3,
+          max_importance: 5,
           representative_image_url: null,
           published_date: new Date("2026-03-28T10:00:00Z"),
           synthesis_status: "complete",
@@ -300,6 +301,7 @@ describe("GET /api/news", () => {
           grim_share: null,
           opinion_share: null,
           avg_importance: 3,
+          max_importance: 5,
           representative_image_url: null,
           published_date: new Date("2026-03-28T10:00:00Z"),
           synthesis_status: "complete",
@@ -313,6 +315,40 @@ describe("GET /api/news", () => {
 
       expect(body.stories[0].articleCount).toBe(7);
       expect(body.stories[0].outletCount).toBe(2);
+    });
+
+    it("exposes maxImportance alongside avgImportance for the stage-7 floor", async () => {
+      // The floor needs the MAX, and the mean is what dilutes it — so the two
+      // must arrive separately. A story whose best member is a 5 but whose
+      // mean is 2.8 is exactly the case the floor exists for: measured over
+      // 523 prod stories, 5 looked like this.
+      mockGetStoriesWithArticles.mockResolvedValue({
+        stories: [{
+          id: "story1",
+          headline: "One important article, minor company",
+          summary: "A synthesized summary.",
+          category: "technology",
+          framings: [],
+          entities: [],
+          article_count: 3,
+          outlet_count: 3,
+          grim_share: null,
+          opinion_share: null,
+          avg_importance: "2.8",
+          max_importance: 5,
+          representative_image_url: null,
+          published_date: new Date("2026-03-28T10:00:00Z"),
+          synthesis_status: "complete",
+        }],
+        storyArticles: { story1: [] },
+        standaloneArticles: [],
+      });
+
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.stories[0].avgImportance).toBeCloseTo(2.8);
+      expect(body.stories[0].maxImportance).toBe(5);
     });
 
     it("passes article tone through and derives story tone from grim_share", async () => {
@@ -330,6 +366,7 @@ describe("GET /api/news", () => {
           grim_share: "0.5",
           opinion_share: "0.5",
           avg_importance: "1.9",
+          max_importance: 2,
           representative_image_url: null,
           published_date: new Date("2026-03-28T10:00:00Z"),
           synthesis_status: "complete",

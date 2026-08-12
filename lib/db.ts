@@ -191,6 +191,43 @@ const STORY_BOOST = 2.0;
 const STORY_IMPORTANCE_CENTER = 2.5;
 const STORY_IMPORTANCE_SQL = `(COALESCE(AVG(a.importance_score), 3) / ${STORY_IMPORTANCE_CENTER})`;
 
+// Stage 7's floor: a story may never rank below a genuinely important member.
+//
+// Stage 7 scores a story on the MEAN importance of its members, which is the
+// right call against wire pickup — but it also means one important article
+// clustered with minor ones is averaged down. Measured over 523 stories in
+// 48h: 98 (19%) rank below their best member, but only **5** have a best
+// member at importance 4-5. Those 5 are the case worth catching — a real
+// story diluted by its company:
+//
+//   health    3 outlets  mean 2.8  max 5  ->  4.15
+//   politics  4 outlets  mean 1.8  max 4  ->  3.09
+//   business  2 outlets  mean 2.5  max 4  ->  3.20
+//
+// GATED AT 4 ON PURPOSE. An unconditional floor would undo what stage 7 is
+// for: it lets a single outlet's importance score set the story's rank, which
+// is the single-outlet leverage the mean was chosen to remove. Above 4 that
+// leverage is worth it — an importance-5 article is the thing the publication
+// most wants surfaced, and burying it because its co-members were fluff is a
+// worse error than over-ranking one story. Below 4 the mean stands unqualified.
+//
+// Applied to SIGNIFICANCE ONLY — coverage x importance — before the dampeners.
+// D48 (grim), opinion and the spectrum bonus still multiply on top: those are
+// deliberate policy, and a floor that outran them would silently revert them.
+// Set STORY_FLOOR_MIN_IMPORTANCE above 5 to disable.
+const STORY_FLOOR_MIN_IMPORTANCE = 4;
+const STORY_MAX_IMPORTANCE_SQL = `MAX(COALESCE(a.importance_score, 3))`;
+const STORY_SIGNIFICANCE_SQL = `
+         CASE WHEN ${STORY_MAX_IMPORTANCE_SQL} >= ${STORY_FLOOR_MIN_IMPORTANCE}
+              THEN GREATEST(
+                (${STORY_BASE} + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float
+                  * ${STORY_IMPORTANCE_SQL},
+                ${STORY_MAX_IMPORTANCE_SQL}::float)
+              ELSE
+                (${STORY_BASE} + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float
+                  * ${STORY_IMPORTANCE_SQL}
+         END`;
+
 // "sources" in that curve means DISTINCT OUTLETS, not article rows. It counted
 // COUNT(a.id) until 2026-08-11, which is a different thing: measured over 7
 // days of complete stories, 29% had more articles than outlets and 18% were at
@@ -303,6 +340,10 @@ export interface DbStory {
   // Mean importance of the live member articles (stage 7): the story's
   // base significance, which corroboration multiplies rather than replaces.
   avg_importance: string | number | null;
+  // Highest member importance. Only used as the stage-7 floor, so a single
+  // genuinely important article is not averaged into invisibility by minor
+  // co-members. See STORY_FLOOR_MIN_IMPORTANCE.
+  max_importance: string | number | null;
   // Fraction of live member articles flagged is_opinion (0..1); the API
   // boundary derives Story.isOpinion when >= 0.5.
   opinion_share: string | number | null;
@@ -331,6 +372,7 @@ export async function getStoriesWithArticles(
               COUNT(DISTINCT a.source_name)::int AS outlet_count,
               AVG(CASE WHEN a.tone = 'grim' THEN 1.0 ELSE 0 END) AS grim_share,
               COALESCE(AVG(a.importance_score), 3) AS avg_importance,
+              ${STORY_MAX_IMPORTANCE_SQL} AS max_importance,
               AVG(CASE WHEN a.is_opinion THEN 1.0 ELSE 0 END) AS opinion_share,
               s.representative_image_url, s.published_date, s.synthesis_status
        FROM stories s
@@ -343,9 +385,8 @@ export async function getStoriesWithArticles(
        GROUP BY s.id
        HAVING COUNT(a.id) >= 2
        ORDER BY
-         (${STORY_BASE} + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float *
-         EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))), 0) / 86400.0, 700)) *
-         ${STORY_IMPORTANCE_SQL}
+         ${STORY_SIGNIFICANCE_SQL} *
+         EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(s.published_date, s.created_at))), 0) / 86400.0, 700))
        DESC NULLS LAST
        LIMIT 20`,
       [category]
