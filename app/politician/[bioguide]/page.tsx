@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import PoliticianDossier from "@/components/politician/PoliticianDossier";
+import JsonLd from "@/components/JsonLd";
 import { getPoliticianByBioguide } from "@/lib/db";
-import { dossierRobotsMeta, isPublishablePolitician } from "@/lib/publishFloor";
-import { jsonLdString, politicianJsonLd } from "@/lib/structuredData";
+import { dossierMetadata } from "@/lib/metadata";
+import { isPublishablePolitician } from "@/lib/publishFloor";
+import { politicianJsonLd } from "@/lib/structuredData";
 
 // ISR — same heartbeat as the landing + outlet dossier (10 minutes).
 // Politician metadata changes slowly (committees shift quarterly,
@@ -30,26 +32,13 @@ export async function generateMetadata({
     politician.party && politician.state
       ? ` (${politician.party}-${politician.state})`
       : "";
-  const fullTitle = `${politician.name}${partyState} — Politician dossier | Sift`;
-  const description = `Committees, top industries by PAC contributions, and voting context for ${politician.name} on Sift.`;
-  return {
+  return dossierMetadata({
     title: `${politician.name} — Politician dossier`,
-    description,
-    // Below-floor dossiers are not advertised. Spread, not assign: a
-    // `robots` key present here would override the root config even when
-    // undefined, dropping max-image-preview. See lib/publishFloor.ts.
-    ...dossierRobotsMeta(isPublishablePolitician(politician)),
-    openGraph: {
-      title: fullTitle,
-      description,
-      type: "profile",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: fullTitle,
-      description,
-    },
-  };
+    unfurlTitle: `${politician.name}${partyState} — Politician dossier | Sift`,
+    description: `Committees, top industries by PAC contributions, and voting context for ${politician.name} on Sift.`,
+    indexable: isPublishablePolitician(politician),
+    ogType: "profile",
+  });
 }
 
 export default async function PoliticianDossierPage({
@@ -60,14 +49,8 @@ export default async function PoliticianDossierPage({
   if (!politician) notFound();
   return (
     <>
-      <script
-        type="application/ld+json"
-        // Serialized by lib/structuredData.ts, which escapes `<`. Emits only
-        // fields the page itself renders — notably not `notes`.
-        dangerouslySetInnerHTML={{
-          __html: jsonLdString(politicianJsonLd(politician)),
-        }}
-      />
+      {/* Emits only fields the page itself renders — notably not `notes`. */}
+      <JsonLd data={politicianJsonLd(politician)} />
       <PoliticianDossier politician={politician} />
     </>
   );
