@@ -364,6 +364,9 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     // rather than replacing it. Centered on the observed mean story
     // importance (2.50) so the story/article mix #231 tuned is unchanged.
     const STORY_IMPORTANCE_CENTER = 2.5;
+    // Stage 7 floor (mirrors STORY_FLOOR_MIN_IMPORTANCE in lib/db.ts): a
+    // story never ranks below a member this important or better.
+    const STORY_FLOOR_MIN_IMPORTANCE = 4;
     const STORY_BOOST = 2.0;
     const SPECTRUM_BOOST = 0.1;
     // Stage 4 (mirrors OPINION_DAMPENER in lib/db.ts): outlet-declared
@@ -401,6 +404,17 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         // "major". Absent on an older payload → 1.0 (pre-stage-7 behavior).
         const storyImportance =
           (item.data.avgImportance ?? STORY_IMPORTANCE_CENTER) / STORY_IMPORTANCE_CENTER;
+        // Floor (mirrors STORY_SIGNIFICANCE_SQL): the mean is right against
+        // wire pickup but averages a single important article down, so a real
+        // story diluted by minor co-members never ranks below that member.
+        // Gated at 4 — an unconditional floor restores the single-outlet
+        // leverage stage 7 removed. Applied to significance only, so the
+        // dampeners below still bite.
+        const maxImp = item.data.maxImportance ?? 0;
+        const significance =
+          maxImp >= STORY_FLOOR_MIN_IMPORTANCE
+            ? Math.max(sourceScore * storyImportance, maxImp)
+            : sourceScore * storyImportance;
         const spectrum = 1 + SPECTRUM_BOOST * Math.max(0, (item.data.spectrumBuckets ?? 1) - 1);
         // Corroboration is the story-level analog of importance: a
         // two-outlet grim story dampens, a five-outlet disaster does not.
@@ -414,7 +428,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         const civic = civicBoost(
           Math.max(0, ...item.data.articles.map((a) => weightedCivicLinks(a.entityLinks)))
         );
-        return sourceScore * decay * spectrum * damp * civic * opDamp * storyImportance;
+        return significance * decay * spectrum * damp * civic * opDamp;
       }
       const importance = item.data.importanceScore ?? 3;
       const damp = item.data.tone === "grim" && importance <= 3 ? GRIM_DAMPENER : 1;

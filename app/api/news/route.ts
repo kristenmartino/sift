@@ -198,6 +198,7 @@ export async function GET(request: NextRequest) {
         // A story is grim when at least half its live members are (D48).
         ...(Number(s.grim_share ?? 0) >= 0.5 ? { tone: "grim" as const } : {}),
         avgImportance: Number(s.avg_importance ?? 3),
+        maxImportance: Number(s.max_importance ?? 3),
         ...(Number(s.opinion_share ?? 0) >= 0.5 ? { isOpinion: true } : {}),
         ...(spectrumBuckets > 0 ? { spectrumBuckets } : {}),
       };

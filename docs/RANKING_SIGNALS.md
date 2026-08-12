@@ -95,6 +95,49 @@ continuous factor fixes the mid-range too — a 7-outlet wildfire evacuation at
 mean 3.7 now separates from a 6-outlet trial at mean 2.3, which a cliff
 leaves tied.
 
+### The floor: real news is never averaged into invisibility
+
+*"Will breaking news that's genuinely important but thinly covered end up
+buried?"* Mostly no — and stage 7 is why. Before it, an importance-5 article
+**dropped** from 5.00 to 3.20 the moment a second outlet picked it up, because
+the story score replaced the article score. With stage 7 it *rises* to 6.39.
+A heavily-covered but minor story now outranks fresh important news for
+**1.1 hours** rather than 7.7.
+
+One residual: the mean that defends against wire pickup also **averages a
+single important article down**. Measured over 523 prod stories in 48h, 98
+(19%) rank below their best member — but only **5** have a best member at
+importance 4–5, which is the case that matters:
+
+```
+health    3 outlets  mean 2.8  max 5  ->  4.15
+politics  4 outlets  mean 1.8  max 4  ->  3.09
+business  2 outlets  mean 2.5  max 4  ->  3.20
+```
+
+So significance is floored at the best member's importance, **gated at ≥4**:
+
+```
+significance = max(coverage × mean/CENTER, max_member_importance)   if max ≥ 4
+             =     coverage × mean/CENTER                           otherwise
+```
+
+**The gate is the whole design.** An unconditional floor would undo stage 7 —
+it lets one outlet's importance score set the story's rank, which is exactly
+the single-outlet leverage the mean was chosen to remove. Above 4 that leverage
+is worth paying: an importance-5 article is what the publication most wants
+surfaced, and burying it because its co-members were fluff is a worse error
+than over-ranking one story.
+
+Applied to **significance only**, before the dampeners — D48 (grim), opinion
+and the spectrum bonus still multiply on top. Those are deliberate policy, and
+a floor that outran them would silently revert them.
+
+Replayed against prod across eight categories: **top-20 churn 0–1, two stories
+lifted, 21–34 ms either way.** A safety net that is inert in normal conditions
+and fires only on the case it exists for. Set `STORY_FLOOR_MIN_IMPORTANCE`
+above 5 to disable.
+
 ## Stage 6 — the front page is for news (added from product direction)
 
 *"Sift should be showing important news, not so much entertainment."*
