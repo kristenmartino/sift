@@ -33,12 +33,26 @@ function errorMessage(err: unknown): string {
 }
 
 /**
+ * Does `message` name `identifier` as a whole identifier?
+ *
+ * Postgres is not consistent about quoting here, so neither can this be: 42P01
+ * quotes (`relation "outlet_profiles" does not exist`) while 42703 does not and
+ * may qualify with the table alias (`column a.story_id does not exist`). Both
+ * forms have to match, and a prefix must not — `search` may not satisfy a guard
+ * written for `search_queries`.
+ */
+function namesIdentifier(message: string, identifier: string): boolean {
+  const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[\\s"(.])${escaped}(?:$|[\\s"),])`).test(message);
+}
+
+/**
  * True when `err` is Postgres complaining about a missing schema object.
  *
  * Pass `names` to additionally require that the error names one of the objects
- * you expect to be missing (matched against the quoted identifier Postgres puts
- * in the message, e.g. `relation "search_queries" does not exist`). Without
- * `names`, any undefined-table/undefined-column error qualifies.
+ * you expect to be missing (e.g. `relation "search_queries" does not exist`,
+ * `column a.story_id does not exist`). Without `names`, any
+ * undefined-table/undefined-column error qualifies.
  */
 export function isMissingSchemaObject(
   err: unknown,
@@ -50,7 +64,7 @@ export function isMissingSchemaObject(
 
   const wanted = typeof names === "string" ? [names] : names;
   const message = errorMessage(err).toLowerCase();
-  return wanted.some((name) => message.includes(`"${name.toLowerCase()}"`));
+  return wanted.some((name) => namesIdentifier(message, name.toLowerCase()));
 }
 
 /** True when `err` is `relation "<table>" does not exist`. */
@@ -63,7 +77,7 @@ export function isMissingTable(
   );
 }
 
-/** True when `err` is `column "<column>" does not exist`. */
+/** True when `err` is `column <column> does not exist`. */
 export function isMissingColumn(
   err: unknown,
   names?: string | readonly string[],

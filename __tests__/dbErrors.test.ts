@@ -28,6 +28,16 @@ const undefinedColumn = pgError(
   PG_UNDEFINED_COLUMN,
   'column "entity_links" does not exist',
 );
+// Postgres quotes the identifier for 42P01 but not for 42703, and qualifies it
+// with the table alias when the query does.
+const undefinedQualifiedColumn = pgError(
+  PG_UNDEFINED_COLUMN,
+  "column a.story_id does not exist",
+);
+const undefinedBareColumn = pgError(
+  PG_UNDEFINED_COLUMN,
+  "column story_id does not exist",
+);
 
 describe("pgErrorCode", () => {
   it("reads the SQLSTATE off a pg error", () => {
@@ -56,6 +66,31 @@ describe("isMissingSchemaObject", () => {
     expect(
       isMissingSchemaObject(undefinedTable, ["articles", "search_queries"]),
     ).toBe(true);
+  });
+
+  // Regression: requiring the quoted form made every named missing-column
+  // guard rethrow, so dropping a tolerated column 500'd the feed.
+  it("matches an unquoted column, qualified or bare", () => {
+    expect(isMissingSchemaObject(undefinedQualifiedColumn, "story_id")).toBe(
+      true,
+    );
+    expect(isMissingSchemaObject(undefinedBareColumn, "story_id")).toBe(true);
+    expect(
+      isMissingSchemaObject(undefinedQualifiedColumn, ["stories", "story_id"]),
+    ).toBe(true);
+    expect(isMissingSchemaObject(undefinedQualifiedColumn, "entity_links")).toBe(
+      false,
+    );
+  });
+
+  it("does not match the table qualifier as the identifier", () => {
+    // `articles.story_id` names the missing column, not a missing `articles`.
+    const err = pgError(
+      PG_UNDEFINED_COLUMN,
+      "column articles.story_id does not exist",
+    );
+    expect(isMissingSchemaObject(err, "articles")).toBe(false);
+    expect(isMissingSchemaObject(err, "story_id")).toBe(true);
   });
 
   it("does not match a substring of a different identifier", () => {
@@ -93,5 +128,10 @@ describe("isMissingTable / isMissingColumn", () => {
   it("matches without a name filter", () => {
     expect(isMissingTable(undefinedTable)).toBe(true);
     expect(isMissingColumn(undefinedColumn)).toBe(true);
+  });
+
+  it("matches the unquoted column form pg actually emits", () => {
+    expect(isMissingColumn(undefinedQualifiedColumn, "story_id")).toBe(true);
+    expect(isMissingColumn(undefinedBareColumn, "story_id")).toBe(true);
   });
 });

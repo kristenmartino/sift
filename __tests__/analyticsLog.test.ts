@@ -131,7 +131,10 @@ describe("logSearchQuery", () => {
 
   it("warns and returns null when search_queries isn't provisioned yet", async () => {
     mockQuery.mockRejectedValue(
-      new Error('relation "search_queries" does not exist'),
+      // 42P01 undefined_table — the SQLSTATE is the signal, not the message.
+      Object.assign(new Error('relation "search_queries" does not exist'), {
+        code: "42P01",
+      }),
     );
     await expect(logSearchQuery(FULL_ROW)).resolves.toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(
@@ -143,7 +146,7 @@ describe("logSearchQuery", () => {
     mockQuery.mockRejectedValue(new Error("deadlock detected"));
     await expect(logSearchQuery(FULL_ROW)).resolves.toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(
-      "logSearchQuery failed:",
+      "[searchAnalytics.logSearchQuery]",
       expect.any(Error),
     );
   });
@@ -197,7 +200,9 @@ describe("logPrimerExpand", () => {
 
   it("warns and returns null when primer_expand_events isn't provisioned yet", async () => {
     mockQuery.mockRejectedValue(
-      new Error('relation "primer_expand_events" does not exist'),
+      Object.assign(new Error('relation "primer_expand_events" does not exist'), {
+        code: "42P01",
+      }),
     );
     await expect(logPrimerExpand(EXPAND_ROW)).resolves.toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(
@@ -209,7 +214,7 @@ describe("logPrimerExpand", () => {
     mockQuery.mockRejectedValue(new Error("connection terminated"));
     await expect(logPrimerExpand(EXPAND_ROW)).resolves.toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(
-      "logPrimerExpand failed:",
+      "[primerAnalytics.logPrimerExpand]",
       expect.any(Error),
     );
   });

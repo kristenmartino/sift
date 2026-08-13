@@ -163,9 +163,12 @@ describe("enrichLinksWithContext — attaching context", () => {
 });
 
 describe("enrichLinksWithContext — error posture", () => {
-  it("degrades silently when politician_profiles doesn't exist yet", async () => {
+  it("degrades when politician_profiles doesn't exist yet", async () => {
     mockQuery.mockRejectedValue(
-      new Error('relation "politician_profiles" does not exist'),
+      // The SQLSTATE is the signal now, not the message text.
+      Object.assign(new Error('relation "politician_profiles" does not exist'), {
+        code: "42P01",
+      }),
     );
     const links = [link("politician", "S000148")];
     await expect(enrichLinksWithContext(links)).resolves.toBeUndefined();
@@ -177,5 +180,14 @@ describe("enrichLinksWithContext — error posture", () => {
     await expect(
       enrichLinksWithContext([link("politician", "S000148")]),
     ).rejects.toThrow("connection terminated");
+  });
+
+  it("rethrows a missing role — that phrase also says 'does not exist'", async () => {
+    mockQuery.mockRejectedValue(
+      Object.assign(new Error('role "sift" does not exist'), { code: "28000" }),
+    );
+    await expect(
+      enrichLinksWithContext([link("politician", "S000148")]),
+    ).rejects.toThrow('role "sift" does not exist');
   });
 });
