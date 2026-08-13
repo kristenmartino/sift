@@ -25,8 +25,11 @@ outlets named in it, each assembled from public records and citing them.
   paid out. A public charity's donors are redacted from the public copy of its
   return, so who funds an organization cannot be read from its own filing.
 - **Some rows are withheld on purpose.** Each filed edge is checked against the
-  IRS record for the EIN it was filed under; ones that disagree are held for
-  human review and the page says how many.
+  IRS record for the EIN it was filed under. Ones whose name disagrees are held
+  for human review; ones whose EIN is absent from the IRS index of electronic
+  filers have nothing to check against. The page reports the two counts
+  separately — they are different facts — and reports them even when every edge
+  for an organization is withheld and no grants are shown at all.
 
 ## Surfaces
 

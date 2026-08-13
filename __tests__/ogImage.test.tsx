@@ -1,32 +1,22 @@
 /**
- * @jest-environment node
+ * The dossier `opengraph-image` handler factory.
  *
- * The dossier `opengraph-image` factory (lib/ogImage.tsx).
- *
- * Every dossier route delegates its unfurl card to this one handler, so the
- * contract worth pinning is the fallback: a 404'd entity still has to produce a
- * valid card (a bare "Sift" one) rather than throwing inside an image route,
- * which renders in someone else's Slack as a broken thumbnail.
- *
- * `next/og` is mocked — ImageResponse rasterizes with satori/resvg, which is
- * both slow and beside the point here. The fonts are the real vendored TTFs.
+ * Every dossier route's unfurl goes through here, so the load-fails path
+ * matters as much as the happy one: a 404 or a pruned entity must still
+ * produce a valid card rather than an exception in someone else's Slack.
  */
-const imageResponseCalls: Array<{ element: unknown; options: unknown }> = [];
-
-jest.mock("next/og", () => ({
-  ImageResponse: class {
-    constructor(element: unknown, options: unknown) {
-      imageResponseCalls.push({ element, options });
-    }
-  },
-}));
-
 import { createDossierOgImage } from "@/lib/ogImage";
 import { OG_SIZE } from "@/lib/og";
 
-interface Org {
-  name: string;
-}
+const constructed: { element: unknown; options: Record<string, unknown> }[] = [];
+
+jest.mock("next/og", () => ({
+  ImageResponse: class {
+    constructor(element: unknown, options: Record<string, unknown>) {
+      constructed.push({ element, options });
+    }
+  },
+}));
 
 const flatten = (node: unknown): string => {
   if (node === null || node === undefined || typeof node === "boolean") return "";
@@ -36,46 +26,51 @@ const flatten = (node: unknown): string => {
   return el.props ? flatten(el.props.children) : "";
 };
 
-function handler(load: (params: { slug: string }) => Promise<Org | null>) {
-  return createDossierOgImage<{ slug: string }, Org>({
+interface Params {
+  slug: string;
+}
+
+interface Org {
+  name: string;
+}
+
+function buildHandler(load: (params: Params) => Promise<Org | null>) {
+  return createDossierOgImage<Params, Org>({
     eyebrow: "Org dossier",
     load,
-    card: (org) => ({ title: org.name, meta: "Nonprofit" }),
+    card: (org) => ({ title: org.name, meta: "Think tank" }),
   });
 }
 
 beforeEach(() => {
-  imageResponseCalls.length = 0;
+  constructed.length = 0;
 });
 
 describe("createDossierOgImage", () => {
-  it("renders the entity card at the OG size, with the loaded fonts", async () => {
-    const Image = handler(async ({ slug }) => ({ name: `Org ${slug}` }));
-    await Image({ params: Promise.resolve({ slug: "brookings" }) });
+  it("renders the entity card and the vendored fonts", async () => {
+    const load = jest.fn(async ({ slug }: Params) => ({ name: `Org ${slug}` }));
+    await buildHandler(load)({ params: Promise.resolve({ slug: "cato" }) });
 
-    expect(imageResponseCalls).toHaveLength(1);
-    const { element, options } = imageResponseCalls[0];
-    const text = flatten(element);
+    expect(load).toHaveBeenCalledWith({ slug: "cato" });
+    expect(constructed).toHaveLength(1);
+    const text = flatten(constructed[0].element);
     expect(text).toContain("Org dossier");
-    expect(text).toContain("Org brookings");
-    expect(text).toContain("Nonprofit");
-    expect(options).toMatchObject(OG_SIZE);
-    expect((options as { fonts: unknown[] }).fonts).toHaveLength(3);
+    expect(text).toContain("Org cato");
+    expect(text).toContain("Think tank");
+    expect(constructed[0].options).toMatchObject(OG_SIZE);
+    expect(
+      (constructed[0].options.fonts as { name: string }[]).map((f) => f.name).sort(),
+    ).toEqual(["DM Mono", "Fraunces", "Fraunces"]);
   });
 
   it("falls back to a bare Sift card when the entity is missing", async () => {
-    const Image = handler(async () => null);
-    await Image({ params: Promise.resolve({ slug: "nope" }) });
+    await buildHandler(async () => null)({
+      params: Promise.resolve({ slug: "not-curated" }),
+    });
 
-    const text = flatten(imageResponseCalls[0].element);
+    const text = flatten(constructed[0].element);
     expect(text).toContain("Org dossier");
     expect(text).toContain("Sift");
-    expect(text).not.toContain("Nonprofit");
-  });
-
-  it("passes the awaited route params to the loader", async () => {
-    const load = jest.fn<Promise<Org | null>, [{ slug: string }]>().mockResolvedValue(null);
-    await handler(load)({ params: Promise.resolve({ slug: "cato-institute" }) });
-    expect(load).toHaveBeenCalledWith({ slug: "cato-institute" });
+    expect(text).not.toContain("Think tank");
   });
 });

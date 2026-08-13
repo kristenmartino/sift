@@ -437,8 +437,20 @@ export const COPY = {
     },
     // ── Funding edges ────────────────────────────────────
     fundingEdges: {
-      grantsIntro: (count: number, total: string, period: string) =>
-        `${count} grant${count === 1 ? "" : "s"} of $5,000 or more, ${total} in total, as reported on the organization's own Form 990 for ${period}.`,
+      // `periodCount` is not cosmetic: the total sums every period on file, so
+      // labelling it with the newest one alone (as this did until 2026-08-12)
+      // reported three years of grants as one year's giving.
+      grantsIntro: (
+        count: number,
+        total: string,
+        period: string,
+        periodCount: number = 1,
+      ) =>
+        `${count} grant${count === 1 ? "" : "s"} of $5,000 or more, ${total} in total, as reported on the organization's own ${periodCount > 1 ? "Forms" : "Form"} 990 for ${period}.`,
+      // The total can only add up what was stated. Saying so is cheaper than a
+      // reader dividing the total by the count and finding it doesn't work.
+      amountUnknownNote: (count: number) =>
+        `${count} of ${count === 1 ? "these grants doesn't" : "these grants don't"} state an amount on the filing, so ${count === 1 ? "it isn't" : "they aren't"} included in the total.`,
       relatedIntro:
         "Organizations this one declares as related on its Form 990. A declared relationship, not an inference by Sift.",
       // The gate, said out loud — and split by reason, because they are not
@@ -452,6 +464,8 @@ export const COPY = {
         `${count} more ${count === 1 ? "recipient is" : "recipients are"} not shown: the EIN on the filing isn't in the IRS index of electronic filers — often a consultancy, an LLC, or an organization small enough not to file — so there's nothing to check the name against.`,
       inboundNote:
         "This shows money paid out. A public charity's own donors are redacted from the public copy of its return, so who funds this organization can't be read from this filing.",
+      heldOtherNote: (count: number) =>
+        `${count} further ${count === 1 ? "entry is" : "entries are"} withheld pending a check this page can't yet describe. The count is shown anyway: an omission Sift can't explain is still an omission a reader should know about.`,
       sourceLink: (period: string) => `Source: Form 990, tax period ${period}`,
       noEin: "No EIN on record for this organization, so filed grants can't be matched to it.",
       amountUnknown: "Amount not stated",

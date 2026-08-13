@@ -686,7 +686,12 @@ export interface Story {
    * Mean importance of the live member articles (1-5) — the story's base
    * significance since stage 7. Corroboration multiplies this rather than
    * standing in for it, so wire pickup of a local tragedy no longer reads
-   * as a major event.
+   * as a major event. Unscored members are averaged in at the center, so
+   * they abstain rather than handing the story to whoever was scored.
+   *
+   * Absent means no importance signal at all, which the re-rank scores as
+   * neutral. The API omits it rather than substituting a default, so that
+   * "neutral" is defined in exactly one place.
    */
   avgImportance?: number;
   /**
@@ -695,6 +700,9 @@ export interface Story {
    * co-members — gated at 4, because an unconditional floor would restore the
    * single-outlet leverage the mean was chosen to remove. See
    * STORY_FLOOR_MIN_IMPORTANCE in lib/db.ts.
+   *
+   * Absent when no member carries a score — only a member somebody actually
+   * scored may trip the floor, so absence switches it off.
    */
   maxImportance?: number;
   /**
@@ -804,6 +812,12 @@ export interface OrgFundingEdges {
   heldForReview: number;
   /** EIN absent from the IRS e-filer index — nothing to check against. */
   heldEinAbsent: number;
+  /**
+   * Withheld under a verdict this repo has no wording for — sift-api owns the
+   * vocabulary and can extend it independently. Counted so a new verdict
+   * withholds rows loudly instead of silently.
+   */
+  heldOther: number;
   /** Distinct fiscal periods represented, newest first. */
   fiscalPeriods: string[];
 }

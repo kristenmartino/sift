@@ -193,7 +193,15 @@ const STORY_BOOST = 2.0;
 // runs 7.5/6.8/6.0/5.5/4.3 against a 5.7 baseline. 2.5 holds the mix that
 // #231 tuned while adding 89 units of story-vs-story reordering.
 const STORY_IMPORTANCE_CENTER = 2.5;
-const STORY_IMPORTANCE_SQL = `(COALESCE(AVG(a.importance_score), 3) / ${STORY_IMPORTANCE_CENTER})`;
+// An unscored member abstains rather than voting: it is averaged in AT the
+// center, so it neither lifts nor lowers the story. Plain AVG skips NULLs
+// instead, which hands the whole story to whichever members happen to be
+// scored — one scored 5 among four unscored members read as mean 5, a 2.0x
+// multiplier off a single outlet's judgment, which is precisely the
+// single-outlet leverage the mean exists to remove. A flat COALESCE to 3
+// would be worse still: it puts "no signal" ABOVE the observed mean.
+const STORY_MEAN_IMPORTANCE_SQL = `AVG(COALESCE(a.importance_score, ${STORY_IMPORTANCE_CENTER}))`;
+const STORY_IMPORTANCE_SQL = `(${STORY_MEAN_IMPORTANCE_SQL} / ${STORY_IMPORTANCE_CENTER})`;
 
 // Stage 7's floor: a story may never rank below a genuinely important member.
 //
@@ -220,17 +228,23 @@ const STORY_IMPORTANCE_SQL = `(COALESCE(AVG(a.importance_score), 3) / ${STORY_IM
 // deliberate policy, and a floor that outran them would silently revert them.
 // Set STORY_FLOOR_MIN_IMPORTANCE above 5 to disable.
 const STORY_FLOOR_MIN_IMPORTANCE = 4;
-const STORY_MAX_IMPORTANCE_SQL = `MAX(COALESCE(a.importance_score, 3))`;
+// NULL-skipping on purpose, unlike the mean above: only a member somebody
+// actually scored may trip the floor. MAX over all-NULL members is NULL and
+// `NULL >= 4` is false, so the floor switches itself off with no fallback to
+// invent. (This coalesced NULL to 3 until 2026-08-12, which was inert at the
+// gate of 4 but would have fired on unscored members the moment the gate was
+// lowered to test the rule.)
+const STORY_MAX_IMPORTANCE_SQL = `MAX(a.importance_score)`;
+// The floor is zero unless a member earns it, which makes one GREATEST enough
+// — and keeps the coverage and mean subexpressions written (and evaluated)
+// once rather than once per CASE branch.
 const STORY_SIGNIFICANCE_SQL = `
-         CASE WHEN ${STORY_MAX_IMPORTANCE_SQL} >= ${STORY_FLOOR_MIN_IMPORTANCE}
-              THEN GREATEST(
-                (${STORY_BASE} + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float
-                  * ${STORY_IMPORTANCE_SQL},
-                ${STORY_MAX_IMPORTANCE_SQL}::float)
-              ELSE
-                (${STORY_BASE} + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float
-                  * ${STORY_IMPORTANCE_SQL}
-         END`;
+         GREATEST(
+           (${STORY_BASE} + ${STORY_BOOST} * LN(1 + COUNT(DISTINCT a.source_name)))::float
+             * ${STORY_IMPORTANCE_SQL},
+           CASE WHEN ${STORY_MAX_IMPORTANCE_SQL} >= ${STORY_FLOOR_MIN_IMPORTANCE}
+                THEN ${STORY_MAX_IMPORTANCE_SQL}::float ELSE 0 END
+         )`;
 
 // "sources" in that curve means DISTINCT OUTLETS, not article rows. It counted
 // COUNT(a.id) until 2026-08-11, which is a different thing: measured over 7
@@ -375,7 +389,7 @@ export async function getStoriesWithArticles(
               COUNT(a.id)::int AS article_count,
               COUNT(DISTINCT a.source_name)::int AS outlet_count,
               AVG(CASE WHEN a.tone = 'grim' THEN 1.0 ELSE 0 END) AS grim_share,
-              COALESCE(AVG(a.importance_score), 3) AS avg_importance,
+              ${STORY_MEAN_IMPORTANCE_SQL} AS avg_importance,
               ${STORY_MAX_IMPORTANCE_SQL} AS max_importance,
               AVG(CASE WHEN a.is_opinion THEN 1.0 ELSE 0 END) AS opinion_share,
               s.representative_image_url, s.published_date, s.synthesis_status
@@ -1517,6 +1531,7 @@ export async function getFundingEdgesForOrg(
     related: [],
     heldForReview: 0,
     heldEinAbsent: 0,
+    heldOther: 0,
     fiscalPeriods: [],
   };
   if (!ein || !/^\d{9}$/.test(ein)) return empty;
@@ -1582,6 +1597,14 @@ export async function getFundingEdgesForOrg(
       heldForReview: undecided.filter((r) => r.ein_name_agrees === "review").length,
       heldEinAbsent: undecided.filter((r) => r.ein_name_agrees === "ein_absent")
         .length,
+      // A verdict this reader doesn't recognize. sift-api owns the vocabulary
+      // and can add to it without this repo shipping; bucketing by name alone
+      // would then withhold rows and report zero withheld, which is the exact
+      // silent omission the counts exist to prevent. Counted as "held for a
+      // reason we can't describe" rather than dropped.
+      heldOther: undecided.filter(
+        (r) => r.ein_name_agrees !== "review" && r.ein_name_agrees !== "ein_absent",
+      ).length,
       fiscalPeriods: [
         ...new Set(publishable.map((r) => r.fiscal_period)),
       ].sort((a, b) => b.localeCompare(a)),

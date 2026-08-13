@@ -21,19 +21,41 @@ const NO_FUNDING: OrgFundingEdges = {
   related: [],
   heldForReview: 0,
   heldEinAbsent: 0,
+  heldOther: 0,
   fiscalPeriods: [],
 };
 
-/** "202412" -> "the year ending December 2024". */
-function formatFiscalPeriod(period: string | undefined): string {
-  if (!period || period.length !== 6) return "that year";
-  const year = period.slice(0, 4);
+/** "202412" -> "December 2024"; null when the period isn't YYYYMM. */
+function formatMonthYear(period: string | undefined): string | null {
+  if (!period || period.length !== 6) return null;
   const month = Number(period.slice(4, 6));
   const name = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
   ][month - 1];
-  return name ? `the year ending ${name} ${year}` : `fiscal ${year}`;
+  return name ? `${name} ${period.slice(0, 4)}` : null;
+}
+
+/** "202412" -> "the year ending December 2024". */
+function formatFiscalPeriod(period: string | undefined): string {
+  const monthYear = formatMonthYear(period);
+  if (monthYear) return `the year ending ${monthYear}`;
+  return period && period.length >= 4 ? `fiscal ${period.slice(0, 4)}` : "that year";
+}
+
+/**
+ * Labels the span the grants total actually covers.
+ *
+ * The total sums every filing on file, so a single period's label misstated it
+ * whenever more than one 990 had been ingested: three years of giving read as
+ * one year's. `periods` arrives newest-first.
+ */
+function formatFiscalPeriodSpan(periods: string[]): string {
+  if (periods.length <= 1) return formatFiscalPeriod(periods[0]);
+  const newest = formatMonthYear(periods[0]);
+  const oldest = formatMonthYear(periods[periods.length - 1]);
+  if (!newest || !oldest) return `${periods.length} tax periods`;
+  return `the years ending ${oldest} through ${newest}`;
 }
 
 /**
@@ -55,6 +77,21 @@ export default function OrgDossier({
   const c = COPY.orgDossier;
   const fc = c.fundingEdges;
   const grantTotal = funding.grants.reduce((sum, e) => sum + (e.amountUsd ?? 0), 0);
+  const grantsWithoutAmount = funding.grants.filter((e) => e.amountUsd === null).length;
+  // One citation per filing the sections drew from, not per edge — a 40-grant
+  // 990 is one document. `filingUrl` was fetched and never rendered until
+  // 2026-08-12, leaving the one all-filings section on the site uncited.
+  const filings = [...funding.grants, ...funding.related]
+    .reduce<{ period: string; url: string }[]>((acc, edge) => {
+      if (edge.filingUrl && !acc.some((f) => f.url === edge.filingUrl)) {
+        acc.push({ period: edge.fiscalPeriod, url: edge.filingUrl });
+      }
+      return acc;
+    }, [])
+    .sort((a, b) => b.period.localeCompare(a.period));
+  const hasFundingSections = funding.grants.length > 0 || funding.related.length > 0;
+  const heldTotal =
+    funding.heldForReview + funding.heldEinAbsent + funding.heldOther;
   const typeLabel = formatOrgTypeLabel(org.type);
   const budgetLabel = formatBudgetUsd(org.annualBudgetUsd);
 
@@ -276,13 +313,18 @@ export default function OrgDossier({
               {fc.grantsIntro(
                 funding.grants.length,
                 formatBudgetUsd(grantTotal) ?? `$${grantTotal.toLocaleString()}`,
-                formatFiscalPeriod(funding.fiscalPeriods[0]),
+                formatFiscalPeriodSpan(funding.fiscalPeriods),
+                funding.fiscalPeriods.length,
               )}
             </p>
             <ul className="space-y-2.5 mb-3">
-              {funding.grants.map((edge) => (
+              {funding.grants.map((edge, i) => (
                 <li
-                  key={`${edge.targetEin}-${edge.amountUsd}-${edge.purpose}`}
+                  // The index is part of the key deliberately: two grants to
+                  // the same recipient for the same amount and purpose in two
+                  // filings are distinct rows, and nothing in a row's own data
+                  // tells them apart.
+                  key={`${edge.filingUrl}-${edge.targetEin}-${i}`}
                   className="flex flex-col gap-y-1 md:grid md:grid-cols-[1fr_auto] md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
                 >
                   <span className="font-body text-[15px] text-(--text-secondary) leading-snug">
@@ -301,6 +343,11 @@ export default function OrgDossier({
                 </li>
               ))}
             </ul>
+            {grantsWithoutAmount > 0 && (
+              <p className="font-body text-meta text-(--text-tertiary) max-w-[60ch] leading-relaxed mb-1.5">
+                {fc.amountUnknownNote(grantsWithoutAmount)}
+              </p>
+            )}
             <p className="font-body text-meta text-(--text-tertiary) max-w-[60ch] leading-relaxed">
               {fc.inboundNote}
             </p>
@@ -319,9 +366,9 @@ export default function OrgDossier({
               {fc.relatedIntro}
             </p>
             <ul className="space-y-2.5">
-              {funding.related.map((edge) => (
+              {funding.related.map((edge, i) => (
                 <li
-                  key={edge.targetEin}
+                  key={`${edge.filingUrl}-${edge.targetEin}-${i}`}
                   className="flex flex-col gap-y-1 md:grid md:grid-cols-[1fr_auto] md:gap-x-6 md:items-baseline border-b border-(--border-subtle) pb-2.5"
                 >
                   <span className="font-body text-[15px] text-(--text-secondary)">
@@ -344,21 +391,66 @@ export default function OrgDossier({
         {/* The verdict gate, said out loud. Rendering the count is the
             point: a page that silently dropped mismatched rows would be
             the failure the check exists to prevent. */}
-        {(funding.heldForReview > 0 || funding.heldEinAbsent > 0) &&
-          (funding.grants.length > 0 || funding.related.length > 0) && (
-            <div className="max-w-[60ch] mb-12 -mt-6 space-y-1.5">
-              {funding.heldForReview > 0 && (
-                <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
-                  {fc.heldReviewNote(funding.heldForReview)}
-                </p>
-              )}
-              {funding.heldEinAbsent > 0 && (
-                <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
-                  {fc.heldUnmatchedNote(funding.heldEinAbsent)}
-                </p>
-              )}
-            </div>
-          )}
+        {heldTotal > 0 && (
+          // Not gated on a section having rendered: an org whose every filed
+          // edge is withheld is the case the disclosure matters MOST for, and
+          // requiring a published row to earn the note meant that org showed
+          // nothing and said nothing — the silent withholding this check was
+          // built to prevent, and what public/llms.txt promises doesn't happen.
+          <div
+            className={`max-w-[60ch] mb-12 space-y-1.5 ${
+              hasFundingSections ? "-mt-6" : ""
+            }`}
+          >
+            {!hasFundingSections && (
+              // With no list above it, the note needs its own eyebrow or it
+              // reads as a stray sentence under whatever section precedes it.
+              <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
+                {c.sections.grantsPaid}
+              </p>
+            )}
+            {funding.heldForReview > 0 && (
+              <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
+                {fc.heldReviewNote(funding.heldForReview)}
+              </p>
+            )}
+            {funding.heldEinAbsent > 0 && (
+              <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
+                {fc.heldUnmatchedNote(funding.heldEinAbsent)}
+              </p>
+            )}
+            {funding.heldOther > 0 && (
+              <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
+                {fc.heldOtherNote(funding.heldOther)}
+              </p>
+            )}
+            {!hasFundingSections && (
+              <p className="font-body text-meta text-(--text-tertiary) leading-relaxed">
+                {fc.inboundNote}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* The filings themselves. Every figure above is quoted from one of
+            these documents, so the reader can go read it. */}
+        {filings.length > 0 && (
+          <div className="max-w-[60ch] mb-12 -mt-6 space-y-1.5">
+            {filings.map((filing) => (
+              <p key={filing.url} className="font-body text-meta">
+                <a
+                  href={filing.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
+                >
+                  {fc.sourceLink(formatMonthYear(filing.period) ?? filing.period)}{" "}
+                  <span aria-hidden>↗</span>
+                </a>
+              </p>
+            ))}
+          </div>
+        )}
 
         {/* External links — public-record citations */}
         {externalLinkEntries.length > 0 && (

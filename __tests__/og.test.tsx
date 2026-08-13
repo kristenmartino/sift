@@ -114,3 +114,13 @@ describe("loadOgFonts", () => {
     expect(await loadOgFonts()).toBe(await loadOgFonts());
   });
 });
+
+describe("siftIconCard", () => {
+  it("scales the corner radius and the mark it is given", () => {
+    const card = siftIconCard({ radius: 36, mark: 96 }) as {
+      props: { style: { borderRadius: number }; children: { props: { width: number } } };
+    };
+    expect(card.props.style.borderRadius).toBe(36);
+    expect(card.props.children.props.width).toBe(96);
+  });
+});
