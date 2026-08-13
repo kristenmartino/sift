@@ -1,6 +1,6 @@
 # Sift — STATUS
 
-**Updated:** 2026-08-11
+**Updated:** 2026-08-12
 **Tier:** v1.5 (civic-literacy pivot) — **feature work active** (un-paused 2026-08-05)
 **Velocity:** **27 PRs merged 2026-08-05** (24 `sift-api`, 3 `sift`) — the largest single day in the project's history, against a six-week gap that ended 2026-07-30. By month: Mar 44 · Apr 39 · May 51 · Jun 13 · Jul 3. This line has twice been wrong in the *optimistic* direction (it read "High (10+ PRs / week)" through eight weeks of near-zero — see [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) §2.5); treat a single day as a day, not a baseline.
 
@@ -206,6 +206,8 @@ Both found while applying migration 012 to prod. Neither blocks the week-one tes
 - Triage of `sift-api` #62 (merge) and #63 (Ask Sift + Refined Compare) into the sequenced roadmap
 
 ## Recent decisions
+
+- **2026-08-12** — **The coverage ratchet moved for the first time: `./lib/` is now ~98% statements / ~94% branches, up from ~75%.** The 2026-07-30 pass made the gate real by naming sources in `collectCoverageFrom`; this one covered what that measurement exposed — every `lib/` module that sat at 0% (`security`, `rate-limit`, `civic`, `civicContext`'s batch query, both analytics writers) plus `copy.ts` (35% → 100%) and `constants.ts`. Two API routes went from 0% to 100% (`/api/primer/expand`, `/api/compare/daily`); the rest of `app/api/` and nearly all of `components/` are still untested, so the `global` group only rose 11% → 17%. Thresholds raised to just under the measured values, per the ratchet rule in `jest.config.ts`. No source changed — the tests found no defects, which is itself the result: the graceful-degradation paths (missing table, malformed JSONB, unparseable body, kill switch) all behave as their comments claim.
 
 - **2026-08-11** — **Clerk migrated to siftnews.io; sign-in works on the canonical domain.** Closes the deferral recorded in `WEEK_ONE_OUTREACH.md` ("someone who lands on `siftnews.io` and clicks Sign in hits a broken flow") before the week-one send. It was a domain change on the existing Clerk production instance — new publishable key in Vercel, CNAMEs on Vercel DNS, three CSP entries in `next.config.js` — not the 4–6-hour new-instance rebuild the launch memo costed. Auth on the old subdomain stops working; `siftnews.io` is canonical. sift-api's CORS list also swapped the never-registered `siftnews.ai` entries for `siftnews.io` in the same pass.
 
