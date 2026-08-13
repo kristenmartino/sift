@@ -1,4 +1,4 @@
-import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
+import { stripHtml, sanitizeUrl, sanitizeLinkUrl } from "@/lib/sanitize";
 
 describe("stripHtml", () => {
   it("removes basic HTML tags", () => {
@@ -76,5 +76,24 @@ describe("sanitizeUrl", () => {
 
   it("rejects empty string", () => {
     expect(sanitizeUrl("")).toBeNull();
+  });
+});
+
+describe("sanitizeLinkUrl", () => {
+  it("passes through http(s) URLs", () => {
+    expect(sanitizeLinkUrl("https://example.com/story")).toBe(
+      "https://example.com/story"
+    );
+  });
+
+  it("collapses script-bearing schemes to no link", () => {
+    expect(sanitizeLinkUrl("javascript:alert(1)")).toBe("");
+    expect(sanitizeLinkUrl("data:text/html,<script>alert(1)</script>")).toBe("");
+  });
+
+  it("collapses null, undefined and garbage to no link", () => {
+    expect(sanitizeLinkUrl(null)).toBe("");
+    expect(sanitizeLinkUrl(undefined)).toBe("");
+    expect(sanitizeLinkUrl("not a url")).toBe("");
   });
 });

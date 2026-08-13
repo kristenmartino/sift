@@ -42,3 +42,14 @@ export function sanitizeUrl(raw: string): string | null {
     return null;
   }
 }
+
+/**
+ * Same check as `sanitizeUrl`, collapsed to "" for the non-nullable
+ * `Article.sourceUrl` field. Article URLs reach the reader as an `href`,
+ * so a `javascript:` value stored by an upstream writer would execute on
+ * click; components already treat an empty `sourceUrl` as "no link".
+ */
+export function sanitizeLinkUrl(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return sanitizeUrl(raw) ?? "";
+}

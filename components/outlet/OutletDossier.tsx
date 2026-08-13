@@ -271,17 +271,9 @@ export default function OutletDossier({
             </p>
           ) : (
             <ul className="space-y-0">
-              {recentArticles.map((article) => (
-                <li
-                  key={article.id}
-                  className="border-b border-(--border-subtle) last:border-b-0 py-3.5"
-                >
-                  <a
-                    href={article.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block group no-underline"
-                  >
+              {recentArticles.map((article) => {
+                const body = (
+                  <>
                     <p className="font-heading text-[17px] leading-snug text-(--text-primary) group-hover:text-(--accent) transition-colors">
                       {article.title}
                     </p>
@@ -290,9 +282,28 @@ export default function OutletDossier({
                       <span className="opacity-30">·</span>
                       <span>{article.readTime} min read</span>
                     </p>
-                  </a>
-                </li>
-              ))}
+                  </>
+                );
+                return (
+                  <li
+                    key={article.id}
+                    className="border-b border-(--border-subtle) last:border-b-0 py-3.5"
+                  >
+                    {article.sourceUrl ? (
+                      <a
+                        href={article.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block group no-underline"
+                      >
+                        {body}
+                      </a>
+                    ) : (
+                      <div className="block">{body}</div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

@@ -50,14 +50,18 @@ export default function LeadStory({ article }: { article: Article | null }) {
           {mbfc && <span className="sl-chip">MBFC: {mbfc}</span>}
         </div>
 
-        <a
-          href={article.sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="sl-lead-link"
-        >
+        {article.sourceUrl ? (
+          <a
+            href={article.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sl-lead-link"
+          >
+            <h3 className="sl-lead">{article.title}</h3>
+          </a>
+        ) : (
           <h3 className="sl-lead">{article.title}</h3>
-        </a>
+        )}
 
         {background ? (
           <div className="sl-primer">

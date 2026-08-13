@@ -129,6 +129,12 @@ describe("mapArticleRow", () => {
     expect(article.summary).toBe("<b>raw</b>");
   });
 
+  it("drops a script-bearing source URL even when clean is false", () => {
+    const unsafe = row({ source_url: "javascript:alert(1)" });
+    expect(mapArticleRow(unsafe).sourceUrl).toBe("");
+    expect(mapArticleRow(unsafe, { clean: false }).sourceUrl).toBe("");
+  });
+
   it("attaches entity links and outlet provenance when present", () => {
     const outlet = { slug: "reuters", name: "Reuters" } as OutletProfile;
     const entityLinks = [

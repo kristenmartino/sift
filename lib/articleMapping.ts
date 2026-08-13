@@ -13,7 +13,7 @@ import { resolveOutletForSourceName } from "./db";
 import type { DbArticle } from "./db";
 import { parseEntityLinks } from "./entityLinks";
 import { attachPrimerTermLinks, parseContextPrimer } from "./primer";
-import { sanitizeUrl, stripHtml } from "./sanitize";
+import { sanitizeLinkUrl, sanitizeUrl, stripHtml } from "./sanitize";
 import type { Article, ArticleTone, CategoryId, EntityLink, OutletProfile } from "./types";
 
 const BAD_SUMMARIES = ["unable to provide summary"];
@@ -84,7 +84,10 @@ export function mapArticleRow(
     id: row.id,
     title: row.title,
     summary: clean ? cleanSummary(row.summary) : row.summary || "",
-    sourceUrl: row.source_url,
+    // Always scheme-checked, even when `clean` is off: source_url is written
+    // by sift-api's ingest and lands in an `href`, so a stored `javascript:`
+    // would execute on click. Components render an empty sourceUrl unlinked.
+    sourceUrl: sanitizeLinkUrl(row.source_url),
     sourceName: row.source_name,
     publishedDate: row.published_date ? row.published_date.toISOString() : null,
     imageUrl: clean ? cleanImageUrl(row.image_url, image) : row.image_url,
