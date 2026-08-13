@@ -15,8 +15,11 @@ jest.mock("@/lib/db", () => ({
   default: { query: (...args: unknown[]) => mockQuery(...args) },
 }));
 
-import { enrichLinksWithContext } from "@/lib/civicContext";
-import type { EntityLink } from "@/lib/types";
+import {
+  enrichArticleEntityLinks,
+  enrichLinksWithContext,
+} from "@/lib/civicContext";
+import type { Article, EntityLink } from "@/lib/types";
 
 function link(
   type: EntityLink["type"],
@@ -177,5 +180,46 @@ describe("enrichLinksWithContext — error posture", () => {
     await expect(
       enrichLinksWithContext([link("politician", "S000148")]),
     ).rejects.toThrow("connection terminated");
+  });
+});
+
+describe("enrichArticleEntityLinks", () => {
+  const article = (...entityLinks: EntityLink[]) =>
+    ({ id: "a1", entityLinks }) as Article;
+
+  it("enriches chips across every article list in one query", async () => {
+    mockQuery.mockResolvedValue({
+      rows: [
+        {
+          bioguide_id: "S000148",
+          top_industries_current_cycle: SCHUMER_INDUSTRIES,
+        },
+      ],
+    });
+    const standalone = article(link("politician", "S000148"));
+    const clustered = article(link("politician", "S000148"));
+
+    await enrichArticleEntityLinks([standalone], [clustered]);
+
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(standalone.entityLinks![0].civicContext).toBeDefined();
+    expect(clustered.entityLinks![0].civicContext).toBeDefined();
+  });
+
+  it("skips the query when no article carries chips", async () => {
+    await enrichArticleEntityLinks([article()], [{ id: "a2" } as Article]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("swallows a hard query failure — a chip without a tooltip still links", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    mockQuery.mockRejectedValue(new Error("connection terminated"));
+    const a = article(link("politician", "S000148"));
+
+    await expect(enrichArticleEntityLinks([a])).resolves.toBeUndefined();
+
+    expect(a.entityLinks![0].civicContext).toBeUndefined();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
