@@ -134,4 +134,14 @@ describe("isMissingTable / isMissingColumn", () => {
     expect(isMissingColumn(undefinedQualifiedColumn, "story_id")).toBe(true);
     expect(isMissingColumn(undefinedBareColumn, "story_id")).toBe(true);
   });
+
+  it("needs a message to name a relation — a bare SQLSTATE isn't enough", () => {
+    // A driver-shaped error with the right code but no message text can't be
+    // attributed to a specific table, so the named form declines it.
+    expect(isMissingTable({ code: "42P01" }, "outlet_profiles")).toBe(false);
+    expect(isMissingTable({ code: "42P01", message: 42 }, "outlet_profiles")).toBe(
+      false,
+    );
+    expect(isMissingTable({ code: "42P01" })).toBe(true);
+  });
 });
