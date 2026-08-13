@@ -39,6 +39,42 @@ describe("story corroboration constants", () => {
     expect(constant(clientSrc, "STORY_BOOST")).toBe(constant(dbSrc, "STORY_BOOST"));
   });
 
+  it("STORY_IMPORTANCE_CENTER matches between the SQL pool and the client re-rank", () => {
+    // Stage 7 divides every story by this. The two ends disagreeing would not
+    // change any story's rank against another story — it is a constant — but
+    // it would move stories as a block against standalone articles, on one
+    // side of the boundary only. The pool would then be cut with one mix and
+    // displayed with another.
+    expect(constant(clientSrc, "STORY_IMPORTANCE_CENTER")).toBe(
+      constant(dbSrc, "STORY_IMPORTANCE_CENTER")
+    );
+  });
+
+  it("STORY_FLOOR_MIN_IMPORTANCE matches between the SQL pool and the client re-rank", () => {
+    // The gate IS the design of the floor (#237), and it is the constant most
+    // likely to be moved by hand — lowering it to 3 to see what happens is the
+    // obvious experiment, and doing it in one file only would floor the pool
+    // and not the feed.
+    expect(constant(clientSrc, "STORY_FLOOR_MIN_IMPORTANCE")).toBe(
+      constant(dbSrc, "STORY_FLOOR_MIN_IMPORTANCE")
+    );
+  });
+
+  it("treats an unscored member as an abstention on both sides", () => {
+    // The mean coalesces missing scores to the center so they neither lift nor
+    // lower the story; the floor's MAX does NOT coalesce, so an unscored
+    // member can never trip it. Plain AVG (NULL-skipping) let one scored
+    // member out of five set the whole story's multiplier — the single-outlet
+    // leverage the mean exists to remove, re-entering through missing data.
+    expect(dbSrc).toContain(
+      "AVG(COALESCE(a.importance_score, ${STORY_IMPORTANCE_CENTER}))"
+    );
+    expect(dbSrc).toContain("`MAX(a.importance_score)`");
+    // The client's fallbacks are the same two rules: neutral mean, floor off.
+    expect(clientSrc).toContain("item.data.avgImportance ?? STORY_IMPORTANCE_CENTER");
+    expect(clientSrc).toContain("item.data.maxImportance ?? 0");
+  });
+
   it("both formulas use the constants rather than an inlined number", () => {
     // The base was a literal `3` inside both expressions until 2026-08-11,
     // which is how it stayed unexamined while being 77% of the score.

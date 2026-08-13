@@ -390,6 +390,10 @@ describe("annualBudgetKind", () => {
     expect(parseDbOrgProfile(row("https://example.org/budget.pdf"))?.annualBudgetKind).toBeNull();
   });
 
+  it("returns null when the source isn't a URL at all", () => {
+    expect(parseDbOrgProfile(row("Annual report, page 12"))?.annualBudgetKind).toBeNull();
+  });
+
   it("matches on host, not substring — a lookalike URL does not count", () => {
     const o = parseDbOrgProfile(row("https://evil.com/?u=projects.propublica.org"));
     expect(o?.annualBudgetKind).toBeNull();

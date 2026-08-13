@@ -92,6 +92,10 @@ describe("classifyUserAgent", () => {
     ).toBe("desktop");
   });
 
+  it("returns 'unknown' for a UA matching none of the families", () => {
+    expect(classifyUserAgent("SiftInternalProbe/1.0")).toBe("unknown");
+  });
+
   it("treats bot regex as winning over mobile (a 'mobile-bot' is still a bot)", () => {
     expect(
       classifyUserAgent(

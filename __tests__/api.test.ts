@@ -351,6 +351,43 @@ describe("GET /api/news", () => {
       expect(body.stories[0].maxImportance).toBe(5);
     });
 
+    it("omits both importance fields when no member carries a score", async () => {
+      // MAX over all-NULL members is NULL, and `Number(null)` is 0 — which as
+      // a ranking multiplier reads "score this zero" rather than "unknown".
+      // Omitting instead leaves the single definition of "no signal" in the
+      // client re-rank (neutral mean, floor off) rather than a second one
+      // here: this boundary defaulted to 3 while the client defaulted to 2.5,
+      // so the same missing value scored 1.2x on one side and 1.0x on the
+      // other.
+      mockGetStoriesWithArticles.mockResolvedValue({
+        stories: [{
+          id: "story1",
+          headline: "Two members, neither scored yet",
+          summary: "A synthesized summary.",
+          category: "technology",
+          framings: [],
+          entities: [],
+          article_count: 2,
+          outlet_count: 2,
+          grim_share: null,
+          opinion_share: null,
+          avg_importance: null,
+          max_importance: null,
+          representative_image_url: null,
+          published_date: new Date("2026-03-28T10:00:00Z"),
+          synthesis_status: "complete",
+        }],
+        storyArticles: { story1: [] },
+        standaloneArticles: [],
+      });
+
+      const res = await GET(makeRequest("technology"));
+      const body = await res.json();
+
+      expect(body.stories[0]).not.toHaveProperty("avgImportance");
+      expect(body.stories[0]).not.toHaveProperty("maxImportance");
+    });
+
     it("passes article tone through and derives story tone from grim_share", async () => {
       mockGetStoriesWithArticles.mockResolvedValue({
         stories: [{
