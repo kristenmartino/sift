@@ -87,6 +87,16 @@ describe("dossierOgCard", () => {
   });
 });
 
+describe("siftIconCard", () => {
+  it("scales the corner radius and the mark, keeping the brand background", () => {
+    const card = siftIconCard({ radius: 36, mark: 120 }) as {
+      props: { style: Record<string, unknown>; children: { props: Record<string, unknown> } };
+    };
+    expect(card.props.style).toMatchObject({ background: "#E0492A", borderRadius: 36 });
+    expect(card.props.children.props).toMatchObject({ width: 120, height: 120 });
+  });
+});
+
 describe("loadOgFonts", () => {
   it("loads the vendored Fraunces and DM Mono cuts", async () => {
     const fonts = await loadOgFonts();

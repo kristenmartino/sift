@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { STORAGE_KEYS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
+import { reportError } from "@/lib/observability";
 
 /**
  * First-run coaching: one dismissible sentence above the feed pointing at
@@ -30,7 +31,10 @@ export default function CoachStrip() {
     setVisible(false);
     try {
       localStorage.setItem(STORAGE_KEYS.seenIntro, "1");
-    } catch {}
+    } catch (err) {
+      // The strip stays dismissed for this session but returns next visit.
+      reportError("CoachStrip.dismiss", err, { level: "warning" });
+    }
   };
 
   if (!visible) return null;

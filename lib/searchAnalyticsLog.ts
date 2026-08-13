@@ -8,6 +8,8 @@
  * and never propagate; the SSE response completes either way.
  */
 import pool from "./db";
+import { isMissingSchemaObject } from "./dbErrors";
+import { reportError } from "./observability";
 import {
   isLoggingEnabled,
   type SearchAnalyticsRow,
@@ -54,14 +56,13 @@ export async function logSearchQuery(
     );
     return result.rows[0]?.id ?? null;
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("search_queries") && msg.includes("does not exist")) {
+    if (isMissingSchemaObject(err, "search_queries")) {
       console.warn(
         "search_queries table not yet provisioned; skipping analytics insert",
       );
       return null;
     }
-    console.warn("logSearchQuery failed:", err);
+    reportError("searchAnalytics.logSearchQuery", err, { level: "warning" });
     return null;
   }
 }

@@ -1,3 +1,5 @@
+import { reportError } from "./observability";
+
 // Token usage + cost logging for Anthropic API calls.
 // Emits a single structured JSON log line per call so costs can be
 // aggregated from server logs (Vercel log drains / console).
@@ -39,7 +41,9 @@ export interface UsageLog {
 
 /**
  * Log token usage + estimated cost for an Anthropic Messages response.
- * Swallows all errors so telemetry never breaks the request path.
+ * Never throws — telemetry must not break the request path — but a failure is
+ * reported rather than dropped: the daily cost guard is fed by these lines, so
+ * silence here reads as "nothing was spent".
  */
 export function logUsage(
   operation: string,
@@ -75,7 +79,11 @@ export function logUsage(
     };
     console.log(JSON.stringify(payload));
     return payload;
-  } catch {
+  } catch (err) {
+    reportError("usageTracker.logUsage", err, {
+      level: "warning",
+      extra: { operation, model },
+    });
     return null;
   }
 }
@@ -91,7 +99,8 @@ export function countWebSearches(response: MaybeMessage): number {
       }
     }
     return count;
-  } catch {
+  } catch (err) {
+    reportError("usageTracker.countWebSearches", err, { level: "warning" });
     return 0;
   }
 }

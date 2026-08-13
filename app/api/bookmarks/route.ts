@@ -11,6 +11,7 @@ import {
 } from "@/lib/db";
 import { mapArticleRows } from "@/lib/articleMapping";
 import { enrichArticleEntityLinks } from "@/lib/civicContext";
+import { reportError } from "@/lib/observability";
 import type { Article } from "@/lib/types";
 import { checkCsrf } from "@/lib/security";
 import { internalError, parseJsonBody, unauthorized } from "@/lib/apiResponses";
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     const ids = await getBookmarks(userId);
     return NextResponse.json({ ids });
   } catch (err) {
-    console.error("Bookmarks GET error:", err);
+    reportError("api.bookmarks.GET", err);
     return internalError();
   }
 }
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     await addBookmark(userId, data.articleId);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("Bookmarks POST error:", err);
+    reportError("api.bookmarks.POST", err);
     return internalError();
   }
 }
@@ -95,7 +96,7 @@ export async function DELETE(request: NextRequest) {
     await removeBookmark(userId, data.articleId);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("Bookmarks DELETE error:", err);
+    reportError("api.bookmarks.DELETE", err);
     return internalError();
   }
 }
