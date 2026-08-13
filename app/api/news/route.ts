@@ -43,6 +43,23 @@ function cleanImageUrl(raw: string | null): string | null {
   }
 }
 
+/**
+ * `{ key: n }` when the DB gave a real number, `{}` otherwise.
+ *
+ * `pg` returns NUMERIC as a string and an aggregate over all-NULL rows as
+ * `null`, and `Number(null)` is `0` — which for a ranking multiplier is not
+ * "unknown" but "score this zero". Absent beats guessed here: every consumer
+ * already has to handle an older payload without the field.
+ */
+function spreadIfNumber(
+  key: string,
+  raw: string | number | null | undefined
+): Record<string, number> {
+  if (raw === null || raw === undefined || raw === "") return {};
+  const n = Number(raw);
+  return Number.isFinite(n) ? { [key]: n } : {};
+}
+
 // ─── Valid Categories ───────────────────────────────────
 
 const VALID_CATEGORIES = new Set<string>([
@@ -197,8 +214,15 @@ export async function GET(request: NextRequest) {
         articles: childArticles,
         // A story is grim when at least half its live members are (D48).
         ...(Number(s.grim_share ?? 0) >= 0.5 ? { tone: "grim" as const } : {}),
-        avgImportance: Number(s.avg_importance ?? 3),
-        maxImportance: Number(s.max_importance ?? 3),
+        // Stage 7: the mean member importance, and the best member the floor
+        // may lift the story to. Both are OMITTED rather than defaulted when
+        // the query has no number to give — the client re-rank already
+        // defines what "no importance signal" means (neutral, floor off), and
+        // a second definition here is how the two ends drifted apart: this
+        // read `?? 3` while the client read `?? 2.5`, so the same missing
+        // value scored 1.2x on one side of the boundary and 1.0x on the other.
+        ...spreadIfNumber("avgImportance", s.avg_importance),
+        ...spreadIfNumber("maxImportance", s.max_importance),
         ...(Number(s.opinion_share ?? 0) >= 0.5 ? { isOpinion: true } : {}),
         ...(spectrumBuckets > 0 ? { spectrumBuckets } : {}),
       };

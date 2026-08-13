@@ -59,8 +59,17 @@ export default async function OrgDossierPage({ params }: OrgRouteProps) {
   // Guarded so a funding-table miss degrades to a dossier without the
   // sections rather than a broken page — same posture as the lead-story
   // and outlet-map fetches on the landing route.
-  const funding = await getFundingEdgesForOrg(einFromOrgLinks(org.externalLinks))
-    .catch(() => undefined);
+  // getFundingEdgesForOrg already swallows the one expected failure (a local
+  // DB predating migration 027). Anything reaching here is unexpected, so it
+  // gets logged before the page degrades — a silent catch turned a broken
+  // query into an org that simply appears to fund nobody, which is the one
+  // wrong impression these sections must never leave.
+  const funding = await getFundingEdgesForOrg(
+    einFromOrgLinks(org.externalLinks),
+  ).catch((err) => {
+    console.error(`Funding edges failed for org ${slug}:`, err);
+    return undefined;
+  });
   return (
     <>
       <script
