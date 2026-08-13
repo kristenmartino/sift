@@ -11,6 +11,8 @@
  * privacy posture stays consistent across both analytics tables.
  */
 import pool from "./db";
+import { isMissingSchemaObject } from "./dbErrors";
+import { reportError } from "./observability";
 import { isLoggingEnabled } from "./searchAnalytics";
 
 export interface PrimerExpandRow {
@@ -48,17 +50,13 @@ export async function logPrimerExpand(
     );
     return result.rows[0]?.id ?? null;
   } catch (err) {
-    const msg = String(err);
-    if (
-      msg.includes("primer_expand_events") &&
-      msg.includes("does not exist")
-    ) {
+    if (isMissingSchemaObject(err, "primer_expand_events")) {
       console.warn(
         "primer_expand_events table not yet provisioned; skipping insert",
       );
       return null;
     }
-    console.warn("logPrimerExpand failed:", err);
+    reportError("primerAnalytics.logPrimerExpand", err, { level: "warning" });
     return null;
   }
 }

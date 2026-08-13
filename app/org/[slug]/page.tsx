@@ -5,6 +5,7 @@ import OrgDossier from "@/components/org/OrgDossier";
 import JsonLd from "@/components/JsonLd";
 import { getFundingEdgesForOrg, getOrgBySlug } from "@/lib/db";
 import { dossierMetadata } from "@/lib/metadata";
+import { reportError } from "@/lib/observability";
 import { einFromOrgLinks } from "@/lib/org";
 import { isPublishableOrg } from "@/lib/publishFloor";
 import { orgJsonLd } from "@/lib/structuredData";
@@ -49,13 +50,13 @@ export default async function OrgDossierPage({ params }: OrgRouteProps) {
   // and outlet-map fetches on the landing route.
   // getFundingEdgesForOrg already swallows the one expected failure (a local
   // DB predating migration 027). Anything reaching here is unexpected, so it
-  // gets logged before the page degrades — a silent catch turned a broken
+  // gets reported before the page degrades — a silent catch turned a broken
   // query into an org that simply appears to fund nobody, which is the one
   // wrong impression these sections must never leave.
   const funding = await getFundingEdgesForOrg(
     einFromOrgLinks(org.externalLinks),
   ).catch((err) => {
-    console.error(`Funding edges failed for org ${slug}:`, err);
+    reportError("page.orgDossier.fundingEdges", err, { extra: { slug } });
     return undefined;
   });
   return (

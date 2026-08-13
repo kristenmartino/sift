@@ -1,0 +1,147 @@
+/**
+ * The point of these predicates is what they *don't* match.
+ *
+ * The pattern they replace — `String(err).includes("does not exist")` — took the
+ * degrade path for `role "sift" does not exist` and `database "sift" does not
+ * exist`, i.e. exactly the credentials/config failures that should surface as a
+ * 500. Those cases are pinned below alongside the ones that should still degrade.
+ */
+import {
+  isMissingColumn,
+  isMissingSchemaObject,
+  isMissingTable,
+  pgErrorCode,
+  PG_UNDEFINED_COLUMN,
+  PG_UNDEFINED_TABLE,
+} from "@/lib/dbErrors";
+
+/** A `pg` error carries the SQLSTATE on `.code` and the server text on `.message`. */
+function pgError(code: string, message: string): Error {
+  return Object.assign(new Error(message), { code });
+}
+
+const undefinedTable = pgError(
+  PG_UNDEFINED_TABLE,
+  'relation "search_queries" does not exist',
+);
+const undefinedColumn = pgError(
+  PG_UNDEFINED_COLUMN,
+  'column "entity_links" does not exist',
+);
+// Postgres quotes the identifier for 42P01 but not for 42703, and qualifies it
+// with the table alias when the query does.
+const undefinedQualifiedColumn = pgError(
+  PG_UNDEFINED_COLUMN,
+  "column a.story_id does not exist",
+);
+const undefinedBareColumn = pgError(
+  PG_UNDEFINED_COLUMN,
+  "column story_id does not exist",
+);
+
+describe("pgErrorCode", () => {
+  it("reads the SQLSTATE off a pg error", () => {
+    expect(pgErrorCode(undefinedTable)).toBe("42P01");
+  });
+
+  it("returns null for anything without a string code", () => {
+    expect(pgErrorCode(new Error("boom"))).toBeNull();
+    expect(pgErrorCode({ code: 42 })).toBeNull();
+    expect(pgErrorCode("relation does not exist")).toBeNull();
+    expect(pgErrorCode(null)).toBeNull();
+    expect(pgErrorCode(undefined)).toBeNull();
+  });
+});
+
+describe("isMissingSchemaObject", () => {
+  it("matches undefined_table and undefined_column", () => {
+    expect(isMissingSchemaObject(undefinedTable)).toBe(true);
+    expect(isMissingSchemaObject(undefinedColumn)).toBe(true);
+  });
+
+  it("requires the named object when names are given", () => {
+    expect(isMissingSchemaObject(undefinedTable, "search_queries")).toBe(true);
+    expect(isMissingSchemaObject(undefinedTable, "SEARCH_QUERIES")).toBe(true);
+    expect(isMissingSchemaObject(undefinedTable, "articles")).toBe(false);
+    expect(
+      isMissingSchemaObject(undefinedTable, ["articles", "search_queries"]),
+    ).toBe(true);
+  });
+
+  // Regression: requiring the quoted form made every named missing-column
+  // guard rethrow, so dropping a tolerated column 500'd the feed.
+  it("matches an unquoted column, qualified or bare", () => {
+    expect(isMissingSchemaObject(undefinedQualifiedColumn, "story_id")).toBe(
+      true,
+    );
+    expect(isMissingSchemaObject(undefinedBareColumn, "story_id")).toBe(true);
+    expect(
+      isMissingSchemaObject(undefinedQualifiedColumn, ["stories", "story_id"]),
+    ).toBe(true);
+    expect(isMissingSchemaObject(undefinedQualifiedColumn, "entity_links")).toBe(
+      false,
+    );
+  });
+
+  it("does not match the table qualifier as the identifier", () => {
+    // `articles.story_id` names the missing column, not a missing `articles`.
+    const err = pgError(
+      PG_UNDEFINED_COLUMN,
+      "column articles.story_id does not exist",
+    );
+    expect(isMissingSchemaObject(err, "articles")).toBe(false);
+    expect(isMissingSchemaObject(err, "story_id")).toBe(true);
+  });
+
+  it("does not match a substring of a different identifier", () => {
+    // "story" must not satisfy a guard written for the "stories" table.
+    expect(isMissingSchemaObject(undefinedTable, "search")).toBe(false);
+  });
+
+  // The regression this module exists for.
+  it.each([
+    ["28000", 'role "sift" does not exist'],
+    ["3D000", 'database "sift_prod" does not exist'],
+    ["28P01", 'password authentication failed for user "sift"'],
+    ["57P03", "the database system is starting up"],
+    ["53300", "too many clients already"],
+  ])("does not swallow %s (%s)", (code, message) => {
+    expect(isMissingSchemaObject(pgError(code, message))).toBe(false);
+  });
+
+  it("does not match errors with no SQLSTATE at all", () => {
+    expect(isMissingSchemaObject(new Error("relation does not exist"))).toBe(
+      false,
+    );
+    expect(isMissingSchemaObject("relation does not exist")).toBe(false);
+  });
+});
+
+describe("isMissingTable / isMissingColumn", () => {
+  it("discriminates table from column", () => {
+    expect(isMissingTable(undefinedTable, "search_queries")).toBe(true);
+    expect(isMissingTable(undefinedColumn, "entity_links")).toBe(false);
+    expect(isMissingColumn(undefinedColumn, "entity_links")).toBe(true);
+    expect(isMissingColumn(undefinedTable, "search_queries")).toBe(false);
+  });
+
+  it("matches without a name filter", () => {
+    expect(isMissingTable(undefinedTable)).toBe(true);
+    expect(isMissingColumn(undefinedColumn)).toBe(true);
+  });
+
+  it("matches the unquoted column form pg actually emits", () => {
+    expect(isMissingColumn(undefinedQualifiedColumn, "story_id")).toBe(true);
+    expect(isMissingColumn(undefinedBareColumn, "story_id")).toBe(true);
+  });
+
+  it("needs a message to name a relation — a bare SQLSTATE isn't enough", () => {
+    // A driver-shaped error with the right code but no message text can't be
+    // attributed to a specific table, so the named form declines it.
+    expect(isMissingTable({ code: "42P01" }, "outlet_profiles")).toBe(false);
+    expect(isMissingTable({ code: "42P01", message: 42 }, "outlet_profiles")).toBe(
+      false,
+    );
+    expect(isMissingTable({ code: "42P01" })).toBe(true);
+  });
+});

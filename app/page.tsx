@@ -8,6 +8,7 @@ import {
   resolveOutletForSourceName,
 } from "@/lib/db";
 import { mapArticleRow } from "@/lib/articleMapping";
+import { reportError } from "@/lib/observability";
 import type { Article, OutletProfile } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -30,16 +31,25 @@ export default async function Home() {
     // Curated outlet list for the source colophon. Guarded so an outlet-data
     // miss degrades to an empty list rather than breaking the landing (same
     // posture as getTopStoryForLanding returning null).
-    getAllOutletProfiles().catch(() => []),
+    getAllOutletProfiles().catch((err) => {
+      reportError("page.home.outletProfiles", err);
+      return [];
+    }),
     // source_name → OutletProfile map (module-cached, 1h TTL — shared with
     // /api/news). Lets the hero card resolve the lead source's AllSides + MBFC
     // ratings the same way the feed does, with no extra round-trip on a warm
     // cache. Guarded to an empty map so a miss degrades to a card without
     // rating chips, never a broken page.
-    getOutletProfilesMap().catch((): Map<string, OutletProfile> => new Map()),
+    getOutletProfilesMap().catch((err): Map<string, OutletProfile> => {
+      reportError("page.home.outletProfilesMap", err);
+      return new Map();
+    }),
     // Daily compare example for the comparison section. Null (not yet
     // generated / DB miss) falls back to the static labeled illustration.
-    getDailyCompareExample().catch(() => null),
+    getDailyCompareExample().catch((err) => {
+      reportError("page.home.dailyCompareExample", err, { level: "warning" });
+      return null;
+    }),
   ]);
   const outlets = outletProfiles.map((o) => ({
     slug: o.slug,

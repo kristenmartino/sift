@@ -1,5 +1,7 @@
 import { Pool } from "pg";
 
+import { isMissingColumn, isMissingSchemaObject } from "./dbErrors";
+import { reportError } from "./observability";
 import { parseDbOrgProfile, type DbOrgProfileRow } from "./org";
 import { hasPartisanBalanceCap } from "./agencies";
 import { claimsNonPartisanship } from "./thinkTanks";
@@ -409,9 +411,10 @@ export async function getStoriesWithArticles(
     );
     stories = storiesResult.rows;
   } catch (err) {
-    // stories table may not exist yet — fall back to articles-only
-    const msg = String(err);
-    if (!msg.includes("does not exist")) throw err;
+    // stories table / story_id column may not exist yet — fall back to
+    // articles-only. Anything else is a real failure and propagates.
+    if (!isMissingSchemaObject(err, ["stories", "story_id"])) throw err;
+    reportError("db.getStoriesAndArticles.stories", err, { level: "warning" });
   }
 
   const storyIds = stories.map((s) => s.id);
@@ -441,8 +444,10 @@ export async function getStoriesWithArticles(
       }
     } catch (err) {
       // story_id column may not exist — tolerate and fall through to articles-only path.
-      const msg = String(err);
-      if (!msg.includes("story_id") && !msg.includes("does not exist")) throw err;
+      if (!isMissingColumn(err, "story_id")) throw err;
+      reportError("db.getStoriesAndArticles.storyArticles", err, {
+        level: "warning",
+      });
     }
   }
 
@@ -495,8 +500,10 @@ export async function getStoriesWithArticles(
     );
     standaloneArticles = standaloneResult.rows;
   } catch (err) {
-    const msg = String(err);
-    if (!msg.includes("story_id")) throw err;
+    if (!isMissingColumn(err, "story_id")) throw err;
+    reportError("db.getStoriesAndArticles.standalone", err, {
+      level: "warning",
+    });
     const fallback = await pool.query<DbArticle>(
       `WITH scored AS (
          SELECT id, title, summary, source_url, source_name, image_url,
@@ -586,7 +593,10 @@ export async function getTopStoryForLanding(): Promise<DbArticle | null> {
        LIMIT 1`
     );
     return result.rows[0] ?? null;
-  } catch {
+  } catch (err) {
+    // The landing hero degrades to the static illustration rather than 500ing,
+    // but a silent degrade here means an empty homepage nobody is told about.
+    reportError("db.getTopStoryForLanding", err);
     return null;
   }
 }
@@ -603,7 +613,8 @@ export async function healthCheck(): Promise<boolean> {
   try {
     await pool.query("SELECT 1");
     return true;
-  } catch {
+  } catch (err) {
+    reportError("db.healthCheck", err);
     return false;
   }
 }
@@ -833,9 +844,9 @@ async function loadOutletProfilesMap(): Promise<Map<string, OutletProfile>> {
       out.set(profile.name.trim().toLowerCase(), profile);
     }
   } catch (err) {
-    const msg = String(err);
-    if (!msg.includes("does not exist")) throw err;
+    if (!isMissingSchemaObject(err, "outlet_profiles")) throw err;
     // outlet_profiles missing — return empty map; aliases lookup also pointless.
+    reportError("db.loadOutletProfilesMap.profiles", err, { level: "warning" });
     return out;
   }
 
@@ -850,9 +861,9 @@ async function loadOutletProfilesMap(): Promise<Map<string, OutletProfile>> {
       out.set(raw_source_name.trim().toLowerCase(), profile);
     }
   } catch (err) {
-    const msg = String(err);
-    if (!msg.includes("does not exist")) throw err;
+    if (!isMissingSchemaObject(err, "source_name_aliases")) throw err;
     // source_name_aliases missing — fall through with name-only matches.
+    reportError("db.loadOutletProfilesMap.aliases", err, { level: "warning" });
   }
 
   return out;
@@ -874,7 +885,7 @@ export async function getOutletProfilesMap(): Promise<Map<string, OutletProfile>
       return data;
     })
     .catch((err) => {
-      console.error("getOutletProfilesMap: failed to load", err);
+      reportError("db.getOutletProfilesMap", err);
       // Don't cache failure; next caller will retry. Return empty map so the
       // API still serves articles, just without outlet provenance.
       return new Map<string, OutletProfile>();
@@ -931,9 +942,9 @@ export async function getAllOutletProfiles(): Promise<OutletProfile[]> {
     }
     return out;
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return [];
-    throw err;
+    if (!isMissingSchemaObject(err, "outlet_profiles")) throw err;
+    reportError("db.getAllOutletProfiles", err, { level: "warning" });
+    return [];
   }
 }
 
@@ -947,7 +958,9 @@ export async function getAllOutletProfiles(): Promise<OutletProfile[]> {
 export async function getOutletStats(): Promise<OutletStats> {
   try {
     return computeOutletStats(await getAllOutletProfiles());
-  } catch {
+  } catch (err) {
+    // Callers fall back to count-free copy; report so the fallback isn't silent.
+    reportError("db.getOutletStats", err);
     return { ...EMPTY_OUTLET_STATS };
   }
 }
@@ -975,13 +988,11 @@ export async function getArticleEntityLinks(
     );
     return new Map(result.rows.map((r) => [r.id, r.entity_links]));
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("entity_links") && msg.includes("does not exist")) {
-      // Pre-Phase-3.G prod — column not yet added. Fall through with
-      // empty map; the UI renders no glossary section.
-      return new Map();
-    }
-    throw err;
+    if (!isMissingColumn(err, "entity_links")) throw err;
+    // Pre-Phase-3.G prod — column not yet added. Fall through with
+    // empty map; the UI renders no glossary section.
+    reportError("db.getArticleEntityLinks", err, { level: "warning" });
+    return new Map();
   }
 }
 
@@ -1019,9 +1030,9 @@ export async function getPoliticianByBioguide(
     if (result.rows.length === 0) return null;
     return parseDbPoliticianProfile(result.rows[0]);
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return null;
-    throw err;
+    if (!isMissingSchemaObject(err, "politician_profiles")) throw err;
+    reportError("db.getPoliticianByBioguide", err, { level: "warning" });
+    return null;
   }
 }
 
@@ -1054,9 +1065,9 @@ export async function getOrgBySlug(slug: string): Promise<OrgProfile | null> {
     if (result.rows.length === 0) return null;
     return parseDbOrgProfile(result.rows[0]);
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return null;
-    throw err;
+    if (!isMissingSchemaObject(err, "org_profiles")) throw err;
+    reportError("db.getOrgBySlug", err, { level: "warning" });
+    return null;
   }
 }
 
@@ -1086,9 +1097,9 @@ export async function getBillById(billId: string): Promise<BillProfile | null> {
     if (result.rows.length === 0) return null;
     return parseDbBillProfile(result.rows[0]);
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return null;
-    throw err;
+    if (!isMissingSchemaObject(err, "bill_profiles")) throw err;
+    reportError("db.getBillById", err, { level: "warning" });
+    return null;
   }
 }
 
@@ -1125,9 +1136,9 @@ export async function listAllPoliticiansLite(): Promise<PoliticianListItem[]> {
       chamber: (r.chamber as PoliticianListItem["chamber"]) ?? null,
     }));
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return [];
-    throw err;
+    if (!isMissingSchemaObject(err, "politician_profiles")) throw err;
+    reportError("db.listPoliticians", err, { level: "warning" });
+    return [];
   }
 }
 
@@ -1168,9 +1179,9 @@ export async function listCitedAgencies(): Promise<AgencyGovernance[]> {
   } catch (err) {
     // Pre-012 databases lack the columns; degrade to an empty page rather
     // than a 500. The page renders its own empty state.
-    const msg = String(err);
-    if (msg.includes("does not exist")) return [];
-    throw err;
+    if (!isMissingSchemaObject(err)) throw err;
+    reportError("db.listCitedAgencies", err, { level: "warning" });
+    return [];
   }
 }
 
@@ -1221,9 +1232,9 @@ export async function listSelfDescribedOrgs(): Promise<SelfDescribedOrg[]> {
       claimsNonPartisanship: claimsNonPartisanship(r.self_description),
     }));
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return [];
-    throw err;
+    if (!isMissingSchemaObject(err)) throw err;
+    reportError("db.listSelfDescribedOrgs", err, { level: "warning" });
+    return [];
   }
 }
 
@@ -1244,9 +1255,9 @@ export async function listAllOrgsLite(): Promise<OrgListItem[]> {
       type: (r.type as OrgListItem["type"]) ?? null,
     }));
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return [];
-    throw err;
+    if (!isMissingSchemaObject(err, "org_profiles")) throw err;
+    reportError("db.listOrgs", err, { level: "warning" });
+    return [];
   }
 }
 
@@ -1274,9 +1285,9 @@ export async function listAllBillsLite(): Promise<BillListItem[]> {
       status: (r.status as BillListItem["status"]) ?? null,
     }));
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return [];
-    throw err;
+    if (!isMissingSchemaObject(err, "bill_profiles")) throw err;
+    reportError("db.listBills", err, { level: "warning" });
+    return [];
   }
 }
 
@@ -1371,9 +1382,9 @@ export async function listSitemapEntries(): Promise<SitemapEntry[]> {
   } catch (err) {
     // Same graceful degradation as the other profile queries: a pre-Phase-3
     // database yields a static-routes-only sitemap rather than a 500.
-    const msg = String(err);
-    if (msg.includes("does not exist")) return [];
-    throw err;
+    if (!isMissingSchemaObject(err)) throw err;
+    reportError("db.listSitemapEntries", err, { level: "warning" });
+    return [];
   }
 }
 
@@ -1402,9 +1413,9 @@ export async function getOutletBySlug(slug: string): Promise<OutletProfile | nul
     if (result.rows.length === 0) return null;
     return parseDbOutletProfile(result.rows[0]);
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return null;
-    throw err;
+    if (!isMissingSchemaObject(err, "outlet_profiles")) throw err;
+    reportError("db.getOutletBySlug", err, { level: "warning" });
+    return null;
   }
 }
 
@@ -1449,9 +1460,10 @@ export async function getRecentArticlesByOutletSlug(
     );
     return result.rows;
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return [];
-    throw err;
+    if (!isMissingSchemaObject(err, ["outlet_profiles", "source_name_aliases"]))
+      throw err;
+    reportError("db.getRecentArticlesByOutletSlug", err, { level: "warning" });
+    return [];
   }
 }
 
@@ -1489,9 +1501,9 @@ export async function getDailyCompareExample(): Promise<DailyCompareExample | nu
       generatedAt: new Date(generated_at).toISOString(),
     };
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return null;
-    throw err;
+    if (!isMissingSchemaObject(err, "daily_compare_example")) throw err;
+    reportError("db.getDailyCompareExample", err, { level: "warning" });
+    return null;
   }
 }
 
@@ -1598,9 +1610,9 @@ export async function getFundingEdgesForOrg(
       ].sort((a, b) => b.localeCompare(a)),
     };
   } catch (err) {
-    const msg = String(err);
-    if (msg.includes("does not exist")) return empty;
-    throw err;
+    if (!isMissingSchemaObject(err, "funding_edges")) throw err;
+    reportError("db.getFundingEdgesForOrg", err, { level: "warning" });
+    return empty;
   }
 }
 

@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { civicBoost, weightedCivicLinks } from "@/lib/civicWeight";
+import { reportError } from "@/lib/observability";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare, useCustomTopics } from "@/lib/hooks";
 import ArticleCard from "./ArticleCard";
@@ -116,8 +117,12 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     fetch("/api/compare/daily")
       .then((res) => (res.ok ? res.json() : null))
       .then((data: DailyCompareExample | null) => setDailyExample(data))
-      .catch(() => {
-        // No example is a quiet degrade — the sign-in empty state stands in.
+      .catch((err) => {
+        // No example is a quiet degrade — the sign-in empty state stands in —
+        // but the fetch failing is still worth a warning.
+        reportError("NewsAggregator.dailyCompareExample", err, {
+          level: "warning",
+        });
       });
   }, [compareMode, userId, compareError]);
 
@@ -248,7 +253,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         if (!cancelled) setBookmarkFetch({ key: bookmarksKey, articles: data.articles });
       })
       .catch((err) => {
-        console.error("Failed to fetch bookmarked articles:", err);
+        reportError("NewsAggregator.bookmarkedArticles", err);
         if (!cancelled) setBookmarkFetch({ key: bookmarksKey, articles: [] });
       });
     return () => { cancelled = true; };

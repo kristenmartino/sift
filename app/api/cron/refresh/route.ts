@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 
 import { internalError, unauthorized } from "@/lib/apiResponses";
+import { reportError } from "@/lib/observability";
 import { SIFT_API_URL } from "@/lib/siftApi";
 
 function constantTimeEqual(a: string, b: string): boolean {
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
       duration_ms: data.duration_ms,
     });
   } catch (err) {
-    console.error("Pipeline trigger failed:", err);
+    reportError("api.cron.refresh", err);
     return NextResponse.json(
       { triggered: false, error: "Pipeline trigger failed" },
       { status: 502 }

@@ -10,6 +10,7 @@ import { cleanImageUrl, mapArticleRows } from "@/lib/articleMapping";
 import { enrichArticleEntityLinks } from "@/lib/civicContext";
 import { VALID_CATEGORIES } from "@/lib/constants";
 import { countOccupiedBuckets } from "@/lib/crossSpectrum";
+import { reportError } from "@/lib/observability";
 import { stripHtml } from "@/lib/sanitize";
 import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
@@ -175,7 +176,7 @@ export async function GET(request: NextRequest) {
       fetchedAt: lastRefreshed ? lastRefreshed.toISOString() : new Date().toISOString(),
     });
   } catch (err) {
-    console.error("Database query error:", err);
+    reportError("api.news", err, { extra: { category } });
     return NextResponse.json<NewsApiError>(
       { error: "Internal server error" },
       { status: 500 }

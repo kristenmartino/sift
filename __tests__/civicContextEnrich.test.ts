@@ -166,9 +166,12 @@ describe("enrichLinksWithContext — attaching context", () => {
 });
 
 describe("enrichLinksWithContext — error posture", () => {
-  it("degrades silently when politician_profiles doesn't exist yet", async () => {
+  it("degrades when politician_profiles doesn't exist yet", async () => {
     mockQuery.mockRejectedValue(
-      new Error('relation "politician_profiles" does not exist'),
+      // The SQLSTATE is the signal now, not the message text.
+      Object.assign(new Error('relation "politician_profiles" does not exist'), {
+        code: "42P01",
+      }),
     );
     const links = [link("politician", "S000148")];
     await expect(enrichLinksWithContext(links)).resolves.toBeUndefined();
@@ -180,6 +183,88 @@ describe("enrichLinksWithContext — error posture", () => {
     await expect(
       enrichLinksWithContext([link("politician", "S000148")]),
     ).rejects.toThrow("connection terminated");
+  });
+
+  it("rethrows a missing role — that phrase also says 'does not exist'", async () => {
+    mockQuery.mockRejectedValue(
+      Object.assign(new Error('role "sift" does not exist'), { code: "28000" }),
+    );
+    await expect(
+      enrichLinksWithContext([link("politician", "S000148")]),
+    ).rejects.toThrow('role "sift" does not exist');
+  });
+});
+
+/**
+ * The best-effort wrapper the article surfaces call. It is the one place that
+ * turns a hard failure into "chips without tooltips", so the contract is: never
+ * reject, but never go quiet either.
+ */
+describe("enrichArticleEntityLinks", () => {
+  function article(links: EntityLink[]): Article {
+    return {
+      id: "a1",
+      title: "Headline",
+      summary: "Summary.",
+      sourceUrl: "https://example.com/a1",
+      sourceName: "Reuters",
+      publishedDate: null,
+      imageUrl: null,
+      category: "politics",
+      readTime: 3,
+      entityLinks: links,
+    };
+  }
+
+  let warnSpy: jest.SpyInstance;
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it("skips the query when no article carries a chip", async () => {
+    await enrichArticleEntityLinks([article([]), { ...article([]), entityLinks: undefined }]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("batches one query across every article group", async () => {
+    mockQuery.mockResolvedValue({ rows: [] });
+    await enrichArticleEntityLinks(
+      [article([link("politician", "S000148")])],
+      [article([link("politician", "P000197")])],
+    );
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery.mock.calls[0][1]).toEqual([["S000148", "P000197"]]);
+  });
+
+  it("enriches the chips in place", async () => {
+    mockQuery.mockResolvedValue({
+      rows: [
+        {
+          bioguide_id: "S000148",
+          top_industries_current_cycle: SCHUMER_INDUSTRIES,
+        },
+      ],
+    });
+    const a = article([link("politician", "S000148", "Chuck Schumer")]);
+    await enrichArticleEntityLinks([a]);
+    expect(a.entityLinks?.[0].civicContext).toEqual({
+      type: "politician",
+      topIndustries: SCHUMER_INDUSTRIES.slice(0, 3),
+    });
+  });
+
+  it("reports and resolves when enrichment fails — the feed still renders", async () => {
+    mockQuery.mockRejectedValue(new Error("connection terminated"));
+    const a = article([link("politician", "S000148")]);
+    await expect(enrichArticleEntityLinks([a])).resolves.toBeUndefined();
+    expect(a.entityLinks?.[0].civicContext).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[civicContext.enrichArticleEntityLinks]",
+      expect.any(Error),
+    );
   });
 });
 

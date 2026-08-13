@@ -146,3 +146,47 @@ describe("countWebSearches", () => {
     expect(countWebSearches({} as never)).toBe(0);
   });
 });
+
+// ─── telemetry never breaks the request path ─────────────
+
+/**
+ * Both entry points swallow their own failures on purpose — a cost line is not
+ * worth a 500 — but the failure is reported, because the daily AI budget guard
+ * reads these lines and silence there reads as "nothing was spent".
+ */
+describe("failure posture", () => {
+  const hostile = () =>
+    ({
+      get usage(): never {
+        throw new Error("proxy trap");
+      },
+      get content(): never {
+        throw new Error("proxy trap");
+      },
+    }) as never;
+
+  let warnSpy: jest.SpyInstance;
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it("logUsage returns null and reports instead of throwing", () => {
+    expect(logUsage("op", hostile())).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[usageTracker.logUsage]",
+      expect.any(Error),
+      { operation: "op", model: "claude-haiku-4-5" },
+    );
+  });
+
+  it("countWebSearches returns 0 and reports instead of throwing", () => {
+    expect(countWebSearches(hostile())).toBe(0);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[usageTracker.countWebSearches]",
+      expect.any(Error),
+    );
+  });
+});

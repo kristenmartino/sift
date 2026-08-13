@@ -1,3 +1,5 @@
+import { reportError } from "./observability";
+
 /**
  * Parse Server-Sent Events from a fetch Response stream.
  * Yields {event, data} objects as they arrive.
@@ -32,11 +34,19 @@ export async function* readSSE<T = unknown>(
           }
         }
         if (dataStr) {
+          let data: T;
           try {
-            yield { event, data: JSON.parse(dataStr) as T };
-          } catch {
-            // Skip malformed JSON
+            data = JSON.parse(dataStr) as T;
+          } catch (err) {
+            // Skip the frame rather than abort the stream, but report it: a
+            // dropped frame is silently missing search results or claims.
+            reportError("sse.parseFrame", err, {
+              level: "warning",
+              extra: { event, dataPreview: dataStr.slice(0, 200) },
+            });
+            continue;
           }
+          yield { event, data };
         }
       }
     }

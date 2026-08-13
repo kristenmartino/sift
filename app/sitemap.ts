@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { listSitemapEntries } from "@/lib/db";
+import { reportError } from "@/lib/observability";
 
 /**
  * XML sitemap at /sitemap.xml.
@@ -63,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     }));
   } catch (err) {
-    console.error("sitemap: dossier query failed, serving static routes only", err);
+    reportError("sitemap.dossierEntries", err);
   }
 
   return [...staticEntries, ...dossierEntries];
