@@ -23,7 +23,7 @@
  */
 import pool from "./db";
 import { asTopIndustries } from "./politician";
-import type { EntityLink, IndustryDonation } from "./types";
+import type { Article, EntityLink, IndustryDonation } from "./types";
 
 interface PoliticianContextRow {
   bioguide_id: string;
@@ -79,5 +79,24 @@ export async function enrichLinksWithContext(
     if (industries && industries.length > 0) {
       link.civicContext = { type: "politician", topIndustries: industries };
     }
+  }
+}
+
+/**
+ * Best-effort variant for the article-serving surfaces: collects the chips
+ * across one or more article lists and swallows enrichment failures, since a
+ * chip without a tooltip still navigates to the right dossier.
+ */
+export async function enrichArticleEntityLinks(
+  ...articleGroups: Article[][]
+): Promise<void> {
+  const links = articleGroups.flatMap((articles) =>
+    articles.flatMap((article) => article.entityLinks ?? []),
+  );
+  if (links.length === 0) return;
+  try {
+    await enrichLinksWithContext(links);
+  } catch (err) {
+    console.warn("civicContext enrichment failed:", err);
   }
 }

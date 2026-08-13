@@ -7,22 +7,17 @@ import {
   removeBookmark,
   getBookmarkedArticles,
   getOutletProfilesMap,
-  resolveOutletForSourceName,
   getArticleEntityLinks,
 } from "@/lib/db";
-import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
-import { parseEntityLinks } from "@/lib/entityLinks";
-import { enrichLinksWithContext } from "@/lib/civicContext";
-import type { Article, CategoryId } from "@/lib/types";
+import { mapArticleRows } from "@/lib/articleMapping";
+import { enrichArticleEntityLinks } from "@/lib/civicContext";
+import type { Article } from "@/lib/types";
 import { checkCsrf } from "@/lib/security";
+import { internalError, parseJsonBody, unauthorized } from "@/lib/apiResponses";
 
 const bookmarkSchema = z.object({
   articleId: z.string().min(1).max(200),
 });
-
-function unauthorized() {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
 
 // GET /api/bookmarks — returns bookmark IDs (default) or full articles (?full=1)
 export async function GET(request: NextRequest) {
@@ -38,40 +33,16 @@ export async function GET(request: NextRequest) {
         getOutletProfilesMap(),
       ]);
       const entityLinksMap = await getArticleEntityLinks(rows.map((r) => r.id));
-      const articles: Article[] = rows.map((row) => {
-        const rawPrimer = parseContextPrimer(row.context_primer);
-        const outlet = resolveOutletForSourceName(outletMap, row.source_name);
-        const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
-        const primer = attachPrimerTermLinks(rawPrimer, entityLinks);
-        return {
-          id: row.id,
-          title: row.title,
-          summary: row.summary || "",
-          sourceUrl: row.source_url,
-          sourceName: row.source_name,
-          publishedDate: row.published_date ? row.published_date.toISOString() : null,
-          imageUrl: row.image_url,
-          category: row.category as CategoryId,
-          readTime: row.read_time || 1,
-          ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
-          ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
-          ...(primer ? { contextPrimer: primer } : {}),
-          ...(outlet ? { outlet } : {}),
-          ...(entityLinks.length > 0 ? { entityLinks } : {}),
-        };
+      const articles: Article[] = mapArticleRows(rows, {
+        outletMap,
+        entityLinksMap,
+        clean: false,
       });
       // Phase 3.G.3 — enrich politician chips with top-PAC-industry
       // tooltips. Mutates the EntityLink references in place so
       // articles[].entityLinks pick up civicContext without re-mapping.
       // Tolerant of failures (chips still navigate without tooltip).
-      const allLinks = articles.flatMap((a) => a.entityLinks ?? []);
-      if (allLinks.length > 0) {
-        try {
-          await enrichLinksWithContext(allLinks);
-        } catch (err) {
-          console.warn("civicContext enrichment failed:", err);
-        }
-      }
+      await enrichArticleEntityLinks(articles);
       return NextResponse.json({ articles });
     }
 
@@ -79,7 +50,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ids });
   } catch (err) {
     console.error("Bookmarks GET error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return internalError();
   }
 }
 
@@ -92,17 +63,17 @@ export async function POST(request: NextRequest) {
   if (!userId) return unauthorized();
 
   try {
-    let body: z.infer<typeof bookmarkSchema>;
-    try {
-      body = bookmarkSchema.parse(await request.json());
-    } catch {
-      return NextResponse.json({ error: "articleId required" }, { status: 400 });
-    }
-    await addBookmark(userId, body.articleId);
+    const { data, response } = await parseJsonBody(
+      request,
+      bookmarkSchema,
+      "articleId required"
+    );
+    if (response) return response;
+    await addBookmark(userId, data.articleId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Bookmarks POST error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return internalError();
   }
 }
 
@@ -115,16 +86,16 @@ export async function DELETE(request: NextRequest) {
   if (!userId) return unauthorized();
 
   try {
-    let body: z.infer<typeof bookmarkSchema>;
-    try {
-      body = bookmarkSchema.parse(await request.json());
-    } catch {
-      return NextResponse.json({ error: "articleId required" }, { status: 400 });
-    }
-    await removeBookmark(userId, body.articleId);
+    const { data, response } = await parseJsonBody(
+      request,
+      bookmarkSchema,
+      "articleId required"
+    );
+    if (response) return response;
+    await removeBookmark(userId, data.articleId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Bookmarks DELETE error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return internalError();
   }
 }

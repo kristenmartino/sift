@@ -6,6 +6,13 @@ import type { TopicGenerateResponse } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkCsrf } from "@/lib/security";
 import { logUsage } from "@/lib/usage-tracker";
+import {
+  internalError,
+  parseJsonBody,
+  tooManyRequests,
+  unauthorized,
+} from "@/lib/apiResponses";
+import { parseJsonFromModel } from "@/lib/modelJson";
 
 const generateSchema = z.object({
   rawTopic: z.string().min(2).max(200),
@@ -17,28 +24,18 @@ export async function POST(request: NextRequest) {
   if (csrfError) return csrfError;
 
   const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!userId) return unauthorized();
 
   // Rate limit: 10 requests per minute per user
   const rl = rateLimit(`generate:${userId}`, { maxRequests: 10, windowMs: 60_000 });
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } }
-    );
-  }
+  if (!rl.allowed) return tooManyRequests(rl.retryAfterMs);
 
-  let body: z.infer<typeof generateSchema>;
-  try {
-    body = generateSchema.parse(await request.json());
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid input: rawTopic (2-200 chars) is required" },
-      { status: 400 }
-    );
-  }
+  const { data: body, response } = await parseJsonBody(
+    request,
+    generateSchema,
+    "Invalid input: rawTopic (2-200 chars) is required"
+  );
+  if (response) return response;
 
   const rawTopic = body.rawTopic.trim();
   const existingTopics = body.existingTopics;
@@ -51,7 +48,7 @@ export async function POST(request: NextRequest) {
         ? `\nThe user already tracks these topics (avoid duplicates): ${existingTopics.join(", ")}`
         : "";
 
-    const response = await anthropic.messages.create({
+    const aiResponse = await anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 512,
       messages: [
@@ -73,9 +70,9 @@ Respond with ONLY valid JSON, no explanation:
         },
       ],
     });
-    logUsage("topics.generate", response, "claude-haiku-4-5");
+    logUsage("topics.generate", aiResponse, "claude-haiku-4-5");
 
-    const textBlock = response.content.find((b) => b.type === "text");
+    const textBlock = aiResponse.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
       return NextResponse.json(
         { error: "No response from AI" },
@@ -83,15 +80,8 @@ Respond with ONLY valid JSON, no explanation:
       );
     }
 
-    const jsonStr = textBlock.text
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
-
-    let parsed: TopicGenerateResponse;
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch {
+    const parsed = parseJsonFromModel<TopicGenerateResponse>(textBlock.text);
+    if (!parsed) {
       return NextResponse.json(
         { error: "Failed to parse AI response" },
         { status: 502 }
@@ -118,9 +108,6 @@ Respond with ONLY valid JSON, no explanation:
     return NextResponse.json(parsed);
   } catch (err) {
     console.error("Topic generation error:", err);
-    return NextResponse.json(
-      { error: "Failed to generate topic" },
-      { status: 500 }
-    );
+    return internalError("Failed to generate topic");
   }
 }
