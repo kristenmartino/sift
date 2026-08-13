@@ -48,18 +48,27 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
       {/* The outlet's actual headline → the original article */}
       {lead && (
         <div className="flex items-baseline gap-2 text-meta">
-          <a
-            href={lead.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-baseline gap-1.5 flex-1 min-w-0 text-(--accent) no-underline hover:underline relative z-2"
-          >
-            <span aria-hidden className="shrink-0">
-              &rarr;
+          {lead.sourceUrl ? (
+            <a
+              href={lead.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-baseline gap-1.5 flex-1 min-w-0 text-(--accent) no-underline hover:underline relative z-2"
+            >
+              <span aria-hidden className="shrink-0">
+                &rarr;
+              </span>
+              <span className="truncate">{lead.title}</span>
+            </a>
+          ) : (
+            <span className="flex items-baseline gap-1.5 flex-1 min-w-0 text-(--text-secondary)">
+              <span aria-hidden className="shrink-0">
+                &rarr;
+              </span>
+              <span className="truncate">{lead.title}</span>
             </span>
-            <span className="truncate">{lead.title}</span>
-          </a>
+          )}
           <span className="shrink-0 text-(--text-tertiary)">
             {timeAgo(lead.publishedDate)}
           </span>
@@ -88,18 +97,24 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
             )}
           </summary>
           <div className="flex flex-col gap-1.5 mt-1.5 pl-3 border-l border-(--border-subtle)">
-            {extras.map((a) => (
-              <a
-                key={a.id}
-                href={a.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="truncate text-(--text-secondary) no-underline hover:text-(--text-primary) hover:underline relative z-2"
-              >
-                {a.title}
-              </a>
-            ))}
+            {extras.map((a) =>
+              a.sourceUrl ? (
+                <a
+                  key={a.id}
+                  href={a.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="truncate text-(--text-secondary) no-underline hover:text-(--text-primary) hover:underline relative z-2"
+                >
+                  {a.title}
+                </a>
+              ) : (
+                <span key={a.id} className="truncate text-(--text-secondary)">
+                  {a.title}
+                </span>
+              ),
+            )}
           </div>
         </details>
       )}

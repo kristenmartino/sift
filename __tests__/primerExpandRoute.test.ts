@@ -6,9 +6,10 @@
  * The route's job is to be unbreakable from the client's side: a malformed
  * body, a missing session header, or a dead analytics table all still end
  * in 204, because the client fires and forgets while the panel opens. The
- * only non-204 is the rate limiter. Input validation is the other half —
- * `surface` is an allow-list and `articleId` is length-capped, so a client
- * can't write arbitrary strings into the analytics table.
+ * only non-204s are the rate limiter and the CSRF origin check. Input
+ * validation is the other half — `surface` is an allow-list and `articleId`
+ * is length-capped, so a client can't write arbitrary strings into the
+ * analytics table.
  *
  * The DB writer (`logPrimerExpand`) is mocked; its own behavior is covered
  * in __tests__/analyticsLog.test.ts.
@@ -43,6 +44,7 @@ function post(
       method: "POST",
       headers: {
         "content-type": "application/json",
+        "sec-fetch-site": "same-origin",
         "x-real-ip": `10.0.0.${ipCounter}`,
         ...headers,
       },
@@ -160,7 +162,10 @@ describe("POST /api/primer/expand — degradation", () => {
     const res = await POST(
       new NextRequest("https://siftnews.io/api/primer/expand", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          "sec-fetch-site": "same-origin",
+        },
         body: JSON.stringify({ articleId: "abc123", surface: "feed" }),
       }),
     );
@@ -168,6 +173,29 @@ describe("POST /api/primer/expand — degradation", () => {
     expect(mockLogPrimerExpand).toHaveBeenCalledWith(
       expect.objectContaining({ ipHash: null }),
     );
+  });
+});
+
+describe("POST /api/primer/expand — CSRF", () => {
+  it("403s a cross-site beacon without writing", async () => {
+    const res = await post(
+      { articleId: "abc123", surface: "feed" },
+      { "sec-fetch-site": "cross-site" },
+    );
+    expect(res.status).toBe(403);
+    expect(mockLogPrimerExpand).not.toHaveBeenCalled();
+  });
+
+  it("403s when neither a fetch-site nor an origin can be established", async () => {
+    const res = await POST(
+      new NextRequest("https://siftnews.io/api/primer/expand", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ articleId: "abc123", surface: "feed" }),
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(mockLogPrimerExpand).not.toHaveBeenCalled();
   });
 });
 
@@ -179,6 +207,7 @@ describe("POST /api/primer/expand — rate limiting", () => {
           method: "POST",
           headers: {
             "content-type": "application/json",
+            "sec-fetch-site": "same-origin",
             "x-real-ip": "203.0.113.9",
           },
           body: JSON.stringify({ articleId: "abc123", surface: "feed" }),
