@@ -15,8 +15,11 @@ jest.mock("@/lib/db", () => ({
   default: { query: (...args: unknown[]) => mockQuery(...args) },
 }));
 
-import { enrichLinksWithContext } from "@/lib/civicContext";
-import type { EntityLink } from "@/lib/types";
+import {
+  enrichArticleEntityLinks,
+  enrichLinksWithContext,
+} from "@/lib/civicContext";
+import type { Article, EntityLink } from "@/lib/types";
 
 function link(
   type: EntityLink["type"],
@@ -177,5 +180,53 @@ describe("enrichLinksWithContext — error posture", () => {
     await expect(
       enrichLinksWithContext([link("politician", "S000148")]),
     ).rejects.toThrow("connection terminated");
+  });
+});
+
+describe("enrichArticleEntityLinks", () => {
+  function article(links: EntityLink[]): Article {
+    return {
+      id: "a1",
+      title: "t",
+      summary: "s",
+      sourceUrl: "https://example.com/a",
+      sourceName: "Example",
+      publishedDate: null,
+      imageUrl: null,
+      category: "politics",
+      readTime: 2,
+      entityLinks: links,
+    };
+  }
+
+  it("skips the query entirely when no article carries a link", async () => {
+    await enrichArticleEntityLinks([article([])], []);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("enriches links across every group it is handed", async () => {
+    mockQuery.mockResolvedValue({
+      rows: [
+        {
+          bioguide_id: "S000148",
+          top_industries_current_cycle: SCHUMER_INDUSTRIES,
+        },
+      ],
+    });
+    const a = article([link("politician", "S000148")]);
+    const b = article([link("politician", "S000148")]);
+    await enrichArticleEntityLinks([a], [b]);
+    expect(a.entityLinks?.[0].civicContext).toBeDefined();
+    expect(b.entityLinks?.[0].civicContext).toBeDefined();
+  });
+
+  it("warns and resolves when enrichment throws — the feed still renders", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    mockQuery.mockRejectedValue(new Error("connection terminated"));
+    const a = article([link("politician", "S000148")]);
+    await expect(enrichArticleEntityLinks([a])).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalled();
+    expect(a.entityLinks?.[0].civicContext).toBeUndefined();
+    warn.mockRestore();
   });
 });

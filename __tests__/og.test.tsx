@@ -7,7 +7,14 @@
  * public/og-fonts is ever pruned, which would otherwise surface as unstyled
  * or blank cards in production only.
  */
-import { clampOgTitle, dossierOgCard, loadOgFonts, OG, OG_SIZE } from "@/lib/og";
+import {
+  clampOgTitle,
+  dossierOgCard,
+  loadOgFonts,
+  OG,
+  OG_SIZE,
+  siftIconCard,
+} from "@/lib/og";
 
 describe("clampOgTitle", () => {
   it("leaves a short title untouched", () => {
@@ -95,5 +102,15 @@ describe("loadOgFonts", () => {
 
   it("memoizes so repeat renders do not re-read the files", async () => {
     expect(await loadOgFonts()).toBe(await loadOgFonts());
+  });
+});
+
+describe("siftIconCard", () => {
+  it("scales the corner radius and the mark it is given", () => {
+    const card = siftIconCard({ radius: 36, mark: 96 }) as {
+      props: { style: { borderRadius: number }; children: { props: { width: number } } };
+    };
+    expect(card.props.style.borderRadius).toBe(36);
+    expect(card.props.children.props.width).toBe(96);
   });
 });
