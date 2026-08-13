@@ -52,20 +52,27 @@ const config: Config = {
   //   ./lib/  statements 74.6  branches 76.1  lines 76.3  functions 76.2
   //   global  statements 10.8  branches  8.0  lines 11.0  functions 10.2
   //
-  // The ~10% global figure is the honest state of component and API-route
-  // testing, previously hidden entirely by the missing collectCoverageFrom.
+  // Raised 2026-08-12, after tests landed for the seven least-covered
+  // measured modules (lib/security, lib/rate-limit, lib/civic, lib/copy,
+  // lib/civicContext, both analytics writers, lib/constants) plus the
+  // /api/primer/expand and /api/compare/daily routes:
+  //   ./lib/  statements 98.0  branches 93.9  lines 99.3  functions 100
+  //   global  statements 17.3  branches 15.1  lines 18.2  functions 16.4
+  //
+  // The global figure is still the honest state of component testing —
+  // most of components/ has no unit tests at all.
   coverageThreshold: {
     global: {
-      branches: 6,
-      functions: 8,
-      lines: 8,
-      statements: 8,
+      branches: 15,
+      functions: 16,
+      lines: 18,
+      statements: 17,
     },
     "./lib/": {
-      branches: 74,
-      functions: 74,
-      lines: 74,
-      statements: 72,
+      branches: 93,
+      functions: 99,
+      lines: 99,
+      statements: 97,
     },
   },
 };
