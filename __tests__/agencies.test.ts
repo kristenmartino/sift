@@ -145,6 +145,14 @@ describe("partisanCap", () => {
     expect(partisanCap(FDIC)).toEqual({ cap: 3, total: 5 });
   });
 
+  it("reads digits as well as number words", () => {
+    expect(
+      partisanCap(
+        "Independent commission of 5 members appointed by the President. Not more than 3 commissioners may belong to the same political party.",
+      ),
+    ).toEqual({ cap: 3, total: 5 });
+  });
+
   it("returns null where no cap exists, so no badge renders", () => {
     expect(partisanCap(NLRB)).toBeNull();
     expect(partisanCap(TREASURY)).toBeNull();

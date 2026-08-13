@@ -1,64 +1,76 @@
 /**
- * @jest-environment node
+ * The dossier `opengraph-image` handler factory.
  *
- * The dossier `opengraph-image` factory. Every dossier route delegates its
- * handler here, so the fallback branch — entity missing, card must still be a
- * valid unfurl rather than a thrown 500 — is worth pinning once centrally.
- *
- * `ImageResponse` is mocked: it rasterizes with Satori, which is slow and
- * beside the point. What matters is the props the card was built from.
+ * Every dossier route's unfurl goes through here, so the load-fails path
+ * matters as much as the happy one: a 404 or a pruned entity must still
+ * produce a valid card rather than an exception in someone else's Slack.
  */
 import { createDossierOgImage } from "@/lib/ogImage";
+import { OG_SIZE } from "@/lib/og";
 
-const mockImageResponse = jest.fn();
+const constructed: { element: unknown; options: Record<string, unknown> }[] = [];
 
 jest.mock("next/og", () => ({
-  ImageResponse: function (element: unknown, options: unknown) {
-    mockImageResponse(element, options);
-    return { element, options };
+  ImageResponse: class {
+    constructor(element: unknown, options: Record<string, unknown>) {
+      constructed.push({ element, options });
+    }
   },
 }));
 
-interface Outlet {
+const flatten = (node: unknown): string => {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(flatten).join(" ");
+  const el = node as { props?: { children?: unknown } };
+  return el.props ? flatten(el.props.children) : "";
+};
+
+interface Params {
+  slug: string;
+}
+
+interface Org {
   name: string;
 }
 
-function handler(entity: Outlet | null) {
-  return createDossierOgImage<{ slug: string }, Outlet>({
-    eyebrow: "Outlet dossier",
-    load: async ({ slug }) => (slug === "reuters" ? entity : null),
-    card: (outlet) => ({ title: outlet.name, subtitle: "Wire service" }),
+function buildHandler(load: (params: Params) => Promise<Org | null>) {
+  return createDossierOgImage<Params, Org>({
+    eyebrow: "Org dossier",
+    load,
+    card: (org) => ({ title: org.name, meta: "Think tank" }),
   });
-}
-
-function cardProps(): Record<string, unknown> {
-  const element = mockImageResponse.mock.calls[0][0] as {
-    props: Record<string, unknown>;
-  };
-  return element.props;
 }
 
 beforeEach(() => {
-  mockImageResponse.mockClear();
+  constructed.length = 0;
 });
 
 describe("createDossierOgImage", () => {
-  it("renders the entity card with the route's eyebrow and the loaded fonts", async () => {
-    const Image = handler({ name: "Reuters" });
-    await Image({ params: Promise.resolve({ slug: "reuters" }) });
+  it("renders the entity card and the vendored fonts", async () => {
+    const load = jest.fn(async ({ slug }: Params) => ({ name: `Org ${slug}` }));
+    await buildHandler(load)({ params: Promise.resolve({ slug: "cato" }) });
 
-    const [, options] = mockImageResponse.mock.calls[0];
-    expect(options).toMatchObject({ width: 1200, height: 630 });
-    expect((options as { fonts: unknown[] }).fonts).toHaveLength(3);
-    expect(JSON.stringify(cardProps())).toContain("Reuters");
+    expect(load).toHaveBeenCalledWith({ slug: "cato" });
+    expect(constructed).toHaveLength(1);
+    const text = flatten(constructed[0].element);
+    expect(text).toContain("Org dossier");
+    expect(text).toContain("Org cato");
+    expect(text).toContain("Think tank");
+    expect(constructed[0].options).toMatchObject(OG_SIZE);
+    expect(
+      (constructed[0].options.fonts as { name: string }[]).map((f) => f.name).sort(),
+    ).toEqual(["DM Mono", "Fraunces", "Fraunces"]);
   });
 
   it("falls back to a bare Sift card when the entity is missing", async () => {
-    const Image = handler(null);
-    await Image({ params: Promise.resolve({ slug: "unknown" }) });
+    await buildHandler(async () => null)({
+      params: Promise.resolve({ slug: "not-curated" }),
+    });
 
-    const serialized = JSON.stringify(cardProps());
-    expect(serialized).toContain("Sift");
-    expect(serialized).toContain("Outlet dossier");
+    const text = flatten(constructed[0].element);
+    expect(text).toContain("Org dossier");
+    expect(text).toContain("Sift");
+    expect(text).not.toContain("Think tank");
   });
 });
