@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import BillDossier from "@/components/bill/BillDossier";
+import JsonLd from "@/components/JsonLd";
 import { getBillById, getPoliticianByBioguide } from "@/lib/db";
 import { formatBillIdDisplay } from "@/lib/bill";
-import { dossierRobotsMeta, isPublishableBill } from "@/lib/publishFloor";
-import { billJsonLd, jsonLdString } from "@/lib/structuredData";
+import { dossierMetadata } from "@/lib/metadata";
+import { isPublishableBill } from "@/lib/publishFloor";
+import { billJsonLd } from "@/lib/structuredData";
 
 // ISR — same heartbeat as the other dossier routes.
 export const revalidate = 600;
@@ -25,28 +27,15 @@ export async function generateMetadata({
   // Per-route metadata override so shared bill links carry the bill's
   // name in the unfurl card. og:image comes from the sibling
   // opengraph-image.tsx (shared card factory in lib/og.tsx).
-  const fullTitle = `${display} (${bill.shortTitle ?? "Bill"}) — Sift`;
-  const description = `Sponsor, cosponsors, status, and lobbying spend for ${
-    bill.shortTitle ?? display
-  } on Sift.`;
-  return {
+  return dossierMetadata({
     title: `${display} — Bill dossier`,
-    description,
-    // Below-floor dossiers are not advertised. Spread, not assign: a
-    // `robots` key present here would override the root config even when
-    // undefined, dropping max-image-preview. See lib/publishFloor.ts.
-    ...dossierRobotsMeta(isPublishableBill(bill)),
-    openGraph: {
-      title: fullTitle,
-      description,
-      type: "article",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: fullTitle,
-      description,
-    },
-  };
+    unfurlTitle: `${display} (${bill.shortTitle ?? "Bill"}) — Sift`,
+    description: `Sponsor, cosponsors, status, and lobbying spend for ${
+      bill.shortTitle ?? display
+    } on Sift.`,
+    indexable: isPublishableBill(bill),
+    ogType: "article",
+  });
 }
 
 export default async function BillDossierPage({ params }: BillRouteProps) {
@@ -64,10 +53,7 @@ export default async function BillDossierPage({ params }: BillRouteProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdString(billJsonLd(bill)) }}
-      />
+      <JsonLd data={billJsonLd(bill)} />
       <BillDossier bill={bill} sponsor={sponsor} />
     </>
   );

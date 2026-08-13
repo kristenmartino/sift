@@ -7,9 +7,8 @@ import {
   getTopStoryForLanding,
   resolveOutletForSourceName,
 } from "@/lib/db";
-import { parseContextPrimer } from "@/lib/primer";
-import { sanitizeLinkUrl } from "@/lib/sanitize";
-import type { Article, CategoryId, OutletProfile } from "@/lib/types";
+import { mapArticleRow } from "@/lib/articleMapping";
+import type { Article, OutletProfile } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: {
@@ -54,23 +53,8 @@ export default async function Home() {
   const leadOutlet = lead
     ? resolveOutletForSourceName(outletMap, lead.source_name)
     : null;
-  const primer = lead ? parseContextPrimer(lead.context_primer) : null;
   const leadStory: Article | null = lead
-    ? {
-        id: lead.id,
-        title: lead.title,
-        summary: lead.summary || "",
-        sourceUrl: sanitizeLinkUrl(lead.source_url),
-        sourceName: lead.source_name,
-        publishedDate: lead.published_date?.toISOString() ?? null,
-        imageUrl: lead.image_url,
-        category: lead.category as CategoryId,
-        readTime: lead.read_time,
-        whyItMatters: lead.why_it_matters ?? undefined,
-        importanceScore: lead.importance_score ?? undefined,
-        ...(primer ? { contextPrimer: primer } : {}),
-        ...(leadOutlet ? { outlet: leadOutlet } : {}),
-      }
+    ? mapArticleRow(lead, { outlet: leadOutlet, clean: false })
     : null;
 
   return (

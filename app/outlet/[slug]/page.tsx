@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import OutletDossier from "@/components/outlet/OutletDossier";
+import JsonLd from "@/components/JsonLd";
+import { mapArticleRows } from "@/lib/articleMapping";
 import { getOutletBySlug, getRecentArticlesByOutletSlug } from "@/lib/db";
-import { parseContextPrimer } from "@/lib/primer";
-import { sanitizeLinkUrl } from "@/lib/sanitize";
-import { dossierRobotsMeta, isPublishableOutlet } from "@/lib/publishFloor";
-import { jsonLdString, outletJsonLd } from "@/lib/structuredData";
-import type { Article, CategoryId } from "@/lib/types";
+import { dossierMetadata } from "@/lib/metadata";
+import { isPublishableOutlet } from "@/lib/publishFloor";
+import { outletJsonLd } from "@/lib/structuredData";
+import type { Article } from "@/lib/types";
 
 // ISR — same heartbeat as the landing page (10 minutes). The dossier reads
 // curated metadata that changes quarterly + recent articles that change every
@@ -27,26 +28,12 @@ export async function generateMetadata({
 
   // Per-route metadata override so shared outlet links carry the
   // outlet's name in the unfurl card.
-  const fullTitle = `${outlet.name} — Outlet dossier | Sift`;
-  const description = `Ownership, funding, bias, and factual-reporting context for ${outlet.name} on Sift.`;
-  return {
+  return dossierMetadata({
     title: `${outlet.name} — Outlet dossier`,
-    description,
-    // Below-floor dossiers are not advertised. Spread, not assign: a
-    // `robots` key present here would override the root config even when
-    // undefined, dropping max-image-preview. See lib/publishFloor.ts.
-    ...dossierRobotsMeta(isPublishableOutlet(outlet)),
-    openGraph: {
-      title: fullTitle,
-      description,
-      type: "profile",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: fullTitle,
-      description,
-    },
-  };
+    description: `Ownership, funding, bias, and factual-reporting context for ${outlet.name} on Sift.`,
+    indexable: isPublishableOutlet(outlet),
+    ogType: "profile",
+  });
 }
 
 export default async function OutletDossierPage({ params }: DossierRouteProps) {
@@ -63,33 +50,14 @@ export default async function OutletDossierPage({ params }: DossierRouteProps) {
 
   if (!outlet) notFound();
 
-  const recentArticles: Article[] = recentRows.map((row) => {
-    const primer = parseContextPrimer(row.context_primer);
-    return {
-      id: row.id,
-      title: row.title,
-      summary: row.summary || "",
-      sourceUrl: sanitizeLinkUrl(row.source_url),
-      sourceName: row.source_name,
-      publishedDate: row.published_date ? row.published_date.toISOString() : null,
-      imageUrl: row.image_url,
-      category: row.category as CategoryId,
-      readTime: row.read_time || 1,
-      ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
-      ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
-      ...(primer ? { contextPrimer: primer } : {}),
-      // Outlet field intentionally omitted from the dossier's recent-stories
-      // list — every article here is from this outlet by construction; the
-      // OutletBadge in those rows would be redundant noise.
-    };
-  });
+  // Outlet field intentionally omitted from the dossier's recent-stories
+  // list — every article here is from this outlet by construction; the
+  // OutletBadge in those rows would be redundant noise.
+  const recentArticles: Article[] = mapArticleRows(recentRows, { clean: false });
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdString(outletJsonLd(outlet)) }}
-      />
+      <JsonLd data={outletJsonLd(outlet)} />
       <OutletDossier outlet={outlet} recentArticles={recentArticles} />
     </>
   );

@@ -28,6 +28,7 @@ import {
 } from "@/lib/searchAnalytics";
 import { logPrimerExpand } from "@/lib/primerAnalyticsLog";
 import { rateLimit } from "@/lib/rate-limit";
+import { tooManyRequests } from "@/lib/apiResponses";
 import { checkCsrf } from "@/lib/security";
 
 const VALID_SURFACES = new Set(["feed", "bookmarks"]);
@@ -56,11 +57,7 @@ export async function POST(request: NextRequest) {
     windowMs: 60_000,
   });
   if (!perIp.allowed || !global.allowed) {
-    const retryMs = Math.max(perIp.retryAfterMs, global.retryAfterMs);
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429, headers: { "Retry-After": String(Math.ceil(retryMs / 1000)) } },
-    );
+    return tooManyRequests(Math.max(perIp.retryAfterMs, global.retryAfterMs));
   }
 
   let body: { articleId?: unknown; surface?: unknown } = {};
