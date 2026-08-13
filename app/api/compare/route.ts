@@ -4,15 +4,13 @@ import { z } from "zod";
 import { reportError } from "@/lib/observability";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkCsrf } from "@/lib/security";
+import { SIFT_API_KEY, SIFT_API_URL } from "@/lib/siftApi";
+import {
+  parseJsonBody,
+  tooManyRequests,
+  unauthorized,
+} from "@/lib/apiResponses";
 
-const SIFT_API_URL = process.env.SIFT_API_URL || "http://localhost:8000";
-try {
-  const u = new URL(SIFT_API_URL);
-  if (!["http:", "https:"].includes(u.protocol)) throw new Error("bad protocol");
-} catch {
-  throw new Error(`Invalid SIFT_API_URL: ${SIFT_API_URL}`);
-}
-const SIFT_API_KEY = process.env.SIFT_API_KEY || "";
 // The compare workflow runs ~20–30s (up to ~90s on the backend), far past
 // Vercel's ~10s default function timeout — without this the proxy is killed by
 // the platform before a real comparison returns. Raise it to the Hobby max so
@@ -31,29 +29,19 @@ export async function POST(request: NextRequest) {
   if (csrfError) return csrfError;
 
   const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!userId) return unauthorized();
 
   // Rate limit: 5 comparisons per minute per user
   const rl = rateLimit(`compare:${userId}`, { maxRequests: 5, windowMs: 60_000 });
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } }
-    );
-  }
+  if (!rl.allowed) return tooManyRequests(rl.retryAfterMs);
 
   try {
-    let body: z.infer<typeof compareSchema>;
-    try {
-      body = compareSchema.parse(await request.json());
-    } catch {
-      return NextResponse.json(
-        { error: "Topic must be 3-500 characters" },
-        { status: 400 }
-      );
-    }
+    const { data: body, response } = await parseJsonBody(
+      request,
+      compareSchema,
+      "Topic must be 3-500 characters"
+    );
+    if (response) return response;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), COMPARE_TIMEOUT_MS);

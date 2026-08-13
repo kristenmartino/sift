@@ -6,50 +6,17 @@ import {
   resolveOutletForSourceName,
   getArticleEntityLinks,
 } from "@/lib/db";
-import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
-import { parseEntityLinks } from "@/lib/entityLinks";
-import { enrichLinksWithContext } from "@/lib/civicContext";
+import { cleanImageUrl, mapArticleRows } from "@/lib/articleMapping";
+import { enrichArticleEntityLinks } from "@/lib/civicContext";
+import { VALID_CATEGORIES } from "@/lib/constants";
 import { countOccupiedBuckets } from "@/lib/crossSpectrum";
 import { reportError } from "@/lib/observability";
-import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
-import type { CategoryId, Article, ArticleTone, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
+import { stripHtml } from "@/lib/sanitize";
+import type { CategoryId, Article, Story, StoryFraming, EntitySet, NewsApiResponse, NewsApiError } from "@/lib/types";
 
-function isArticleTone(v: unknown): v is ArticleTone {
-  return v === "grim" || v === "neutral" || v === "light";
-}
-
-const BAD_SUMMARIES = ["unable to provide summary"];
-
-function cleanSummary(raw: string | null): string {
-  if (!raw) return "";
-  if (BAD_SUMMARIES.some((b) => raw.toLowerCase().startsWith(b))) return "";
-  return stripHtml(raw);
-}
-
-function cleanImageUrl(raw: string | null): string | null {
-  if (!raw) return null;
-  const safe = sanitizeUrl(raw);
-  if (!safe) return null;
-  try {
-    const url = new URL(safe);
-    // Contentful CDN (VentureBeat etc): upgrade tiny thumbnails to usable size
-    if (url.hostname.includes("ctfassets.net")) {
-      url.searchParams.set("w", "800");
-      url.searchParams.set("q", "80");
-      return url.toString();
-    }
-    return safe;
-  } catch {
-    return null;
-  }
-}
-
-// ─── Valid Categories ───────────────────────────────────
-
-const VALID_CATEGORIES = new Set<string>([
-  "top", "technology", "business", "science", "energy", "world", "health",
-  "politics", "sports", "entertainment",
-]);
+// Contentful-CDN thumbnails (VentureBeat et al) get upsized for the feed's
+// card imagery; see lib/articleMapping.ts.
+const IMAGE_OPTIONS = { upgradeCdnThumbnails: true } as const;
 
 // ─── Route Handler ──────────────────────────────────────
 
@@ -83,63 +50,24 @@ export async function GET(request: NextRequest) {
     const entityLinksMap = await getArticleEntityLinks(allArticleIds);
 
     // Map standalone articles
-    const articles: Article[] = standaloneArticles.map((row) => {
-      const rawPrimer = parseContextPrimer(row.context_primer);
-      const outlet = resolveOutletForSourceName(outletMap, row.source_name);
-      const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
-      // Phase 3.G.4 — link primer terms to dossiers when their text
-      // contains a curated entity surface form (FCC, Schumer, IRA, etc.).
-      const primer = attachPrimerTermLinks(rawPrimer, entityLinks);
-      return {
-        id: row.id,
-        title: row.title,
-        summary: cleanSummary(row.summary),
-        sourceUrl: row.source_url,
-        sourceName: row.source_name,
-        publishedDate: row.published_date ? row.published_date.toISOString() : null,
-        imageUrl: cleanImageUrl(row.image_url),
-        category: row.category as CategoryId,
-        readTime: row.read_time || 1,
-        ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
-        ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
-        ...(isArticleTone(row.tone) ? { tone: row.tone } : {}),
-        ...(row.is_opinion ? { isOpinion: true } : {}),
-        ...(row.is_roundup ? { isRoundup: true } : {}),
-        ...(row.genre && row.genre !== "news" ? { genre: row.genre as "feature" | "soft" } : {}),
-        ...(primer ? { contextPrimer: primer } : {}),
-        ...(outlet ? { outlet } : {}),
-        ...(entityLinks.length > 0 ? { entityLinks } : {}),
-      };
+    const articles: Article[] = mapArticleRows(standaloneArticles, {
+      outletMap,
+      entityLinksMap,
+      includeLabels: true,
+      image: IMAGE_OPTIONS,
     });
 
     // Map stories with nested articles
     const stories: Story[] = dbStories.map((s) => {
       const childRows = storyArticles[s.id] || [];
-      const childArticles: Article[] = childRows.map((row) => {
-        const rawPrimer = parseContextPrimer(row.context_primer);
-        const outlet = resolveOutletForSourceName(outletMap, row.source_name);
-        const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
-        const primer = attachPrimerTermLinks(rawPrimer, entityLinks);
-        return {
-          id: row.id,
-          title: row.title,
-          summary: cleanSummary(row.summary),
-          sourceUrl: row.source_url,
-          sourceName: row.source_name,
-          publishedDate: row.published_date ? row.published_date.toISOString() : null,
-          imageUrl: cleanImageUrl(row.image_url),
-          category: row.category as CategoryId,
-          readTime: row.read_time || 1,
-          ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
-          ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
-          ...(primer ? { contextPrimer: primer } : {}),
-          ...(outlet ? { outlet } : {}),
-          ...(entityLinks.length > 0 ? { entityLinks } : {}),
-        };
+      const childArticles: Article[] = mapArticleRows(childRows, {
+        outletMap,
+        entityLinksMap,
+        image: IMAGE_OPTIONS,
       });
 
       // (entity-link enrichment runs once across all articles below,
-      // before the response is returned — see `enrichLinksWithContext`.)
+      // before the response is returned — see `enrichArticleEntityLinks`.)
 
       // Parse JSONB framings (validate types, sanitize external text)
       const rawFramings = Array.isArray(s.framings) ? s.framings : [];
@@ -193,7 +121,7 @@ export async function GET(request: NextRequest) {
         entities,
         articleCount: s.article_count,
         outletCount: s.outlet_count,
-        imageUrl: cleanImageUrl(s.representative_image_url),
+        imageUrl: cleanImageUrl(s.representative_image_url, IMAGE_OPTIONS),
         publishedDate: s.published_date ? s.published_date.toISOString() : null,
         articles: childArticles,
         // A story is grim when at least half its live members are (D48).
@@ -212,19 +140,10 @@ export async function GET(request: NextRequest) {
     // `civicContext` without us needing to re-thread anything. Tolerant
     // of missing tables (returns silently) — chips still navigate to the
     // right dossier even when enrichment is unavailable.
-    const allLinks = [
-      ...articles.flatMap((a) => a.entityLinks ?? []),
-      ...stories.flatMap((s) => s.articles.flatMap((a) => a.entityLinks ?? [])),
-    ];
-    if (allLinks.length > 0) {
-      try {
-        await enrichLinksWithContext(allLinks);
-      } catch (err) {
-        // Don't break the feed if enrichment fails — chips just render
-        // without tooltips.
-        reportError("api.news.civicContext", err, { level: "warning" });
-      }
-    }
+    await enrichArticleEntityLinks(
+      articles,
+      stories.flatMap((s) => s.articles),
+    );
 
     return NextResponse.json<NewsApiResponse>({
       articles,

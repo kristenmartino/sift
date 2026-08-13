@@ -1,32 +1,12 @@
 import { ImageResponse } from "next/og";
 
+import { siftIconCard } from "@/lib/og";
+
 export const size = { width: 192, height: 192 };
 export const contentType = "image/png";
 
 export default function Icon192() {
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#E0492A",
-          borderRadius: 36,
-        }}
-      >
-        <svg
-          width="120"
-          height="120"
-          viewBox="0 0 24 24"
-          fill="#FBF8F1"
-        >
-          <path d="M12 2L22 12L12 22L2 12Z" />
-        </svg>
-      </div>
-    ),
-    { ...size },
-  );
+  return new ImageResponse(siftIconCard({ radius: 36, mark: 120 }), {
+    ...size,
+  });
 }

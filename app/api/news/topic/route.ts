@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import {
   searchArticlesByEmbedding,
@@ -9,9 +9,8 @@ import {
   getTodayAiSpendUsd,
   recordAiUsage,
 } from "@/lib/db";
-import { parseContextPrimer, attachPrimerTermLinks } from "@/lib/primer";
-import { parseEntityLinks } from "@/lib/entityLinks";
-import { enrichLinksWithContext } from "@/lib/civicContext";
+import { mapArticleRows } from "@/lib/articleMapping";
+import { enrichArticleEntityLinks } from "@/lib/civicContext";
 import {
   classifyUserAgent,
   countTokens,
@@ -26,6 +25,9 @@ import { stripHtml, sanitizeUrl } from "@/lib/sanitize";
 import type { Article, CategoryId } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import { logUsage } from "@/lib/usage-tracker";
+import { badRequest, tooManyRequests } from "@/lib/apiResponses";
+import { embedTexts } from "@/lib/voyage";
+import { stripJsonFences } from "@/lib/modelJson";
 
 // Temporary safety fix while the topic-search AI fallback still lives in this
 // Next.js route (grandfathered — see docs/DECISIONS.md D35; migrating to
@@ -33,19 +35,6 @@ import { logUsage } from "@/lib/usage-tracker";
 // Vercel's ~10s default function timeout, so without this the route can be
 // platform-killed mid-stream. Hobby max is 60s.
 export const maxDuration = 60; // seconds — Vercel Hobby maximum
-
-const BAD_SUMMARIES = ["unable to provide summary"];
-
-function cleanSummary(raw: string | null): string {
-  if (!raw) return "";
-  if (BAD_SUMMARIES.some((b) => raw.toLowerCase().startsWith(b))) return "";
-  return stripHtml(raw);
-}
-
-function cleanImageUrl(raw: string | null): string | null {
-  if (!raw) return null;
-  return sanitizeUrl(raw);
-}
 
 const SIMILARITY_THRESHOLD = 0.35;
 const MIN_STRONG_RESULTS = 3;
@@ -57,12 +46,6 @@ const MAX_RESULTS = 10;
 // the SAME ai_usage_daily ledger the backend guard uses → the ceiling is global.
 const AI_COST_GUARD_ENABLED = process.env.AI_COST_GUARD_ENABLED === "true";
 const DAILY_AI_COST_LIMIT_USD = Number(process.env.DAILY_AI_COST_LIMIT_USD ?? "10");
-
-function getVoyageApiKey(): string {
-  const key = process.env.VOYAGE_API_KEY;
-  if (!key) throw new Error("VOYAGE_API_KEY environment variable is not set");
-  return key;
-}
 
 // ─── Category classification for fallback articles ──────
 
@@ -95,18 +78,10 @@ async function getCategoryEmbeddings(): Promise<{ embeddings: number[][]; catego
   if (categoryEmbeddingsCache) return categoryEmbeddingsCache;
 
   const categories = Object.keys(CATEGORY_DESCRIPTIONS);
-  const texts = categories.map((c) => CATEGORY_DESCRIPTIONS[c]);
-  const res = await fetch("https://api.voyageai.com/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${getVoyageApiKey()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ input: texts, model: "voyage-3-lite", input_type: "document" }),
-  });
-  if (!res.ok) throw new Error(`Voyage category embed error: ${res.status}`);
-  const data = await res.json();
-  const embeddings = data.data.map((d: { embedding: number[] }) => d.embedding);
+  const embeddings = await embedTexts(
+    categories.map((c) => CATEGORY_DESCRIPTIONS[c]),
+    "document",
+  );
   categoryEmbeddingsCache = { embeddings, categories };
   return categoryEmbeddingsCache;
 }
@@ -185,10 +160,7 @@ export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim();
 
   if (!query || query.length < 2 || query.length > 200) {
-    return NextResponse.json(
-      { error: "Query must be 2-200 characters" },
-      { status: 400 }
-    );
+    return badRequest("Query must be 2-200 characters");
   }
 
   // Rate limit by IP + global fallback to prevent abuse
@@ -198,11 +170,7 @@ export async function GET(request: NextRequest) {
   const perIp = rateLimit(`topic-search:${ip}`, { maxRequests: 20, windowMs: 60_000 });
   const global = rateLimit("topic-search:global", { maxRequests: 200, windowMs: 60_000 });
   if (!perIp.allowed || !global.allowed) {
-    const retryMs = Math.max(perIp.retryAfterMs, global.retryAfterMs);
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429, headers: { "Retry-After": String(Math.ceil(retryMs / 1000)) } }
-    );
+    return tooManyRequests(Math.max(perIp.retryAfterMs, global.retryAfterMs));
   }
 
   // Phase 1 instrumentation — capture per-stage timings + a session
@@ -242,44 +210,15 @@ export async function GET(request: NextRequest) {
         const entityLinksMap = await getArticleEntityLinks(rows.map((r) => r.id));
 
         // 3. Map DB rows to Article type
-        const articles: Article[] = rows.map((row) => {
-          const rawPrimer = parseContextPrimer(row.context_primer);
-          const outlet = resolveOutletForSourceName(outletMap, row.source_name);
-          const entityLinks = parseEntityLinks(entityLinksMap.get(row.id));
-          const primer = attachPrimerTermLinks(rawPrimer, entityLinks);
-          return {
-            id: row.id,
-            title: row.title,
-            summary: cleanSummary(row.summary),
-            sourceUrl: row.source_url,
-            sourceName: row.source_name,
-            publishedDate: row.published_date
-              ? row.published_date.toISOString()
-              : null,
-            imageUrl: cleanImageUrl(row.image_url),
-            category: row.category as CategoryId,
-            readTime: row.read_time || 1,
-            ...(row.why_it_matters ? { whyItMatters: row.why_it_matters } : {}),
-            ...(row.importance_score ? { importanceScore: row.importance_score } : {}),
-            ...(primer ? { contextPrimer: primer } : {}),
-            ...(outlet ? { outlet } : {}),
-            ...(entityLinks.length > 0 ? { entityLinks } : {}),
-          };
+        const articles: Article[] = mapArticleRows(rows, {
+          outletMap,
+          entityLinksMap,
         });
 
         // Phase 3.G.3 — civic-context tooltip enrichment for the chips
         // we're about to stream. Tolerant of failures (chips still
         // navigate; tooltip just doesn't render).
-        const allLinks = articles.flatMap((a) => a.entityLinks ?? []);
-        if (allLinks.length > 0) {
-          try {
-            await enrichLinksWithContext(allLinks);
-          } catch (err) {
-            reportError("api.news.topic.civicContext", err, {
-              level: "warning",
-            });
-          }
-        }
+        await enrichArticleEntityLinks(articles);
 
         // 4. Stream vector results immediately
         if (articles.length > 0) {
@@ -384,26 +323,8 @@ export async function GET(request: NextRequest) {
 // ─── Voyage AI Embedding ────────────────────────────────
 
 async function embedQuery(text: string): Promise<number[]> {
-  const res = await fetch("https://api.voyageai.com/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${getVoyageApiKey()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      input: [text],
-      model: "voyage-3-lite",
-      input_type: "query",
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Voyage API error ${res.status}: ${body}`);
-  }
-
-  const data = await res.json();
-  return data.data[0].embedding;
+  const [embedding] = await embedTexts([text], "query");
+  return embedding;
 }
 
 // ─── Interim daily-budget check ─────────────────────────
@@ -511,10 +432,7 @@ If you truly cannot find any articles, respond with an empty array: []`,
 
   for (const text of textBlocks) {
     try {
-      const jsonStr = text
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
+      const jsonStr = stripJsonFences(text);
       // Try to find a JSON array in the text
       const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
       if (arrayMatch) {
@@ -556,25 +474,10 @@ If you truly cannot find any articles, respond with an empty array: []`,
   // Embed fallback articles for future vector search
   let embeddings: number[][] = [];
   try {
-    const textsToEmbed = parsed.map((a) => `${a.title}. ${a.summary}`);
-    const embRes = await fetch("https://api.voyageai.com/v1/embeddings", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${getVoyageApiKey()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        input: textsToEmbed,
-        model: "voyage-3-lite",
-        input_type: "document",
-      }),
-    });
-    if (embRes.ok) {
-      const embData = await embRes.json();
-      embeddings = embData.data.map(
-        (d: { embedding: number[] }) => d.embedding
-      );
-    }
+    embeddings = await embedTexts(
+      parsed.map((a) => `${a.title}. ${a.summary}`),
+      "document",
+    );
   } catch (err) {
     reportError("api.news.topic.embedFallback", err, { level: "warning" });
   }

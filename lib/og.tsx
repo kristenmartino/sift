@@ -68,7 +68,7 @@ export function clampOgTitle(title: string, max = 90): string {
   return `${cut.slice(0, lastSpace > 40 ? lastSpace : max)}…`;
 }
 
-interface DossierOgCardProps {
+export interface DossierOgCardProps {
   /** Mono uppercase kicker, e.g. "Politician dossier". Rendered in accent. */
   eyebrow: string;
   /** The entity name. Long titles should pass through clampOgTitle first. */
@@ -190,6 +190,31 @@ export function dossierOgCard({ eyebrow, title, meta, chips }: DossierOgCardProp
           The news, with footnotes.
         </span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The app-icon mark, shared by every favicon/app-icon route. Same geometry at
+ * every size — only the corner radius and the mark itself scale.
+ */
+export function siftIconCard({ radius, mark }: { radius: number; mark: number }) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#E0492A",
+        borderRadius: radius,
+      }}
+    >
+      {/* Diamond mark — ◆ */}
+      <svg width={mark} height={mark} viewBox="0 0 24 24" fill="#FBF8F1">
+        <path d="M12 2L22 12L12 22L2 12Z" />
+      </svg>
     </div>
   );
 }

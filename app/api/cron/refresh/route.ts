@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 
+import { internalError, unauthorized } from "@/lib/apiResponses";
 import { reportError } from "@/lib/observability";
-
-const SIFT_API_URL = process.env.SIFT_API_URL || "http://localhost:8000";
-try {
-  const u = new URL(SIFT_API_URL);
-  if (!["http:", "https:"].includes(u.protocol)) throw new Error("bad protocol");
-} catch {
-  throw new Error(`Invalid SIFT_API_URL: ${SIFT_API_URL}`);
-}
+import { SIFT_API_URL } from "@/lib/siftApi";
 
 function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -21,18 +15,16 @@ export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
     console.error("CRON_SECRET environment variable is not set");
-    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+    return internalError("Server misconfigured");
   }
   const authHeader = request.headers.get("authorization") || "";
   const expected = `Bearer ${cronSecret}`;
-  if (!constantTimeEqual(authHeader, expected)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!constantTimeEqual(authHeader, expected)) return unauthorized();
 
   const siftApiKey = process.env.SIFT_API_KEY;
   if (!siftApiKey) {
     console.error("SIFT_API_KEY environment variable is not set");
-    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+    return internalError("Server misconfigured");
   }
 
   try {
