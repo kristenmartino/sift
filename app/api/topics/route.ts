@@ -5,6 +5,12 @@ import { getCustomTopics, saveCustomTopic, deleteCustomTopic } from "@/lib/db";
 import type { CustomTopic } from "@/lib/types";
 import { MAX_CUSTOM_TOPICS } from "@/lib/constants";
 import { checkCsrf } from "@/lib/security";
+import {
+  badRequest,
+  internalError,
+  parseJsonBody,
+  unauthorized,
+} from "@/lib/apiResponses";
 
 const topicSchema = z.object({
   topic: z.object({
@@ -22,10 +28,6 @@ const topicSchema = z.object({
 const deleteTopicSchema = z.object({
   id: z.string().min(1).max(200),
 });
-
-function unauthorized() {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
 
 // GET /api/topics — returns user's custom topics
 export async function GET() {
@@ -53,7 +55,7 @@ export async function GET() {
     return NextResponse.json({ topics });
   } catch (err) {
     console.error("Topics GET error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return internalError();
   }
 }
 
@@ -66,28 +68,25 @@ export async function POST(request: NextRequest) {
   if (!userId) return unauthorized();
 
   try {
-    let parsed: z.infer<typeof topicSchema>;
-    try {
-      parsed = topicSchema.parse(await request.json());
-    } catch {
-      return NextResponse.json({ error: "Invalid topic" }, { status: 400 });
-    }
-    const topic = parsed.topic as CustomTopic;
+    const { data, response } = await parseJsonBody(
+      request,
+      topicSchema,
+      "Invalid topic"
+    );
+    if (response) return response;
+    const topic = data.topic as CustomTopic;
 
     // Check limit
     const existing = await getCustomTopics(userId);
     if (existing.length >= MAX_CUSTOM_TOPICS) {
-      return NextResponse.json(
-        { error: "Maximum custom topics reached" },
-        { status: 400 }
-      );
+      return badRequest("Maximum custom topics reached");
     }
 
     await saveCustomTopic(topic.id, userId, topic.shortLabel, JSON.stringify(topic));
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Topics POST error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return internalError();
   }
 }
 
@@ -100,17 +99,16 @@ export async function DELETE(request: NextRequest) {
   if (!userId) return unauthorized();
 
   try {
-    let body: z.infer<typeof deleteTopicSchema>;
-    try {
-      body = deleteTopicSchema.parse(await request.json());
-    } catch {
-      return NextResponse.json({ error: "id required" }, { status: 400 });
-    }
-    const { id } = body;
-    await deleteCustomTopic(id, userId);
+    const { data, response } = await parseJsonBody(
+      request,
+      deleteTopicSchema,
+      "id required"
+    );
+    if (response) return response;
+    await deleteCustomTopic(data.id, userId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Topics DELETE error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return internalError();
   }
 }
