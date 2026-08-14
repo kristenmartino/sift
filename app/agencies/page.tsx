@@ -4,9 +4,9 @@ import AgenciesGovernance from "@/components/agencies/AgenciesGovernance";
 import { listAllOrgsLite, listCitedAgencies } from "@/lib/db";
 
 // ISR — statutory governance changes on the order of decades, not days. The
-// only thing that moves here is Sift citing another agency, so a 10-minute
+// only thing that moves here is Sift citing another agency, so a 30-minute
 // window matches the rest of the civic surface without staleness mattering.
-export const revalidate = 600;
+export const revalidate = 1800;
 
 const TITLE = "Who controls a federal agency — Sift";
 const DESC =

@@ -12,8 +12,8 @@ import { orgJsonLd } from "@/lib/structuredData";
 
 // ISR — same heartbeat as the landing + outlet/politician dossiers.
 // Org metadata changes slowly (annual budgets refresh on 990 cycles,
-// FARA registrations are sporadic), so 600s is well-matched.
-export const revalidate = 600;
+// FARA registrations are sporadic), so 1800s is well-matched.
+export const revalidate = 1800;
 
 interface OrgRouteProps {
   params: Promise<{ slug: string }>;

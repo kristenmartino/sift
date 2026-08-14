@@ -10,7 +10,7 @@ import { isPublishableBill } from "@/lib/publishFloor";
 import { billJsonLd } from "@/lib/structuredData";
 
 // ISR — same heartbeat as the other dossier routes.
-export const revalidate = 600;
+export const revalidate = 1800;
 
 interface BillRouteProps {
   params: Promise<{ id: string }>;

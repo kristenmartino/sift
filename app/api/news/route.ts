@@ -183,11 +183,11 @@ export async function GET(request: NextRequest) {
         // between pipeline runs — an uncached feed is what would quietly put it
         // back to 24/7 the moment traffic arrives.
         //
-        // 600s matches the `revalidate` every page already carries, so the
+        // 1800s matches the `revalidate` every page already carries, so the
         // freshness contract is unchanged; the pipeline only writes every
         // 1800s anyway. Same pattern as app/api/compare/daily/route.ts.
         headers: {
-          "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600",
+          "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
         },
       }
     );

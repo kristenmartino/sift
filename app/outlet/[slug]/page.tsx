@@ -10,10 +10,10 @@ import { isPublishableOutlet } from "@/lib/publishFloor";
 import { outletJsonLd } from "@/lib/structuredData";
 import type { Article } from "@/lib/types";
 
-// ISR — same heartbeat as the landing page (10 minutes). The dossier reads
+// ISR — same heartbeat as the landing page (30 minutes). The dossier reads
 // curated metadata that changes quarterly + recent articles that change every
-// pipeline cycle, so a 600s edge cache is well-matched on both sides.
-export const revalidate = 600;
+// pipeline cycle, so a 1800s edge cache is well-matched on both sides.
+export const revalidate = 1800;
 
 interface DossierRouteProps {
   params: Promise<{ slug: string }>;

@@ -5,7 +5,7 @@ import { listSelfDescribedOrgs } from "@/lib/db";
 
 // ISR — a self-description changes when an organization rewrites its About
 // page, which is rare. Matches the rest of the civic surface.
-export const revalidate = 600;
+export const revalidate = 1800;
 
 const TITLE = "How policy organizations describe themselves — Sift";
 const DESC =

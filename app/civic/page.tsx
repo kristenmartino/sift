@@ -9,9 +9,9 @@ import {
 import type { PoliticianChamber } from "@/lib/types";
 
 // ISR — committee/dossier metadata changes slowly (politician roster ~6mo,
-// org curation ~quarterly, bills as we add them). 10-minute cache keeps the
+// org curation ~quarterly, bills as we add them). 30-minute cache keeps the
 // page snappy without staleness mattering at this cadence.
-export const revalidate = 600;
+export const revalidate = 1800;
 
 // Per-route metadata override so shared /civic links carry the index's
 // own title/description in unfurl cards (not the homepage default).

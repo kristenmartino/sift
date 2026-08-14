@@ -8,11 +8,11 @@ import { dossierMetadata } from "@/lib/metadata";
 import { isPublishablePolitician } from "@/lib/publishFloor";
 import { politicianJsonLd } from "@/lib/structuredData";
 
-// ISR — same heartbeat as the landing + outlet dossier (10 minutes).
+// ISR — same heartbeat as the landing + outlet dossier (30 minutes).
 // Politician metadata changes slowly (committees shift quarterly,
 // donor/voting data updates daily via the Phase 3.E refresh job), so a
-// 600s edge cache is well-matched on both sides.
-export const revalidate = 600;
+// 1800s edge cache is well-matched on both sides.
+export const revalidate = 1800;
 
 interface PoliticianRouteProps {
   params: Promise<{ bioguide: string }>;
