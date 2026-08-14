@@ -59,7 +59,7 @@
 | D51 | The front page is for news | 'top' holds a higher bar than topical tabs: importance ≤2 ranks ×0.35 there (0 = hard floor), and non-news genres (feature/soft, LLM-tagged on the existing call) rank ×0.5 as standalone articles. Story ranking untouched — corroborated coverage keeps tabloid members visible under "how this was covered" | ~$0 (fourth key on an existing call) | SETTLED (Aug 2026) |
 | D52 | Corroboration multiplies significance | A story's base is the mean importance of its members ÷ 2.5 (the observed mean), not a constant — outlet count scales significance instead of standing in for it. Evidence: an 18-outlet local drowning scored 1.05× a 169-death earthquake. Centered to hold the story/article mix #231 tuned: +89 reordering units, share unchanged | $0 (existing data) | SETTLED (Aug 2026) |
 | D53 | A degrade must be reported, and tolerance is keyed to SQLSTATE | Every deliberate degrade path calls `reportError` (console + Sentry, tagged by call site) instead of swallowing. The "deploy before the migration lands" tolerance matches Postgres SQLSTATE 42P01/42703 and the named relation, not `String(err).includes("does not exist")` — which also matched `role "sift" does not exist`, so bad credentials rendered as an empty site instead of a 500 | $0 (Sentry already wired, inert without a DSN) | SETTLED (Aug 2026) |
-| D54 | The Neon compute is allowed to sleep | Scale-to-zero accepted, and the polling that prevented it removed. The compute had run 26 days unbroken (~730 CU-h/mo vs a 300 CU-h allowance) because the batch poller queried `api_batches` every 60s and `/health` queried twice every 30 min. Cold starts accepted at current traffic | −$45/mo of overage; revisit at real traffic | SETTLED (Aug 2026) |
+| D54 | The Neon compute is allowed to sleep | The polling that prevented scale-to-zero removed; cold starts accepted at current traffic. The compute ran 26 days unbroken **with scale-to-zero already enabled** — because the batch poller queried `api_batches` every 60s and `/health` queried twice every 30 min, inside every 5-min window. No console setting needed changing | −~$15/mo (60% of sift's compute); revisit at real traffic | SETTLED (Aug 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -452,7 +452,7 @@ Standalone Neon gives more control: 0.5 GiB storage, pgvector native, connection
 
 > **Corrections, 2026-08-14.** Three claims in the paragraph above did not survive contact with the running system.
 >
-> - **Not the free tier, and not 0.5 GiB.** The project is on **Launch** ($19/mo base, 300 CU-hours, 10 GiB). Nothing records when or why it moved. Actual size: 1,993 MB.
+> - **Not the free tier, and not 0.5 GiB.** The project is on **Launch**, which bills compute and storage by usage with no free allowance ($0.35/GB-month storage; ~$0.106/CU-hour compute as observed 2026-08-14). Nothing records when or why it moved. Actual size: 2.11 GB → $0.38/month.
 > - **"Auto-suspend" was a reason to choose Neon and was never verified.** The compute had never suspended once in 26 days. See D54.
 > - **"Pooled connection for serverless functions" is aspirational.** No client in any repo uses a `-pooler` endpoint; every `DATABASE_URL` inspected points at the direct endpoint. `sift-api/STATUS.md` separately records that `max=5` "starts queuing requests visibly" — which is the symptom this claim was meant to prevent. Worth doing; not yet done.
 
@@ -915,7 +915,13 @@ They also cost almost nothing to add. `org_profiles` already carries `governance
 
 ### D54. The Neon compute is allowed to sleep
 
-**Decided 2026-08-14.** Neon's compute scales to zero after 300s without a query. Sift's never had — measured `pg_postmaster_start_time()`: **26 days of unbroken uptime**, i.e. ~730 CU-hours/month billed against the Launch plan's 300 CU-hour allowance, roughly $45/mo of overage.
+**Decided 2026-08-14.** Neon's compute scales to zero after 300s without a query. Sift's never had — measured `pg_postmaster_start_time()`: **26 days of unbroken uptime**.
+
+**The console needed no changes, and that is the strongest evidence in this entry.** Checked the same day: autoscale was already `.25 ↔ 2 CU`, **scale-to-zero was already enabled** at 5 minutes, history retention 6 hours, one branch and one endpoint. With suspension enabled and the compute still up for 26 days unbroken, a query must have arrived inside every single 5-minute window. Nothing else explains it.
+
+**On the money.** Launch bills compute **from the first hour** — there is no included-CU-hour allowance, so savings are linear rather than a cliff to get under. Aug 1–14: **312.8 CU-h → $33.08** org-wide (~$0.106/CU-h) against $0.38 of storage. And the CU-hours are **shared across all four projects in the org**, where `sift` (139 CU-h) was not even the largest — `cratedigger` was (~161). A sibling project, `tenancy`, sits Idle at ~$3/month on the same plan, which is what `sift` should look like.
+
+Of sift's 10.0 CU-h/day, **6.0 is the 0.25 CU floor running 24 hours** and 4.0 is real pipeline work — so this buys back roughly $15/month, not the $45 first estimated off a misremembered pricing model.
 
 **The diagnosis was wrong the first time, in the direction that feels right.** The obvious suspect was `asyncpg.create_pool(min_size=2)` in `sift-api/app/db.py` — a pool that "pins connections open" so the compute can't idle out. Both halves of that are false. asyncpg's `min_size` is only the number of connections opened at init; `_minsize` is read in `Pool._initialize` and a getter and nowhere else, and `_deactivate_inactive_connection` terminates idle connections with no `min_size` check. And Neon suspends on absence of *queries*, not connections. The pool was never the problem.
 
@@ -925,7 +931,7 @@ Both were asking Postgres a question the process already knew the answer to. Eve
 
 **What is accepted:** the first request after an idle period pays a Neon cold start. `sift-api/STATUS.md` records a 2,374 ms feed-query regression where cold heap reads dominated, so this is not free. It is acceptable because there is no traffic to feel it (`search_queries`: 0 rows in 8 days) — and because the alternative was paying for an idle database around the clock. **Revisit when traffic is real**: the fallback is the autoscale floor, not re-pinning the compute.
 
-**Storage is explicitly not the lever here.** 1,993 MB against Launch's 10 GiB. `sift-api/docs/NEON_RETENTION.md` is a careful piece of work about a bill that storage was not driving; its remaining actions save no money on this plan.
+**Storage is explicitly not the lever here.** 2.11 GB at $0.35/GB-month is **$0.38/month** — 1% of the bill. `sift-api/docs/NEON_RETENTION.md` is a careful piece of work about a bill that storage was not driving; reclaiming a full gigabyte would save 35 cents.
 
 **The generalizable finding:** the whole class of defect is "a background loop that asks a question it could have remembered". It is invisible in every dimension a normal review looks at — no error, no latency, no failing test, no user impact — and shows up only on an invoice nobody re-derives. Hence `sift-api/scripts/verify_neon_idle.py`, in the shape of `verify_cost_baseline.py`: the fix for a stale number is not a better number, it is making re-derivation a one-liner.
 
