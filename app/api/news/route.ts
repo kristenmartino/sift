@@ -169,12 +169,28 @@ export async function GET(request: NextRequest) {
       stories.flatMap((s) => s.articles),
     );
 
-    return NextResponse.json<NewsApiResponse>({
-      articles,
-      stories,
-      cached: false,
-      fetchedAt: lastRefreshed ? lastRefreshed.toISOString() : new Date().toISOString(),
-    });
+    return NextResponse.json<NewsApiResponse>(
+      {
+        articles,
+        stories,
+        cached: false,
+        fetchedAt: lastRefreshed ? lastRefreshed.toISOString() : new Date().toISOString(),
+      },
+      {
+        // Let the CDN absorb repeat requests instead of waking Neon for each
+        // one. This handler runs the full story + members + standalone +
+        // entity-links query set per call, and the compute now scales to zero
+        // between pipeline runs — an uncached feed is what would quietly put it
+        // back to 24/7 the moment traffic arrives.
+        //
+        // 600s matches the `revalidate` every page already carries, so the
+        // freshness contract is unchanged; the pipeline only writes every
+        // 1800s anyway. Same pattern as app/api/compare/daily/route.ts.
+        headers: {
+          "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600",
+        },
+      }
+    );
   } catch (err) {
     reportError("api.news", err, { extra: { category } });
     return NextResponse.json<NewsApiError>(
