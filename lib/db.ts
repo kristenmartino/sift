@@ -39,9 +39,18 @@ if (!process.env.DATABASE_URL) {
 
 const isLocalhost = process.env.DATABASE_URL.includes("localhost") || process.env.DATABASE_URL.includes("127.0.0.1");
 
-// Held on globalThis, not module scope. Module caching makes this a singleton
-// in production, but dev HMR re-evaluates the module on every edit and each
-// evaluation would leak a Pool holding up to `max` sockets against Neon.
+// Held on globalThis, not module scope, and cached in EVERY environment.
+//
+// The familiar idiom guards this with `NODE_ENV !== "production"`, on the
+// reasoning that only dev HMR re-evaluates a module. That is wrong here in the
+// one direction that costs money: Next.js bundles the RSC graph and the
+// route-handler graph separately, so this module can be instantiated more than
+// once per server instance in production — each copy opening its own Pool of
+// up to `max` sockets against Neon. Guarding on NODE_ENV disables
+// duplicate-pool protection in exactly the environment that pays for it.
+//
+// (Found in the sibling `cratedigger` project, which shares this Neon org and
+// had the same pattern.)
 const globalForDb = globalThis as unknown as { siftPgPool?: Pool };
 
 const pool =
@@ -60,7 +69,7 @@ const pool =
     }),
   });
 
-if (process.env.NODE_ENV !== "production") globalForDb.siftPgPool = pool;
+globalForDb.siftPgPool = pool;
 
 // Ceiling on how many articles one outlet can hold in a category's standalone
 // pool (LIMIT 50). Without it a single high-volume feed dominates the pool —
