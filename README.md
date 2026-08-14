@@ -91,7 +91,7 @@ sift/
 │   ├── constants.ts               # Categories, colors (semantic), gradients
 │   ├── hooks.ts                   # useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare
 │   ├── types.ts                   # TypeScript interfaces
-│   ├── db.ts                      # Neon serverless Postgres client
+│   ├── db.ts                      # Postgres client (node-pg over TCP; Neon-hosted)
 │   ├── sse.ts                     # SSE event parser
 │   └── utils.ts                   # Hash, parse, time, domain helpers
 ├── __tests__/                     # Jest + RTL

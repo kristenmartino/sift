@@ -170,7 +170,7 @@ User clicks "Compare coverage" on a story
 | AI out of request path | Background pipeline generates; API routes serve from DB |
 | Right tool for each job | Next.js for frontend + simple reads; LangGraph for multi-step workflows |
 | Single source of truth | Postgres stores everything; no in-memory cache to lose |
-| Cost scales with content, not users | Claude costs are fixed (~$4/mo for pipeline). 1 user or 10,000 users costs the same. Total: ~$9/mo. |
+| Cost scales with content, not users | Claude costs scale with articles ingested, not readers — 1 user or 10,000 costs the same. The *figures* that used to sit here (~$4/mo, ~$9/mo total) were March 2026 and wrong by more than an order of magnitude by August. Re-derive rather than quote: `sift-api/scripts/verify_cost_baseline.py` (model spend), `sift-api/scripts/verify_neon_idle.py` (Neon). See `docs/DECISIONS.md` D54. |
 | Progressive enhancement | Fixed categories work without auth. Custom topics and comparison require sign-in. |
 | Graceful degradation | If pipeline fails, articles are stale but still served. If comparison fails, user gets an error, not a crash. |
 

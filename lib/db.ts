@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { Pool } from "pg";
 
 import { isMissingColumn, isMissingSchemaObject } from "./dbErrors";
@@ -38,13 +39,37 @@ if (!process.env.DATABASE_URL) {
 
 const isLocalhost = process.env.DATABASE_URL.includes("localhost") || process.env.DATABASE_URL.includes("127.0.0.1");
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 5,
-  ...(!isLocalhost && {
-    ssl: { rejectUnauthorized: true },
-  }),
-});
+// Held on globalThis, not module scope, and cached in EVERY environment.
+//
+// The familiar idiom guards this with `NODE_ENV !== "production"`, on the
+// reasoning that only dev HMR re-evaluates a module. That is wrong here in the
+// one direction that costs money: Next.js bundles the RSC graph and the
+// route-handler graph separately, so this module can be instantiated more than
+// once per server instance in production — each copy opening its own Pool of
+// up to `max` sockets against Neon. Guarding on NODE_ENV disables
+// duplicate-pool protection in exactly the environment that pays for it.
+//
+// (Found in the sibling `cratedigger` project, which shares this Neon org and
+// had the same pattern.)
+const globalForDb = globalThis as unknown as { siftPgPool?: Pool };
+
+const pool =
+  globalForDb.siftPgPool ??
+  new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 5,
+    // node-pg defaults this to 0, meaning "wait forever". Harmless while the
+    // Neon compute was pinned awake 24/7; not harmless now that it scales to
+    // zero, because a cold start is the one moment a connect can take seconds.
+    // Fail the request instead of hanging it — the page has a fallback, a hung
+    // lambda does not.
+    connectionTimeoutMillis: 10_000,
+    ...(!isLocalhost && {
+      ssl: { rejectUnauthorized: true },
+    }),
+  });
+
+globalForDb.siftPgPool = pool;
 
 // Ceiling on how many articles one outlet can hold in a category's standalone
 // pool (LIMIT 50). Without it a single high-volume feed dominates the pool —
@@ -297,43 +322,18 @@ export interface DbArticle {
   reading_levels: unknown;
 }
 
-// The category feed queries (here and the standalone query in
-// getStoriesWithArticles) carry a 30-day recency floor. The EXP() decay in
+// The category feed queries in getStoriesWithArticles (the standalone pool and
+// its fallback) carry a 30-day recency floor. The EXP() decay in
 // ORDER BY already zeroes out older rows (score × ~1e-13 at 30 days), so
 // they can never rank — but without the floor Postgres still fetches and
 // sorts every feed-quality row in the category (29k for business, 73k for
 // sports as of 2026-07; sift-api#16). Written as an OR rather than
 // COALESCE(published_date, created_at) so both branches stay servable by
 // idx_articles_feed (category, published_date DESC).
-export async function getArticlesByCategory(
-  category: string,
-  limit = 30
-): Promise<DbArticle[]> {
-  const result = await pool.query<DbArticle>(
-    `SELECT id, title, summary, source_url, source_name, image_url,
-            category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, is_roundup, genre, context_primer, reading_levels, created_at
-     FROM articles
-     WHERE category = $1 AND from_search = false
-       AND summary IS NOT NULL AND summary != ''
-       AND LOWER(summary) NOT LIKE 'unable to provide%'
-       AND (published_date > NOW() - INTERVAL '30 days'
-            OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
-     ORDER BY
-       COALESCE(importance_score, 3)::float *
-       EXP(-LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - COALESCE(published_date, created_at))), 0) / 86400.0, 700)) *
-       ${GRIM_DAMPENER_SQL} *
-       ${CIVIC_BOOST_SQL} *
-       ${OPINION_DAMPENER_SQL} *
-       ${ROUNDUP_DAMPENER_SQL} *
-       ${LOW_IMPORTANCE_SQL} *
-       ${NON_NEWS_SQL}
-     DESC NULLS LAST
-     LIMIT $2`,
-    [category, limit]
-  );
-  return result.rows;
-}
-
+//
+// This floor is also why ~80% of the corpus is structurally undisplayable, and
+// therefore why sift-api's embedding prune was safe — see
+// sift-api/docs/NEON_RETENTION.md.
 // ─── Stories ──────────────────────────────────────────
 
 export interface DbStory {
@@ -607,16 +607,6 @@ export async function getLastRefreshed(category: string): Promise<Date | null> {
     [category]
   );
   return result.rows[0]?.last_refreshed_at ?? null;
-}
-
-export async function healthCheck(): Promise<boolean> {
-  try {
-    await pool.query("SELECT 1");
-    return true;
-  } catch (err) {
-    reportError("db.healthCheck", err);
-    return false;
-  }
 }
 
 // ─── Bookmarks ─────────────────────────────────────────
@@ -1005,7 +995,7 @@ export async function getArticleEntityLinks(
  * when the politician_profiles table doesn't exist yet (graceful for
  * pre-Phase-3.A-merge prod).
  */
-export async function getPoliticianByBioguide(
+async function getPoliticianByBioguideUncached(
   bioguideId: string,
 ): Promise<PoliticianProfile | null> {
   const trimmed = bioguideId.trim().toUpperCase();
@@ -1044,7 +1034,7 @@ export async function getPoliticianByBioguide(
  * notFound() for the dossier route) or when the org_profiles table
  * doesn't exist yet.
  */
-export async function getOrgBySlug(slug: string): Promise<OrgProfile | null> {
+async function getOrgBySlugUncached(slug: string): Promise<OrgProfile | null> {
   const trimmed = slug.trim().toLowerCase();
   if (!trimmed) return null;
 
@@ -1079,7 +1069,7 @@ export async function getOrgBySlug(slug: string): Promise<OrgProfile | null> {
  * table doesn't exist yet. The route's notFound() renders the global
  * 404 page on null.
  */
-export async function getBillById(billId: string): Promise<BillProfile | null> {
+async function getBillByIdUncached(billId: string): Promise<BillProfile | null> {
   const trimmed = billId.trim().toLowerCase();
   if (!trimmed) return null;
 
@@ -1395,7 +1385,7 @@ export async function listSitemapEntries(): Promise<SitemapEntry[]> {
  * curated (caller should call notFound() for the dossier route) or when the
  * outlet_profiles table doesn't exist yet (pre-Phase-2.A-merge prod).
  */
-export async function getOutletBySlug(slug: string): Promise<OutletProfile | null> {
+async function getOutletBySlugUncached(slug: string): Promise<OutletProfile | null> {
   const trimmed = slug.trim().toLowerCase();
   if (!trimmed) return null;
 
@@ -1615,5 +1605,43 @@ export async function getFundingEdgesForOrg(
     return empty;
   }
 }
+
+// ─── Per-request dossier fetchers ───────────────────────
+//
+// Every dossier route calls its fetcher twice per render — once in
+// generateMetadata, once in the page body — and neither knows about the other.
+// That is two identical round-trips for one page. React's cache() dedupes them
+// for the life of a single request, so the second call is free.
+//
+// Only these four are wrapped, and only because their double-call is
+// structural rather than incidental. The opengraph-image routes call the same
+// fetchers but are a separate HTTP request, so nothing here helps them — that
+// would need a real cache, not a per-request one.
+
+/**
+ * Fetch a curated politician dossier by bioguide id (the Congress.gov
+ * identifier, e.g. 'S000148' for Schumer). Returns null when the bioguide
+ * isn't curated (caller should call notFound() for the dossier route) or when
+ * politician_profiles doesn't exist yet.
+ */
+export const getPoliticianByBioguide = cache(getPoliticianByBioguideUncached);
+
+/**
+ * Fetch a curated organization dossier by slug. Returns null when the slug
+ * isn't curated or when org_profiles doesn't exist yet.
+ */
+export const getOrgBySlug = cache(getOrgBySlugUncached);
+
+/**
+ * Fetch a curated bill dossier by bill id. Returns null when the bill_id isn't
+ * curated or when bill_profiles doesn't exist yet.
+ */
+export const getBillById = cache(getBillByIdUncached);
+
+/**
+ * Fetch a curated outlet dossier by slug. Returns null when the slug isn't
+ * curated or when outlet_profiles doesn't exist yet.
+ */
+export const getOutletBySlug = cache(getOutletBySlugUncached);
 
 export default pool;
