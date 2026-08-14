@@ -4,7 +4,7 @@ import { createDossierOgImage } from "@/lib/ogImage";
 import { formatOrgTypeLabel } from "@/lib/org";
 
 // Same heartbeat as the page — the unfurl should never outlive the dossier.
-export const revalidate = 600;
+export const revalidate = 1800;
 export const size = OG_SIZE;
 export const contentType = "image/png";
 export const alt = "Organization dossier on Sift — the news, with footnotes";

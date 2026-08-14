@@ -15,9 +15,9 @@ export const metadata: Metadata = {
 
 // ISR — methodology copy itself is static, but the live outlet list reads
 // from outlet_profiles which changes when new outlets are curated. Same
-// 10-minute heartbeat as the landing keeps the list fresh without paying
+// 30-minute heartbeat as the landing keeps the list fresh without paying
 // the DB cost on every visit.
-export const revalidate = 600;
+export const revalidate = 1800;
 
 type BucketKey = CrossSpectrumBucket | "unrated";
 

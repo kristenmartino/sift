@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 };
 
 // ISR — the architecture note carries the live curated-outlet count, read from
-// outlet_profiles. Same 10-minute heartbeat as the landing + methodology.
-export const revalidate = 600;
+// outlet_profiles. Same 30-minute heartbeat as the landing + methodology.
+export const revalidate = 1800;
 
 const STACK = [
   { name: "Next.js 15", role: "Frontend & App Router on Vercel" },
