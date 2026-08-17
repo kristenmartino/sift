@@ -1339,17 +1339,27 @@ const SITEMAP_TERM_BRANCH = String.raw`
               WHERE a.from_search = false
                 AND a.summary IS NOT NULL AND a.summary <> ''
                 AND LOWER(a.summary) NOT LIKE 'unable to provide%'
-                AND to_tsvector('english', COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))
-                    @@ phraseto_tsquery('english', f.s)
-                -- Prefilter above, exact predicate below — both load-bearing.
-                -- See termMatchSql for why. All-caps forms match
-                -- case-sensitively, mirroring isAcronym in lib/term.ts.
-                AND CASE WHEN f.s = UPPER(f.s)
-                         THEN (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~
-                              ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
-                         ELSE (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~*
-                              ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
-                    END
+                -- Same two halves as termMatchSql, and they must stay the
+                -- same: this decides the sitemap, that decides the page, and
+                -- a disagreement means a page says noindex while the sitemap
+                -- lists it.
+                AND (
+                     (to_tsvector('english', COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))
+                        @@ phraseto_tsquery('english', f.s)
+                      -- Prefilter above, exact predicate below — both
+                      -- load-bearing. All-caps forms match case-sensitively,
+                      -- mirroring isAcronym in lib/term.ts.
+                      AND CASE WHEN f.s = UPPER(f.s)
+                               THEN (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~
+                                    ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
+                               ELSE (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~*
+                                    ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
+                          END)
+                     -- The primer half (migration 033). An article counts
+                     -- when Sift's reading-aid layer defined the term for it,
+                     -- even if the headline never says it.
+                     OR primer_term_keys(a.context_primer) && ARRAY[lower(btrim(f.s))]
+                    )
            ) m ON TRUE
           WHERE t.definition IS NOT NULL AND t.definition_source IS NOT NULL
           GROUP BY t.slug, t.updated_at
@@ -1407,7 +1417,10 @@ const SITEMAP_TERM_BRANCH = String.raw`
  *   coverage is not stored, so the SQL recomputes it. Without the coverage
  *   half a term page is a definition Cornell wrote and we cited — strictly
  *   worse than Cornell, and the "one row poured into a template" shape this
- *   whole function exists to keep out of the index.
+ *   whole function exists to keep out of the index. Coverage counts a title/
+ *   summary match **or** a primer definition; counting only the former
+ *   withheld `prior-restraint` for having "no coverage" while 128 articles
+ *   were about it.
  */
 export async function listSitemapEntries(): Promise<SitemapEntry[]> {
   try {
@@ -1550,10 +1563,20 @@ const TERM_MATCH_TSV =
 const TERM_MATCH_TEXT = "(COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))";
 
 /**
- * SQL for "this article mentions the term", as `(prefilter AND exact) OR ...`
- * over every surface form.
+ * SQL for "this article involves the term".
  *
- * **Both halves are load-bearing; do not simplify to either one alone.**
+ * Two independent signals, OR'd: the term appears in the title or summary, or
+ * the article's own context primer defined it. The second is the subject of
+ * the long note inside the function — it is what makes the page work for
+ * terms that live in article bodies rather than headlines.
+ *
+ * Note the shift from "mentions" to "involves". Once the primer counts, an
+ * article can be covered by a term it never literally prints, which is the
+ * point — and it is why the copy says "stories in Sift's index" rather than
+ * "stories mentioning".
+ *
+ * **The text half's two parts are both load-bearing; do not simplify to
+ * either one alone.**
  *
  * - The `@@ phraseto_tsquery` half is only there for speed. It rides the GIN
  *   index and cuts 305k rows to a few hundred: measured 1,030 ms and ~52,000
@@ -1583,6 +1606,46 @@ function termMatchSql(
     return `(${TERM_MATCH_TSV} @@ phraseto_tsquery('english', $${phraseIdx})
              AND ${TERM_MATCH_TEXT} ${op} $${regexIdx})`;
   });
+
+  // ── The primer half ──
+  //
+  // An article also counts when Sift's own reading-aid layer defined the term
+  // for it, even if the term never reaches the headline. Without this the
+  // coverage signal misses exactly the terms most worth a page, because they
+  // are what a journalist writes in paragraph nine — measured against the
+  // corpus: prior restraint 0 title/summary matches against 128 primer
+  // definitions, certiorari 5 vs 83, qualified immunity 6 vs 75, cloture 0 vs
+  // 45. `/term/prior-restraint` was withheld from the sitemap for "no
+  // coverage" while 128 articles were about it.
+  //
+  // This does not weaken what the page claims, for two reasons:
+  //
+  // 1. It is still reportage about Sift's own index, not a claim about the
+  //    world — the same footing the text half stands on, and why neither
+  //    needs a citation beyond the articles it links.
+  // 2. It is the *higher-precision* half. The primer generator read the
+  //    article; the regex only sees a string. #40 is the standing reminder of
+  //    what a context-free matcher does to a corpus, and it argues for this
+  //    signal rather than against it.
+  //
+  // What the primer still cannot do is define anything: all 72,689 primer
+  // terms in the corpus carry `source: null`, which is why term_profiles is
+  // hand-written. Coverage, yes; definition, never.
+  //
+  // Case is folded on both sides — inside `primer_term_keys` (migration 033)
+  // and here — because the generator is not consistent ('redistricting' 483,
+  // 'Redistricting' 2).
+  const primerIdx = firstParam + params.length;
+  params.push(
+    // Postgres text[] literal. Surface forms are curated and validated by
+    // seed_term_profiles.py, but quote-escape anyway — this is string-built
+    // SQL touching user-visible counts.
+    `{${patterns
+      .map((p) => `"${p.phrase.toLowerCase().replace(/(["\\])/g, "\\$1")}"`)
+      .join(",")}}`,
+  );
+  clauses.push(`primer_term_keys(a.context_primer) && $${primerIdx}::text[]`);
+
   return { sql: `(${clauses.join(" OR ")})`, params };
 }
 
@@ -1620,7 +1683,10 @@ async function getTermBySlugUncached(slug: string): Promise<TermProfile | null> 
  * Nothing here is stored, and nothing here needs a citation — it is a count of
  * articles Sift holds, not a claim about the world. Which is the whole reason
  * this half of the page can be generated while the definition half has to be
- * hand-sourced.
+ * hand-sourced. That holds for the primer half of the match too: "our own
+ * reading-aid layer flagged this term for this article" is a fact about the
+ * index. What the primer cannot do is *define* the term — every primer term
+ * in the corpus has `source: null`.
  *
  * Outlet identity resolves the same way `getRecentArticlesByOutletSlug` does
  * (explicit `source_name_aliases`, else `outlet_profiles.name`), so an outlet
