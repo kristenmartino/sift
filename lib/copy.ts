@@ -596,6 +596,62 @@ export const COPY = {
     noRecent:
       "No recent stories from this outlet on Sift. The pipeline reads from this outlet \u2014 nothing has surfaced in the last day or two.",
   },
+  // ─── Term dossier (`/term/[slug]`) ─────────────────────
+  //
+  // Two registers on one page, and the wording keeps them apart on purpose.
+  // The definition is someone else's — Cornell's, the statute's — so it is
+  // introduced as a citation. The coverage is Sift's own index, so it is
+  // phrased as a count of what Sift holds ("in Sift's index", "Sift has
+  // filed"), never as a claim about how much coverage exists in the world.
+  term: {
+    eyebrow: "Civic term",
+    definitionLabel: "What it means",
+    coverageLabel: "How it's being covered",
+    spreadLabel: "Across the spectrum",
+    outletsLabel: "Who's covering it",
+    recentLabel: "Recent stories on Sift",
+    aliasLabel: "Also written as",
+    // The count line. Deliberately says "in Sift's index" — the corpus is a
+    // sample of the press, and the number would read as a claim about the
+    // whole of it otherwise.
+    coverageSummary: (articles: number, outlets: number) =>
+      `${articles.toLocaleString()} ${articles === 1 ? "story" : "stories"} in Sift's index, from ` +
+      `${outlets.toLocaleString()} ${outlets === 1 ? "outlet" : "outlets"}.`,
+    dateSpan: (first: string, last: string) =>
+      first === last ? `Filed ${first}.` : `Filed ${first} — ${last}.`,
+    // Shown when the corpus has nothing. Says what it means, and does not
+    // pretend the term is unimportant.
+    noCoverage:
+      "No stories in Sift's index mention this term yet. The definition stands; " +
+      "the coverage below fills in as the pipeline files stories that use it.",
+    // Bucket counts.
+    //
+    // The second sentence used to read "Outlets AllSides has not rated are
+    // counted in the totals above but not placed on the spectrum" — which was
+    // false, and false in the direction that matters. AllSides rates The
+    // Guardian, the New York Times and the Washington Post; Sift just fails to
+    // match them, because articles arrive as "The Guardian US" while the
+    // dossier is "The Guardian" and `source_name_aliases` is empty in prod.
+    // Blaming the rater for our own join gap is exactly the kind of asymmetric
+    // error D37 exists to catch: the unmatched outlets skew left, so the note
+    // made the spread look more right-leaning than the corpus is.
+    spreadNote: (unplaced: number) =>
+      "Positions are AllSides' published ratings, shown for the outlets that " +
+      "filed these stories." +
+      (unplaced > 0
+        ? ` ${unplaced.toLocaleString()} ${unplaced === 1 ? "story is" : "stories are"} ` +
+          "counted in the total above but not placed here — either the outlet " +
+          "has no published rating, or Sift has not yet matched the name it " +
+          "files under to a dossier."
+        : ""),
+    definitionCitation: (source: string, checked: string | null) =>
+      checked
+        ? `Definition drawn from ${source} · last verified ${checked}`
+        : `Definition drawn from ${source}`,
+    // The honest caveat about what the definition is and isn't.
+    definitionNote:
+      "Sift's plain-language summary of the cited source, not a quotation from it.",
+  },
   landing: {
     // Lead-story fallback + feed CTA, shown by components/landing/LeadStory.tsx
     // when the morning ingest hasn't filed a lead story yet. The rest of the old

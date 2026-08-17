@@ -253,3 +253,88 @@ describe("landingReskin — live-example and outlet-count lines", () => {
     expect(COPY.landingReskin.sources.titleIt(0)).toBe("Curated outlets.");
   });
 });
+
+describe("term.coverageSummary", () => {
+  const { coverageSummary } = COPY.term;
+
+  it("pluralizes stories and outlets independently", () => {
+    expect(coverageSummary(146, 23)).toBe(
+      "146 stories in Sift's index, from 23 outlets.",
+    );
+    expect(coverageSummary(1, 1)).toBe("1 story in Sift's index, from 1 outlet.");
+    expect(coverageSummary(2, 1)).toBe("2 stories in Sift's index, from 1 outlet.");
+  });
+
+  it("groups thousands, because the corpus is large enough to need it", () => {
+    expect(coverageSummary(1234, 1002)).toBe(
+      "1,234 stories in Sift's index, from 1,002 outlets.",
+    );
+  });
+
+  it("scopes the count to Sift's index rather than the press at large", () => {
+    // The corpus is a sample. "146 stories" unqualified reads as a claim
+    // about how much coverage exists, which is not something Sift knows.
+    expect(coverageSummary(146, 23)).toContain("in Sift's index");
+  });
+});
+
+describe("term.dateSpan", () => {
+  const { dateSpan } = COPY.term;
+
+  it("collapses to one date when first and last are the same day", () => {
+    expect(dateSpan("2026-08-15", "2026-08-15")).toBe("Filed 2026-08-15.");
+  });
+
+  it("prints a range otherwise", () => {
+    expect(dateSpan("2026-04-08", "2026-08-15")).toBe(
+      "Filed 2026-04-08 — 2026-08-15.",
+    );
+  });
+});
+
+describe("term.spreadNote", () => {
+  const { spreadNote } = COPY.term;
+
+  it("attributes the positions to AllSides, never to Sift", () => {
+    // D37: a third-party rating is surfaced verbatim and attributed. The page
+    // does not characterize an outlet's politics on its own authority.
+    expect(spreadNote(0)).toContain("AllSides' published ratings");
+  });
+
+  it("says nothing about unplaced stories when every story is placed", () => {
+    expect(spreadNote(0)).not.toContain("counted in the total above");
+  });
+
+  it("names BOTH reasons a story can go unplaced", () => {
+    // This is the fix, and the reason it matters. The note used to say only
+    // "outlets AllSides has not rated" — but AllSides rates The Guardian, the
+    // NYT and the WaPo; Sift was failing to match their feed names. Blaming
+    // the rater for our own join gap understated left coverage by 2.4x,
+    // because the unmatched outlets skew left. Both causes must be named.
+    const note = spreadNote(40);
+    expect(note).toContain("no published rating");
+    expect(note).toContain("not yet matched the name it files under");
+  });
+
+  it("pluralizes the unplaced count", () => {
+    expect(spreadNote(1)).toContain("1 story is counted");
+    expect(spreadNote(4)).toContain("4 stories are counted");
+    expect(spreadNote(1500)).toContain("1,500 stories are counted");
+  });
+});
+
+describe("term.definitionCitation", () => {
+  const { definitionCitation } = COPY.term;
+
+  it("names the source and the date it was last verified", () => {
+    expect(definitionCitation("law.cornell.edu", "2026-08-10")).toBe(
+      "Definition drawn from law.cornell.edu · last verified 2026-08-10",
+    );
+  });
+
+  it("omits the verification clause rather than implying an unchecked date", () => {
+    expect(definitionCitation("law.cornell.edu", null)).toBe(
+      "Definition drawn from law.cornell.edu",
+    );
+  });
+});

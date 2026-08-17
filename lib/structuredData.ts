@@ -1,5 +1,5 @@
 /**
- * schema.org JSON-LD for the four dossier types.
+ * schema.org JSON-LD for the five dossier types.
  *
  * These builders live outside the dossier components on purpose: structured
  * data is a document-level concern, and keeping it in `page.tsx` next to
@@ -38,6 +38,7 @@ import type {
   OrgProfile,
   OutletProfile,
   PoliticianProfile,
+  TermProfile,
 } from "./types";
 
 /** Matches `metadataBase` in app/layout.tsx and BASE in app/sitemap.ts. */
@@ -193,6 +194,43 @@ export function outletJsonLd(o: OutletProfile): Record<string, unknown> {
         })
       : undefined,
     sameAs: sameAs(o.externalLinks as Record<string, string | undefined>, OUTLET_SAME_AS),
+  });
+}
+
+/**
+ * A curated civic term, as schema.org `DefinedTerm`.
+ *
+ * The one dossier type where emitting `description` is correct rather than
+ * risky, and for the reason the rule above gives: it is only ever non-null
+ * when its source came with it (`lib/term.ts` drops the pair otherwise), so
+ * there is no unsourced state to leak. The source travels with it as
+ * `citation`, which is the whole point — a definition detached from its
+ * authority is the thing this route was built to avoid.
+ *
+ * Deliberately omitted:
+ *
+ * - **The coverage numbers.** "146 articles from 12 outlets" is true of
+ *   Sift's index on the day it was computed and of nothing else. As prose on
+ *   the page, next to the articles it counts, that context is visible; as
+ *   structured data it is a bare number a search engine may restate as fact
+ *   long after it stopped being one.
+ * - **`inDefinedTermSet`.** Sift has no published glossary these belong to
+ *   yet. Asserting one would describe a thing that does not exist.
+ */
+export function termJsonLd(t: TermProfile): Record<string, unknown> {
+  const url = `${BASE}/term/${t.slug}`;
+  return compact({
+    "@context": "https://schema.org",
+    "@type": "DefinedTerm",
+    "@id": url,
+    mainEntityOfPage: url,
+    url,
+    name: t.term,
+    identifier: t.slug,
+    // Both or neither — see lib/term.ts.
+    description: t.definition ?? undefined,
+    citation: t.definitionSource ?? undefined,
+    alternateName: t.aliases.length > 0 ? t.aliases : undefined,
   });
 }
 

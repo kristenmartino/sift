@@ -36,6 +36,8 @@ import type {
   OrgProfile,
   OutletProfile,
   PoliticianProfile,
+  TermCoverage,
+  TermProfile,
 } from "./types";
 
 function present(s: string | null | undefined): boolean {
@@ -157,6 +159,49 @@ export function isPublishableOutlet(o: OutletProfile): boolean {
   return (
     (present(o.allSidesRating) && present(o.allSidesUrl)) ||
     (present(o.mbfcFactual) && present(o.mbfcUrl))
+  );
+}
+
+/**
+ * How many corpus articles a term needs before its page is worth indexing.
+ *
+ * A term page is two halves: a sourced definition, and how Sift's corpus
+ * covers the term. The definition half alone is a worse Cornell LII — Cornell
+ * wrote it, we're citing them, and Wikipedia outranks both of us on the
+ * definitional query anyway (measured: 145,241 monthly lookups for Strait of
+ * Hormuz, 4,001 for TPS — none of them winnable). The only thing this route
+ * has that they don't is the coverage half. Below a real article count there
+ * is no coverage half, and what's left is a template with one row of data
+ * poured into it — the exact shape Google's scaled-content-abuse policy names.
+ *
+ * 8 rather than 1, because coverage has to be able to *show* something: the
+ * page's argument is the spread across outlets and the span of dates, and
+ * neither reads as anything at two articles. 992 terms clear 8 in the current
+ * corpus, 485 clear 15, 184 clear 30 — so this is not the binding constraint
+ * on how large the route can get.
+ *
+ * `prior-restraint` is the live example. Real term, sourced to Cornell, zero
+ * corpus articles — it renders and resolves, and it stays out of the sitemap.
+ */
+export const TERM_MIN_ARTICLES = 8;
+
+/**
+ * A sourced definition **and** enough coverage to be about something.
+ *
+ * Both halves, deliberately. `lib/term.ts` already drops a definition that
+ * lost its source, so a null definition here means the row cannot state what
+ * the term means — and a term page that neither defines nor covers is not a
+ * page. Unlike the other four types, this floor reads a computed value rather
+ * than a column, because coverage is not stored anywhere.
+ */
+export function isPublishableTerm(
+  t: TermProfile,
+  coverage: TermCoverage,
+): boolean {
+  return (
+    present(t.definition) &&
+    present(t.definitionSource) &&
+    coverage.articleCount >= TERM_MIN_ARTICLES
   );
 }
 
