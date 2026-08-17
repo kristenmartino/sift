@@ -596,6 +596,60 @@ export interface OutletProfile {
   notes: string | null;
 }
 
+// ─── Term dossier (`/term/[slug]`) ───────────────────────────────────
+
+/**
+ * A curated civic term: a sourced definition, plus the surface forms to match
+ * in article text.
+ *
+ * Hand-written, though `articles.context_primer` already defines ~11,900
+ * terms — because every one of those has `source: null`. An inline reading
+ * aid attached to an article is one thing; a standalone page stating what a
+ * legal term means is a claim on Sift's own authority, which is the defect
+ * migrations 013 and 015 each had to remove. `lib/term.ts` drops the
+ * definition if its source doesn't come with it.
+ */
+export interface TermProfile {
+  slug: string;
+  term: string;
+  /** Never non-null without `definitionSource`. See lib/term.ts. */
+  definition: string | null;
+  definitionSource: string | null;
+  /** ISO YYYY-MM-DD: when a human last read the source and confirmed this. */
+  definitionChecked: string | null;
+  /** Extra surface forms matched in article text, e.g. `["TPS"]`. */
+  aliases: string[];
+  category: string | null;
+  notes: string | null;
+}
+
+/** One outlet's share of a term's coverage, with its published lean. */
+export interface TermOutletCoverage {
+  sourceName: string;
+  /** Null when the outlet has no curated dossier. */
+  slug: string | null;
+  articleCount: number;
+  allSidesRating: OutletAllSidesRating | null;
+  /** AllSides' own page for this outlet. Null means the rating is withheld. */
+  allSidesUrl: string | null;
+}
+
+/**
+ * How Sift's corpus covers a term. Computed at read time, stored nowhere.
+ *
+ * This half of the page needs no citation of its own: it is reportage about
+ * Sift's own index — a count of articles we hold and who published them —
+ * not a claim about the world. Every number here is a link away from the
+ * articles it counts.
+ */
+export interface TermCoverage {
+  articleCount: number;
+  outlets: TermOutletCoverage[];
+  /** Publication dates of the oldest and newest match, ISO YYYY-MM-DD. */
+  firstSeen: string | null;
+  lastSeen: string | null;
+}
+
 export interface ContextPrimerTerm {
   term: string;
   definition: string;

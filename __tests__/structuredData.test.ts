@@ -4,6 +4,7 @@ import {
   orgJsonLd,
   outletJsonLd,
   politicianJsonLd,
+  termJsonLd,
 } from "@/lib/structuredData";
 import type {
   BillProfile,
@@ -236,5 +237,64 @@ describe("jsonLdString", () => {
   it("round-trips to the same object once unescaped", () => {
     const ld = politicianJsonLd(politician);
     expect(JSON.parse(jsonLdString(ld).replace(/\\u003c/g, "<"))).toEqual(ld);
+  });
+});
+
+// ─── Terms ──────────────────────────────────────────────────────────────
+
+describe("termJsonLd", () => {
+  const term = {
+    slug: "temporary-protected-status",
+    term: "Temporary Protected Status",
+    definition: "A federal designation that lets nationals of a named country stay.",
+    definitionSource: "https://www.law.cornell.edu/uscode/text/8/1254a",
+    definitionChecked: "2026-08-10",
+    aliases: ["TPS"],
+    category: "immigration",
+    notes: "133 corpus articles as of 2026-08-10.",
+  };
+
+  it("emits a DefinedTerm with the definition and its citation", () => {
+    const ld = termJsonLd(term);
+    expect(ld["@type"]).toBe("DefinedTerm");
+    expect(ld.name).toBe("Temporary Protected Status");
+    expect(ld.description).toContain("federal designation");
+    expect(ld.citation).toBe("https://www.law.cornell.edu/uscode/text/8/1254a");
+    expect(ld.alternateName).toEqual(["TPS"]);
+  });
+
+  it("emits neither description nor citation when the pair was dropped", () => {
+    // The header rule: JSON-LD must never assert more than the row can
+    // source. `description` is safe here *only* because lib/term.ts
+    // guarantees it never survives without its source — so the unsourced
+    // state has to produce neither half, not a bare definition.
+    const ld = termJsonLd({ ...term, definition: null, definitionSource: null });
+    expect("description" in ld).toBe(false);
+    expect("citation" in ld).toBe(false);
+    expect(ld.name).toBe("Temporary Protected Status");
+  });
+
+  it("never emits the coverage numbers or an invented term set", () => {
+    // Coverage is true of Sift's index on the day it was computed. As prose
+    // beside the articles it counts that is visible; as structured data it is
+    // a bare number a crawler may restate long after it stopped being true.
+    const ld = termJsonLd(term);
+    for (const k of ["inDefinedTermSet", "interactionStatistic", "mentions"]) {
+      expect(k in ld).toBe(false);
+    }
+    // `notes` is uncited prose, same as every other type.
+    expect(JSON.stringify(ld)).not.toContain("133 corpus articles");
+  });
+
+  it("omits alternateName when there are no aliases", () => {
+    expect("alternateName" in termJsonLd({ ...term, aliases: [] })).toBe(false);
+  });
+
+  it("points @id, url and mainEntityOfPage at the canonical route", () => {
+    const ld = termJsonLd(term);
+    const url = "https://siftnews.io/term/temporary-protected-status";
+    expect(ld["@id"]).toBe(url);
+    expect(ld.url).toBe(url);
+    expect(ld.mainEntityOfPage).toBe(url);
   });
 });

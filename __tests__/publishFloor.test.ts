@@ -4,13 +4,17 @@ import {
   isPublishableOrg,
   isPublishableOutlet,
   isPublishablePolitician,
+  isPublishableTerm,
   ROLE_VERIFICATION_MAX_AGE_DAYS,
+  TERM_MIN_ARTICLES,
 } from "@/lib/publishFloor";
 import type {
   BillProfile,
   OrgProfile,
   OutletProfile,
   PoliticianProfile,
+  TermCoverage,
+  TermProfile,
 } from "@/lib/types";
 
 /**
@@ -366,5 +370,62 @@ describe("dossierRobotsMeta", () => {
     const withheld = { title: "t", ...dossierRobotsMeta(false) };
     expect("robots" in publishable).toBe(false);
     expect(withheld.robots).toEqual({ index: false, follow: true });
+  });
+});
+
+// ─── Terms ──────────────────────────────────────────────────────────────
+
+const term: TermProfile = {
+  slug: "temporary-protected-status",
+  term: "Temporary Protected Status",
+  definition: "A federal designation that lets nationals of a named country stay.",
+  definitionSource: "https://www.law.cornell.edu/uscode/text/8/1254a",
+  definitionChecked: "2026-08-10",
+  aliases: ["TPS"],
+  category: "immigration",
+  notes: null,
+};
+
+const coverage = (articleCount: number): TermCoverage => ({
+  articleCount,
+  outlets: [],
+  firstSeen: null,
+  lastSeen: null,
+});
+
+describe("isPublishableTerm", () => {
+  it("publishes a sourced definition with real coverage", () => {
+    expect(isPublishableTerm(term, coverage(146))).toBe(true);
+  });
+
+  it("withholds a term whose definition lost its source", () => {
+    // lib/term.ts nulls the pair, so this is what an unsourced row looks like
+    // by the time the floor sees it. Publishing it would state what a legal
+    // term means on Sift's own authority.
+    const unsourced = { ...term, definition: null, definitionSource: null };
+    expect(isPublishableTerm(unsourced, coverage(146))).toBe(false);
+  });
+
+  it("withholds a well-sourced term with no corpus coverage", () => {
+    // `prior-restraint` in the shipped CSV: real term, cited to Cornell, zero
+    // articles. Without the coverage half the page is a definition Cornell
+    // wrote and we re-stated — strictly worse than Cornell, and exactly the
+    // "one row poured into a template" shape the floor exists to keep out.
+    expect(isPublishableTerm(term, coverage(0))).toBe(false);
+  });
+
+  it("draws the line at TERM_MIN_ARTICLES", () => {
+    expect(isPublishableTerm(term, coverage(TERM_MIN_ARTICLES - 1))).toBe(false);
+    expect(isPublishableTerm(term, coverage(TERM_MIN_ARTICLES))).toBe(true);
+  });
+
+  it("mirrors the SQL: definition AND source AND count, all three", () => {
+    // listSitemapEntries filters on
+    //   t.definition IS NOT NULL AND t.definition_source IS NOT NULL
+    //   ... WHERE tc.n >= TERM_MIN_ARTICLES
+    // Change one, change the other.
+    expect(isPublishableTerm({ ...term, definition: null }, coverage(146))).toBe(false);
+    expect(isPublishableTerm({ ...term, definitionSource: null }, coverage(146))).toBe(false);
+    expect(isPublishableTerm(term, coverage(1))).toBe(false);
   });
 });

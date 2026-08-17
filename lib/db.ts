@@ -2,12 +2,19 @@ import { cache } from "react";
 import { Pool } from "pg";
 
 import { isMissingColumn, isMissingSchemaObject } from "./dbErrors";
+import { TERM_MIN_ARTICLES } from "./publishFloor";
 import { reportError } from "./observability";
 import { parseDbOrgProfile, type DbOrgProfileRow } from "./org";
 import { hasPartisanBalanceCap } from "./agencies";
 import { claimsNonPartisanship } from "./thinkTanks";
 import { parseDbBillProfile, type DbBillProfileRow } from "./bill";
 import { parseDbOutletProfile, type DbOutletProfileRow } from "./outlet";
+import {
+  parseDbTermProfile,
+  termPatterns,
+  type DbTermProfileRow,
+  type TermPattern,
+} from "./term";
 import {
   parseDbPoliticianProfile,
   type DbPoliticianProfileRow,
@@ -31,6 +38,9 @@ import type {
   OutletProfile,
   PoliticianListItem,
   PoliticianProfile,
+  TermCoverage,
+  TermOutletCoverage,
+  TermProfile,
 } from "./types";
 
 if (!process.env.DATABASE_URL) {
@@ -1286,6 +1296,69 @@ export async function listAllBillsLite(): Promise<BillListItem[]> {
 export type SitemapEntry = { path: string; lastModified: Date };
 
 /**
+ * The `/term/*` branch of the sitemap union, held apart for two reasons.
+ *
+ * **`String.raw` is mandatory here, not stylistic.** This SQL contains POSIX
+ * word-boundary escapes (`\m`, `\M`) and a bracket expression of regex
+ * metacharacters. In an ordinary template literal JavaScript eats those
+ * backslashes before Postgres ever sees them — `\m` becomes a bare `m`, the
+ * boundaries disappear, and the query silently starts matching substrings
+ * instead of words. It compiles, it runs, it returns a plausible-looking
+ * number. `String.raw` passes the backslashes through untouched.
+ *
+ * Second, it keeps the SQL comments out of a backtick-delimited string, where
+ * a stray backtick terminates the literal mid-query.
+ *
+ * The term floor is the only one that has to count corpus articles, so this
+ * branch is much larger than the other four — see the `listSitemapEntries`
+ * header for what the rule is and why.
+ */
+const SITEMAP_TERM_BRANCH = String.raw`
+       SELECT path, updated_at FROM (
+         SELECT '/term/' || t.slug AS path,
+                t.updated_at,
+                COUNT(DISTINCT m.id) AS n
+           FROM term_profiles t
+           -- One row per surface form, so each gets its own index-scannable
+           -- predicate. Do NOT collapse this into an
+           -- EXISTS (SELECT ... WHERE tsv @@ phraseto_tsquery(f.s)) over the
+           -- forms: that correlates the tsquery per *article*, the planner
+           -- gives up on idx_articles_fulltext, and the whole thing becomes a
+           -- seq scan of the corpus once per term — measured 7,000 ms for four
+           -- terms against 13 ms for this shape.
+           CROSS JOIN LATERAL (
+             SELECT t.term AS s
+             UNION
+             SELECT jsonb_array_elements_text(t.aliases)
+           ) f
+           -- LEFT, so a term with no coverage still produces a row and is
+           -- counted as 0 rather than vanishing before the outer WHERE.
+           LEFT JOIN LATERAL (
+             SELECT a.id
+               FROM articles a
+              WHERE a.from_search = false
+                AND a.summary IS NOT NULL AND a.summary <> ''
+                AND LOWER(a.summary) NOT LIKE 'unable to provide%'
+                AND to_tsvector('english', COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))
+                    @@ phraseto_tsquery('english', f.s)
+                -- Prefilter above, exact predicate below — both load-bearing.
+                -- See termMatchSql for why. All-caps forms match
+                -- case-sensitively, mirroring isAcronym in lib/term.ts.
+                AND CASE WHEN f.s = UPPER(f.s)
+                         THEN (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~
+                              ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
+                         ELSE (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~*
+                              ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
+                    END
+           ) m ON TRUE
+          WHERE t.definition IS NOT NULL AND t.definition_source IS NOT NULL
+          GROUP BY t.slug, t.updated_at
+       ) tc
+        -- COUNT(DISTINCT) above, because an article matching both "Temporary
+        -- Protected Status" and "TPS" is one article, not two.
+        WHERE tc.n >= ${TERM_MIN_ARTICLES}`;
+
+/**
  * Dossier URLs that are substantial enough to advertise to crawlers.
  *
  * ⚠️ INVARIANT: the WHERE clauses below and the predicates in
@@ -1329,6 +1402,12 @@ export type SitemapEntry = { path: string; lastModified: Date };
  *   `listCitedAgencies` applies to /agencies, widened past governance.
  * - **bill** — a status and at least one external link.
  * - **outlet** — at least one rating carrying its source URL.
+ * - **term** — a sourced definition AND `TERM_MIN_ARTICLES` corpus articles.
+ *   The only floor here that reads a computed value rather than a column:
+ *   coverage is not stored, so the SQL recomputes it. Without the coverage
+ *   half a term page is a definition Cornell wrote and we cited — strictly
+ *   worse than Cornell, and the "one row poured into a template" shape this
+ *   whole function exists to keep out of the index.
  */
 export async function listSitemapEntries(): Promise<SitemapEntry[]> {
   try {
@@ -1363,7 +1442,9 @@ export async function listSitemapEntries(): Promise<SitemapEntry[]> {
        SELECT '/outlet/' || slug, updated_at
          FROM outlet_profiles
         WHERE (allsides_rating IS NOT NULL AND allsides_url IS NOT NULL)
-           OR (mbfc_factual IS NOT NULL AND mbfc_url IS NOT NULL)`,
+           OR (mbfc_factual IS NOT NULL AND mbfc_url IS NOT NULL)
+       UNION ALL
+       ${SITEMAP_TERM_BRANCH}`,
     );
     return result.rows.map((r) => ({
       path: r.path,
@@ -1453,6 +1534,228 @@ export async function getRecentArticlesByOutletSlug(
     if (!isMissingSchemaObject(err, ["outlet_profiles", "source_name_aliases"]))
       throw err;
     reportError("db.getRecentArticlesByOutletSlug", err, { level: "warning" });
+    return [];
+  }
+}
+
+// ─── Term dossier (`/term/[slug]`) ─────────────────────
+
+/**
+ * The indexed prefilter expression. Must match `idx_articles_fulltext`
+ * (sift-api migration 032 / `app/db.py:_apply_migrations`) **character for
+ * character**, or Postgres silently falls back to a seq scan.
+ */
+const TERM_MATCH_TSV =
+  "to_tsvector('english', COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))";
+const TERM_MATCH_TEXT = "(COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))";
+
+/**
+ * SQL for "this article mentions the term", as `(prefilter AND exact) OR ...`
+ * over every surface form.
+ *
+ * **Both halves are load-bearing; do not simplify to either one alone.**
+ *
+ * - The `@@ phraseto_tsquery` half is only there for speed. It rides the GIN
+ *   index and cuts 305k rows to a few hundred: measured 1,030 ms and ~52,000
+ *   buffers down to 34 ms and 16. But Postgres FTS *stems* — the query for
+ *   "temporary protected status" is really `temporari <-> protect <-> status`
+ *   — so on its own it would claim coverage the page can't stand behind.
+ * - The `~` / `~*` half is the actual predicate. Word-boundary, exact.
+ *
+ * Verified lossless when the index went in: regex-only and prefilter+regex
+ * returned identical counts on all three terms with corpus volume (133 / 66 /
+ * 9). If that ever stops holding, the prefilter is wrong, not the regex.
+ *
+ * Case sensitivity comes from `isAcronym` in lib/term.ts — see the #40 note
+ * there for why "TPS" must appear as "TPS".
+ */
+function termMatchSql(
+  patterns: TermPattern[],
+  firstParam: number,
+): { sql: string; params: string[] } {
+  const params: string[] = [];
+  const clauses = patterns.map((p) => {
+    const phraseIdx = firstParam + params.length;
+    params.push(p.phrase);
+    const regexIdx = firstParam + params.length;
+    params.push(p.regex);
+    const op = p.caseSensitive ? "~" : "~*";
+    return `(${TERM_MATCH_TSV} @@ phraseto_tsquery('english', $${phraseIdx})
+             AND ${TERM_MATCH_TEXT} ${op} $${regexIdx})`;
+  });
+  return { sql: `(${clauses.join(" OR ")})`, params };
+}
+
+/** The corpus filter every feed query applies — kept identical here. */
+const TERM_ARTICLE_FILTER = `a.from_search = false
+  AND a.summary IS NOT NULL AND a.summary <> ''
+  AND LOWER(a.summary) NOT LIKE 'unable to provide%'`;
+
+async function getTermBySlugUncached(slug: string): Promise<TermProfile | null> {
+  const trimmed = slug.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  try {
+    const result = await pool.query<DbTermProfileRow>(
+      `SELECT slug, term, definition, definition_source, definition_checked,
+              aliases, category, notes
+         FROM term_profiles
+        WHERE slug = $1
+        LIMIT 1`,
+      [trimmed],
+    );
+    if (result.rows.length === 0) return null;
+    return parseDbTermProfile(result.rows[0]);
+  } catch (err) {
+    if (!isMissingSchemaObject(err, "term_profiles")) throw err;
+    reportError("db.getTermBySlug", err, { level: "warning" });
+    return null;
+  }
+}
+
+/**
+ * How Sift's corpus covers a term: how many articles, from which outlets, and
+ * over what span.
+ *
+ * Nothing here is stored, and nothing here needs a citation — it is a count of
+ * articles Sift holds, not a claim about the world. Which is the whole reason
+ * this half of the page can be generated while the definition half has to be
+ * hand-sourced.
+ *
+ * Outlet identity resolves the same way `getRecentArticlesByOutletSlug` does
+ * (explicit `source_name_aliases`, else `outlet_profiles.name`), so an outlet
+ * that publishes under several source names is counted once. An unrecognised
+ * source name still appears, with a null slug and no lean — dropping it would
+ * quietly understate the count the page prints.
+ */
+export async function getTermCoverage(term: TermProfile): Promise<TermCoverage> {
+  const patterns = termPatterns(term);
+  const empty: TermCoverage = {
+    articleCount: 0,
+    outlets: [],
+    firstSeen: null,
+    lastSeen: null,
+  };
+  if (patterns.length === 0) return empty;
+
+  const match = termMatchSql(patterns, 1);
+
+  try {
+    const result = await pool.query<{
+      source_name: string;
+      slug: string | null;
+      article_count: string;
+      allsides_rating: string | null;
+      allsides_url: string | null;
+      first_seen: Date | string | null;
+      last_seen: Date | string | null;
+    }>(
+      `WITH matched AS (
+         SELECT a.source_name,
+                COALESCE(a.published_date, a.created_at) AS dt
+           FROM articles a
+          WHERE ${TERM_ARTICLE_FILTER}
+            AND ${match.sql}
+       ),
+       resolved AS (
+         SELECT m.dt,
+                COALESCE(sa.outlet_slug, op.slug) AS slug,
+                m.source_name
+           FROM matched m
+           LEFT JOIN source_name_aliases sa
+             ON LOWER(sa.raw_source_name) = LOWER(m.source_name)
+           LEFT JOIN outlet_profiles op
+             ON LOWER(op.name) = LOWER(m.source_name)
+       )
+       SELECT COALESCE(o.name, r.source_name) AS source_name,
+              r.slug,
+              COUNT(*)::text     AS article_count,
+              o.allsides_rating,
+              o.allsides_url,
+              MIN(r.dt)          AS first_seen,
+              MAX(r.dt)          AS last_seen
+         FROM resolved r
+         LEFT JOIN outlet_profiles o ON o.slug = r.slug
+        GROUP BY COALESCE(o.name, r.source_name), r.slug,
+                 o.allsides_rating, o.allsides_url
+        ORDER BY COUNT(*) DESC, COALESCE(o.name, r.source_name) ASC`,
+      match.params,
+    );
+
+    if (result.rows.length === 0) return empty;
+
+    const outlets: TermOutletCoverage[] = result.rows.map((r) => ({
+      sourceName: r.source_name,
+      slug: r.slug,
+      articleCount: Number(r.article_count),
+      // Reuse the outlet parser's enum validation rather than trusting the
+      // column: an unknown value renders as no lean, never as a bad label.
+      allSidesRating: parseDbOutletProfile({
+        slug: r.slug ?? "x",
+        name: r.source_name,
+        allsides_rating: r.allsides_rating,
+        allsides_url: r.allsides_url,
+      } as DbOutletProfileRow)?.allSidesRating ?? null,
+      // A rating is only shown with its source — the same gate
+      // `isPublishableOutlet` applies. D37: surface it verbatim, attributed.
+      allSidesUrl: r.allsides_url?.trim() || null,
+    }));
+
+    const dates = result.rows
+      .flatMap((r) => [r.first_seen, r.last_seen])
+      .map(toIsoDate)
+      .filter((d): d is string => d !== null)
+      .sort();
+
+    return {
+      articleCount: outlets.reduce((n, o) => n + o.articleCount, 0),
+      outlets,
+      firstSeen: dates[0] ?? null,
+      lastSeen: dates[dates.length - 1] ?? null,
+    };
+  } catch (err) {
+    if (!isMissingSchemaObject(err, ["outlet_profiles", "source_name_aliases"]))
+      throw err;
+    reportError("db.getTermCoverage", err, { level: "warning" });
+    return empty;
+  }
+}
+
+/** ISO `YYYY-MM-DD` from a pg DATE/TIMESTAMP value. */
+function toIsoDate(v: Date | string | null | undefined): string | null {
+  if (v == null) return null;
+  if (v instanceof Date) {
+    return Number.isNaN(v.getTime()) ? null : v.toISOString().slice(0, 10);
+  }
+  const t = v.trim();
+  return /^\d{4}-\d{2}-\d{2}/.test(t) ? t.slice(0, 10) : null;
+}
+
+/** The N most recent articles mentioning a term. Same matcher as coverage. */
+export async function getRecentArticlesByTerm(
+  term: TermProfile,
+  limit = 12,
+): Promise<DbArticle[]> {
+  const patterns = termPatterns(term);
+  if (patterns.length === 0) return [];
+  const match = termMatchSql(patterns, 1);
+
+  try {
+    const result = await pool.query<DbArticle>(
+      `SELECT a.id, a.title, a.summary, a.source_url, a.source_name, a.image_url,
+              a.category, a.published_date, a.read_time, a.why_it_matters,
+              a.importance_score, a.context_primer, a.reading_levels, a.created_at
+         FROM articles a
+        WHERE ${TERM_ARTICLE_FILTER}
+          AND ${match.sql}
+        ORDER BY COALESCE(a.published_date, a.created_at) DESC NULLS LAST
+        LIMIT $${match.params.length + 1}`,
+      [...match.params, limit],
+    );
+    return result.rows;
+  } catch (err) {
+    if (!isMissingSchemaObject(err, "articles")) throw err;
+    reportError("db.getRecentArticlesByTerm", err, { level: "warning" });
     return [];
   }
 }
@@ -1643,5 +1946,7 @@ export const getBillById = cache(getBillByIdUncached);
  * curated or when outlet_profiles doesn't exist yet.
  */
 export const getOutletBySlug = cache(getOutletBySlugUncached);
+
+export const getTermBySlug = cache(getTermBySlugUncached);
 
 export default pool;
