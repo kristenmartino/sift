@@ -338,3 +338,21 @@ describe("term.definitionCitation", () => {
     );
   });
 });
+
+describe("term.coverageMethod", () => {
+  it("tells the reader the count includes stories that never print the term", () => {
+    // Not decoration. Once the primer counts, the story list contains pieces
+    // whose headline and summary never use the term — a reader who clicks
+    // through and finds one would otherwise conclude the count is wrong.
+    const m = COPY.term.coverageMethod;
+    expect(m).toContain("headline or summary");
+    expect(m).toContain("reading notes");
+    expect(m).toMatch(/never spell out|never print/);
+  });
+
+  it("does not describe the reading notes as a source or a definition", () => {
+    // The primer is a coverage signal only. Every primer term in the corpus
+    // carries source: null, which is the entire reason term_profiles exists.
+    expect(COPY.term.coverageMethod).not.toMatch(/\bsource\b|\bcited\b|\bdefines\b/i);
+  });
+});

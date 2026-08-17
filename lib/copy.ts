@@ -619,6 +619,14 @@ export const COPY = {
       `${outlets.toLocaleString()} ${outlets === 1 ? "outlet" : "outlets"}.`,
     dateSpan: (first: string, last: string) =>
       first === last ? `Filed ${first}.` : `Filed ${first} — ${last}.`,
+    // How the count was arrived at. Worth saying plainly on a page whose
+    // whole argument is that Sift shows its working: the number counts two
+    // different things, and a reader who clicks through will notice that some
+    // stories never print the term.
+    coverageMethod:
+      "Counts stories whose headline or summary uses the term, plus stories " +
+      "where Sift's own reading notes flagged it — many pieces turn on a term " +
+      "they never spell out in the headline.",
     // Shown when the corpus has nothing. Says what it means, and does not
     // pretend the term is unimportant.
     noCoverage:

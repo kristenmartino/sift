@@ -147,6 +147,13 @@ export default function TermDossier({
                   {COPY.term.dateSpan(coverage.firstSeen, coverage.lastSeen)}
                 </p>
               )}
+              {/* How the count was reached. The list below contains stories
+                  that never print the term — they were matched by the primer
+                  — so a reader who clicks through would otherwise think the
+                  count was wrong. */}
+              <p className="font-body text-[12px] text-(--text-tertiary) leading-relaxed mt-4 max-w-[60ch]">
+                {COPY.term.coverageMethod}
+              </p>
             </>
           )}
         </section>
