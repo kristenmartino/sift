@@ -67,6 +67,7 @@ export const COPY = {
       { label: "Civic dossiers", href: "/civic" },
       { label: "Agencies", href: "/agencies" },
       { label: "Think tanks", href: "/think-tanks" },
+      { label: "Glossary", href: "/glossary" },
       { label: "Methodology", href: "/methodology" },
       { label: "Colophon", href: "/colophon" },
     ] as const,
@@ -596,6 +597,63 @@ export const COPY = {
     noRecent:
       "No recent stories from this outlet on Sift. The pipeline reads from this outlet \u2014 nothing has surfaced in the last day or two.",
   },
+  // ─── Term index (route `/glossary`) ────────────────────
+  //
+  // The index over /term/<slug>. The ROUTE is /glossary — /terms is the Terms
+  // of Service, and /agencies and /think-tanks already establish that a
+  // collection page takes a plain-English name rather than the route segment
+  // its children sit under.
+  //
+  // The KEY is `termIndex`, not `glossary`, because COPY.glossary is already
+  // taken by the inline entity-chip layer ("Mentioned in this story") — a
+  // different feature entirely. Reusing it silently shadowed that namespace
+  // and broke EntityChipTooltip and EntityLinksList at the type level.
+  termIndex: {
+    eyebrow: "Civic glossary",
+    headline: "The words the news assumes you already know",
+    dek:
+      "Each one is defined from the primary record — the statute, the " +
+      "constitutional clause, the regulation — and then shown as it is " +
+      "actually being covered right now, and by whom.",
+    // Same job as agencies.contextNote: someone arriving cold sees a masthead
+    // saying "the news, with footnotes" and a Sports tab above this page, and
+    // has to reconcile that before reading a word.
+    contextNote:
+      "Reference, not news. Every definition here is Sift's summary of a " +
+      "cited source, never Sift's own authority on what a term means.",
+    // The finding, stated before the list — a reader who stops here should
+    // still leave with the fact that makes the page worth sending on. Both
+    // numbers are computed, never hardcoded: see listPublishedTerms.
+    findingHeading: "Most of this vocabulary is invisible",
+    finding: (unnamed: number, total: number, worstTerm: string) =>
+      `Across these terms, ${unnamed.toLocaleString()} of ${total.toLocaleString()} ` +
+      `stories in Sift's index turn on a term the coverage never names — ` +
+      `roughly ${Math.round((unnamed / total) * 100)} in every 100. For ${worstTerm} ` +
+      "it is every single story. That is the gap these pages exist to close: " +
+      "you cannot look up a word the article never used.",
+    countLabel: (terms: number) =>
+      `${terms} ${terms === 1 ? "term" : "terms"}, each with its source and its coverage.`,
+    // Says out loud what is missing, rather than showing only the flattering
+    // subset. Mirrors agencies.contextNote's honesty about omissions.
+    gapNote: (published: number, held: number) =>
+      held > published
+        ? `${held - published} further ${held - published === 1 ? "term is" : "terms are"} ` +
+          "defined but held back: below a handful of stories there is nothing " +
+          "to show about how a term is being covered, and a definition alone " +
+          "is something a law dictionary already does better."
+        : "",
+    // Per-row. The share is the point, so it is spelled out rather than
+    // left as a bare number.
+    rowCoverage: (articles: number, outlets: number) =>
+      `${articles.toLocaleString()} ${articles === 1 ? "story" : "stories"} · ` +
+      `${outlets.toLocaleString()} ${outlets === 1 ? "outlet" : "outlets"}`,
+    rowUnnamed: (unnamed: number, articles: number) =>
+      unnamed === 0
+        ? ""
+        : `${Math.round((unnamed / articles) * 100)}% never name it`,
+    empty: "No terms are curated yet.",
+    backLink: "Back to Sift",
+  },
   // ─── Term dossier (`/term/[slug]`) ─────────────────────
   //
   // Two registers on one page, and the wording keeps them apart on purpose.
@@ -974,6 +1032,11 @@ export const COPY = {
       "Who controls a federal agency \u2014 appointment, terms, and the party-balance limits written into statute \u2192",
     thinkTanksCrossLink:
       "How these organizations describe themselves \u2014 in their own words, quoted and linked \u2192",
+    // Third cross-link, same rule as the two above: state the payoff, not the
+    // destination. "See the glossary" gives nobody a reason to click; one
+    // story in five turning on an unnamed term does.
+    termIndexCrossLink:
+      "The words the news assumes you know \u2014 one story in five turns on a term it never names \u2192",
     emptyBills: "No bills curated yet.",
     billsMoreSoon: "More bills as they're curated.",
     backLink: "Back to Sift",

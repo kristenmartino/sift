@@ -39,6 +39,7 @@ import type {
   PoliticianListItem,
   PoliticianProfile,
   TermCoverage,
+  TermListItem,
   TermOutletCoverage,
   TermProfile,
 } from "./types";
@@ -1653,6 +1654,126 @@ function termMatchSql(
 const TERM_ARTICLE_FILTER = `a.from_search = false
   AND a.summary IS NOT NULL AND a.summary <> ''
   AND LOWER(a.summary) NOT LIKE 'unable to provide%'`;
+
+/**
+ * Every term that clears the publish floor, with its coverage counts.
+ *
+ * Backs `/glossary`. Applies the same floor as `listSitemapEntries` — a
+ * sourced definition and `TERM_MIN_ARTICLES` articles — because an index that
+ * advertises pages the sitemap withholds is two different answers to one
+ * question. The precedent is `listCitedAgencies`, which has always refused to
+ * list an agency whose governance text lacks its source.
+ *
+ * `unnamed` is the column the page is built around: articles matched *only*
+ * by the primer, meaning the story turns on the term without ever printing
+ * it. `bool_or` per (term, article) is what makes that computable — an
+ * article can match several surface forms, and it counts as named if any one
+ * of them appeared in the text.
+ *
+ * Measured at 785 ms over 24 terms against the prod corpus. That is heavy for
+ * a page, and fine for this one: ISR holds it for 30 minutes, and the numbers
+ * are the argument rather than decoration.
+ */
+export async function listPublishedTerms(): Promise<TermListItem[]> {
+  try {
+    const result = await pool.query<{
+      slug: string;
+      term: string;
+      category: string | null;
+      article_count: string;
+      outlet_count: string;
+      unnamed_count: string;
+    }>(GLOSSARY_QUERY);
+    return result.rows
+      .map((r) => ({
+        slug: r.slug,
+        term: r.term,
+        category: r.category,
+        articleCount: Number(r.article_count),
+        outletCount: Number(r.outlet_count),
+        unnamedCount: Number(r.unnamed_count),
+      }))
+      .filter((t) => t.articleCount >= TERM_MIN_ARTICLES);
+  } catch (err) {
+    if (!isMissingSchemaObject(err, "term_profiles")) throw err;
+    reportError("db.listPublishedTerms", err, { level: "warning" });
+    return [];
+  }
+}
+
+/**
+ * How many terms carry a sourced definition, floor or no floor.
+ *
+ * The denominator for `/glossary`'s gap note. Split from
+ * `listPublishedTerms` rather than derived from it because that one has
+ * already applied the floor — a page that says "N held back" needs to know
+ * what was filtered out, and asking the filtered list is how a count like
+ * that silently becomes zero.
+ */
+export async function countDefinedTerms(): Promise<number> {
+  try {
+    const r = await pool.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM term_profiles
+        WHERE definition IS NOT NULL AND definition_source IS NOT NULL`,
+    );
+    return Number(r.rows[0]?.n ?? 0);
+  } catch (err) {
+    if (!isMissingSchemaObject(err, "term_profiles")) throw err;
+    reportError("db.countDefinedTerms", err, { level: "warning" });
+    return 0;
+  }
+}
+
+/**
+ * `String.raw` for the same reason `SITEMAP_TERM_BRANCH` is — the POSIX
+ * word-boundary escapes `\m` and `\M` are eaten by an ordinary template
+ * literal, which would silently turn word matching into substring matching.
+ */
+const GLOSSARY_QUERY = String.raw`
+  WITH per AS (
+    SELECT t.slug, t.term, t.category, a.id, a.source_name,
+           -- Named in the text by ANY of its surface forms. Per (term,
+           -- article), so a story that says "TPS" but not "Temporary
+           -- Protected Status" still counts as named.
+           bool_or(
+             to_tsvector('english', COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))
+               @@ phraseto_tsquery('english', f.s)
+             AND CASE WHEN f.s = UPPER(f.s)
+                      THEN (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~
+                           ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
+                      ELSE (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~*
+                           ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
+                 END
+           ) AS in_text
+      FROM term_profiles t
+      CROSS JOIN LATERAL (
+        SELECT t.term AS s UNION SELECT jsonb_array_elements_text(t.aliases)
+      ) f
+      JOIN articles a
+        ON a.from_search = false
+       AND a.summary IS NOT NULL AND a.summary <> ''
+       AND LOWER(a.summary) NOT LIKE 'unable to provide%'
+       AND ( (to_tsvector('english', COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))
+                @@ phraseto_tsquery('english', f.s)
+              AND CASE WHEN f.s = UPPER(f.s)
+                       THEN (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~
+                            ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
+                       ELSE (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~*
+                            ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
+                  END)
+             OR primer_term_keys(a.context_primer) && ARRAY[lower(btrim(f.s))] )
+     WHERE t.definition IS NOT NULL AND t.definition_source IS NOT NULL
+     GROUP BY t.slug, t.term, t.category, a.id, a.source_name
+  )
+  SELECT p.slug, p.term, p.category,
+         COUNT(*)::text AS article_count,
+         COUNT(DISTINCT COALESCE(sa.outlet_slug, op.slug, LOWER(p.source_name)))::text AS outlet_count,
+         COUNT(*) FILTER (WHERE NOT p.in_text)::text AS unnamed_count
+    FROM per p
+    LEFT JOIN source_name_aliases sa ON LOWER(sa.raw_source_name) = LOWER(p.source_name)
+    LEFT JOIN outlet_profiles op ON LOWER(op.name) = LOWER(p.source_name)
+   GROUP BY p.slug, p.term, p.category
+   ORDER BY COUNT(*) DESC`;
 
 async function getTermBySlugUncached(slug: string): Promise<TermProfile | null> {
   const trimmed = slug.trim().toLowerCase();
