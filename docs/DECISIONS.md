@@ -31,8 +31,8 @@
 | D24 | Compare source limits | Min 2, max 5 sources per comparison | $0 | SETTLED |
 | D25 | Per-source timeout | 20s timeout per source in compare workflow | $0 | SETTLED |
 
-| D26 | Story threading architecture | 4-node LangGraph workflow (not 5) | ~$52/mo | SETTLED |
-| D27 | Clustering method | LLM-as-judge (not embedding similarity) | $0 (batched) | SETTLED |
+| D26 | Story threading architecture | 4-node LangGraph workflow (not 5) | ~~~$52/mo~~ see body | SUPERSEDED 2026-08-10 |
+| D27 | Clustering method | LLM-as-judge (not embedding similarity) | $0 (batched) | SETTLED — measured 2026-08-13 |
 | D28 | Entity extraction visibility | Entity tags visible in UI on StoryCard | $0 | SETTLED |
 | D29 | Story ID stability | SHA256 hash of sorted article IDs | $0 | SETTLED |
 | D30 | Pipeline-time vs request-time | Pipeline-time — zero user-facing latency | $0 | SETTLED |
@@ -534,7 +534,7 @@ We considered three approaches:
 3. **4-node workflow** (chosen). Drops the ranking node. Each remaining node earns its place:
    - Node 1 (Fetch): DB query, not an LLM call — pulls 48h articles per category
    - Node 2 (Entity Extract): Extracts people/orgs/locations. **Only justified because entities are visible in the UI** as tags on StoryCard
-   - Node 3 (LLM Cluster): The core differentiator — LLM-as-judge distinguishes same-event from same-topic (accuracy **unmeasured**, see D27)
+   - Node 3 (LLM Cluster): The core differentiator — LLM-as-judge distinguishes same-event from same-topic (accuracy measured 2026-08-13 at **ARI 0.538**, see D27 — and read the caveat there before quoting it)
    - Node 4 (Synthesize+Store): Unified headline, merged summary, per-source framing analysis with tone
 
 **Cost:** ⚠️ **Corrected 2026-07-30.** This section previously claimed "all prompts batched (one call per category per node, not per article), ~$0.012 per pipeline run, ~$1.73/day, ~$52/month." Both halves were wrong:
@@ -542,9 +542,19 @@ We considered three approaches:
 - **Not everything is batched.** `sift-api/services/entity_linker_llm.py:390` `link_articles_llm` makes **one realtime call per article**, re-sending a ~6,500-token entity catalog as a cached system block each time. That is the per-article pattern this entry claims to have avoided.
 - **Actual spend is ~$10/day (~$300/mo)**, roughly 6x the figure above, on a Sift-dedicated API key.
 
-The per-operation breakdown is not yet known: `services/usage_tracker.py:111` `_record_to_ledger` short-circuits unless `ai_cost_guard_enabled` is true, and it defaults to `False` — so the `ai_usage_daily` ledger has never been populated. Attribution is the prerequisite for any cost work.
+~~The per-operation breakdown is not yet known: `services/usage_tracker.py:111` `_record_to_ledger` short-circuits unless `ai_cost_guard_enabled` is true, and it defaults to `False` — so the `ai_usage_daily` ledger has never been populated. Attribution is the prerequisite for any cost work.~~
+
+**Attribution landed 2026-08-05, and the cost work it gated landed after it.** Five clean days of `ai_usage_daily` put spend at **$8.99/day**: `entity_linker_llm.link_text` 46.2% ($4.15), `story_synthesizer.synthesize` 26.3%, `story_clusterer.cluster` 17.1%, `summarizer.batch` 10.3%, Voyage 0.02%. Threading (clusterer + synthesizer) was **43.4%** — this entry's own code comment guessed 39%, which was close by luck rather than by method, since nothing had checked it.
+
+The root cause of the linker line was a volume assumption, not pricing: `services/entity_linker_llm.py` documents its economics as "~100 new articles/day" against an actual ingest of ~2,000. Two changes followed, both verified against the ledger rather than asserted — incremental threading (below) and roster narrowing on the linker. Measured per 1,000 articles, all in: **$3.88 → $2.69, roughly $204/mo → $141/mo**. Always re-baseline from `sift-api/scripts/verify_cost_baseline.py`, and read the per-1k figure rather than the daily one, which moves with the news.
 
 **Why this matters for a portfolio:** Good judgment > raw complexity. A hiring manager who sees a 5-node workflow where one node is a SQL ORDER BY will question your engineering taste. Four nodes where each earns its place shows you know when to reach for an LLM and when not to.
+
+⚠️ **Superseded 2026-08-10 — this workflow is no longer the live path.** The four nodes were sound; the loop around them was not. Each run cleared `story_id` across a category's window and re-clustered from scratch, and because the window query ends in `LIMIT 50 ORDER BY published_date DESC`, the nominal 48 hours was really about **3.3 hours** in politics and 3.7 in sports — same-event articles filed hours apart never met. Story identity compounded it: an id derived from the sorted member set meant gaining an outlet *replaced* a story rather than updating it, leaving **58,259 of 58,557 rows (99.5%) with no members**.
+
+The replacement, `sift-api/workflows/incremental_threading.py`, consumes a queue instead of rescanning a window: a free pgvector nearest-neighbour query proposes candidates, one `story_confirmer.confirm` call per run decides attach / create / neither, and an id is derived once from the seed and never changes. Synthesis now fires only when a story's *outlet set* changes. Measured after cutover: grouping **4.8% → 35.5%**, `story_clusterer.cluster` to **$0.00**, threading **$2.34 → $1.11 per 1k articles (−52.5%)**, marginal orphan rate **0** — after which 60,020 orphaned rows were safe to prune.
+
+Two things worth keeping rather than tidying away. It shipped dark and cleared a 90-run shadow bar, and its worst defect — new stories hollowed out to zero members by a later decision in the same pass — still appeared in the first minute of live traffic, because a shadow that cannot write cannot find write bugs. And the bar it cleared does not test everything: attach candidates are confirmed at **93%** against **53%** for creates, which looks like rubber-stamping on the one path that mutates existing stories, and all three cutover verdicts would have passed regardless.
 
 ---
 
@@ -558,7 +568,19 @@ The per-operation breakdown is not yet known: `services/usage_tracker.py:111` `_
 
 ⚠️ **Accuracy claim retracted 2026-07-30.** This entry previously stated "This achieves ~97% accuracy on event-level clustering," and the ~90% figure for embedding similarity above carries the same caveat. **Both were estimates with no backing eval set.** There was no labeled corpus, no metric, and until 2026-07-30 no test of `services/story_clusterer.py` at all. Neither number should be cited.
 
-A real measurement is in progress: a labeled corpus at `sift-api/data/eval/clustering_corpus.jsonl` scored by `sift-api/services/cluster_metrics.py` on chance-corrected Adjusted Rand Index, V-measure, and pairwise precision/recall, with a free deterministic replay gate in CI. This entry will be updated with the measured values and a link to the baseline artifact.
+~~A real measurement is in progress~~ **Measured 2026-08-13, as this entry promised.** The corpus at `sift-api/data/eval/clustering_corpus.jsonl` (300 articles, 90 carrying an `event_id`) scored by `sift-api/services/cluster_metrics.py` over 15 repeats:
+
+| metric | value |
+|---|---:|
+| Adjusted Rand Index | **0.538** |
+| pairwise F1 | 0.779 |
+| multi-outlet precision | 0.607 |
+
+**Against a retracted claim of ~97%, the real number is nowhere near it** — which is the argument for having retracted it rather than defended it. ARI is the headline because it is chance-corrected: an all-singletons prediction, this system's actual failure mode, scores about 0.0 rather than looking respectable. Purity would score that same failure 1.0, so it is deliberately not a gate. `multi_outlet_precision` applies the ≥2-outlet gate to both partitions, i.e. it scores what readers actually see.
+
+⚠️ **The caveat travels with the number.** The corpus labels have never been human-validated: `sift-api/data/eval/review_pairs.csv` holds 40 blind pairs with **zero verdicts filled**, and the corpus records no annotator provenance. So this measures agreement with the labels, not agreement with the truth — an LLM-labeled corpus scored by an LLM judge is measuring family resemblance, and it cannot yet adjudicate a cross-vendor comparison. Cohen's kappa on those 40 pairs is roughly 20 minutes of hand labeling and is what would settle it. Quote the number with this sentence attached or do not quote it.
+
+Run at `--repeats 15` deliberately: n=5 could not estimate a standard deviation (two consecutive 5-run sets differed by more than the tolerance either produced). Clustering at temperature 1.0 is far noisier than the linker's 97.3% self-agreement, so an A/B on it needs many repeats or a large effect.
 
 The enrichment from entity extraction (Node 2) helps in principle — shared people, organizations, and locations are strong signals — but that too is unmeasured.
 
@@ -567,6 +589,8 @@ The enrichment from entity extraction (Node 2) helps in principle — shared peo
 ⚠️ **That premise turned out to rest on a bug.** The "max 50" is `LIMIT 50` in `sift-api/workflows/story_workflow.py:54`, applied to an already-filtered 48h window. It is not a natural ceiling — in a busy category, articles beyond rank 50 are **never candidates for threading at all**, silently and invisibly in logs. A second, related bug compounded it: `story_clusterer.py` sent up to 50 articles with a fixed `max_tokens=1024`, so an overflowing response truncated to invalid JSON and the category produced **zero stories with no error logged** (fixed 2026-07-30).
 
 The hybrid is therefore being reconsidered — but on **correctness and scale** grounds (it is what makes raising the 50-article cap tractable), not on the cost grounds usually cited for it. Note that clustering here is a *single listwise call per category*, not pairwise, so vector pre-filtering does not eliminate an O(n²) call pattern; splitting a window into many small pools re-pays the fixed prompt per pool and can cost *more*. Embeddings would serve as a candidate **generator**, with the LLM retained as the **decider** — a refinement of this decision, not a reversal of it.
+
+✅ **The hybrid shipped on 2026-08-10, in exactly that shape.** `services/story_matcher.py` generates candidates from pgvector neighbours (`SIMILARITY_THRESHOLD = 0.60`, `TOP_K = 10`) and `services/story_confirmer.py` decides — embeddings as generator, LLM as decider. It went in on the correctness-and-scale grounds this paragraph names, not on cost, and the `LIMIT 50` premise-bug above is what it removes: there is no window to be truncated, because there is no rescan. See the supersession note in D26 for the measured outcome. **This decision is not reversed** — the LLM is still the judge of same-event, which is what D27 is about.
 
 ---
 
