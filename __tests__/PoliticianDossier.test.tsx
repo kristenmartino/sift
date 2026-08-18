@@ -256,6 +256,38 @@ describe("PoliticianDossier — executive office section", () => {
     expect(screen.queryByText(/not on that year's ballot/i)).toBeNull();
   });
 
+  // The heading names a year, but a year alone reads as "current" to a reader
+  // who does not know the release cadence — and the column behind it is named
+  // `top_industries_current_cycle`. Every published congressional row renders
+  // this section, so the note is the common path, not an edge case (#251).
+  it("states the cycle's provenance under a populated industries list", () => {
+    render(
+      <PoliticianDossier
+        politician={{
+          ...austin,
+          chamber: "senate",
+          role: emptyRole,
+          topIndustriesCurrentCycle: [
+            { industry: "Securities & Investment", amount_usd: 250000 },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText(/2022-cycle bulk release/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/not refreshed between cycle releases/i),
+    ).toBeInTheDocument();
+  });
+
+  it("omits the cycle note when there are no industries to qualify", () => {
+    render(
+      <PoliticianDossier
+        politician={{ ...austin, chamber: "senate", role: emptyRole }}
+      />,
+    );
+    expect(screen.queryByText(/2022-cycle bulk release/i)).toBeNull();
+  });
+
   it("surfaces the official .gov link in the citations list", () => {
     render(<PoliticianDossier politician={austin} />);
     expect(

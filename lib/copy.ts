@@ -418,6 +418,21 @@ export const COPY = {
     // default.
     notYetEnrichedSenate:
       "PAC contribution data isn't on file for the 2022 cycle \u2014 common for senators not on that year's ballot. Interest-group ratings aren't yet imported.",
+    // Rendered under the industries list whenever it is populated — which is
+    // every published congressional row, so this is the common case, not an
+    // edge one. The heading names the cycle, but a bare "(2022 cycle)" read in
+    // 2026 still implies "current" by omission, and the column behind it is
+    // literally named `top_industries_current_cycle`. Say what the figure is
+    // and why it has not moved.
+    //
+    // Deliberately "the most recent Sift has been able to obtain" rather than
+    // "the most recent released" — OpenSecrets' bulk downloads sit behind an
+    // account with a manual approval queue, so what they have actually
+    // published is not something this project can verify today. Asserting it
+    // would be the same unsourced-claim defect the dossiers spent three
+    // migrations removing. See #251.
+    topIndustriesCycleNote:
+      "These figures are from OpenSecrets' 2022-cycle bulk release — the most recent Sift has been able to obtain. They are not refreshed between cycle releases.",
     methodologyHint: "Data comes from public records. Read the methodology.",
   },
   orgDossier: {

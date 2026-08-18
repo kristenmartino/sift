@@ -301,7 +301,11 @@ export default function PoliticianDossier({
           </section>
         )}
 
-        {/* Top industries by PAC contributions (2022 cycle, from OpenSecrets bulk) */}
+        {/* Top industries by PAC contributions (2022 cycle, from OpenSecrets bulk).
+            The cycle note below the list is not decoration: the heading names a
+            year, but a year alone reads as "current" to someone who does not
+            know the release cadence, and every published congressional row
+            renders this section. See `topIndustriesCycleNote` in lib/copy.ts. */}
         {!industriesEmpty && (
           <section className="mb-10">
             <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
@@ -324,6 +328,9 @@ export default function PoliticianDossier({
                 </li>
               ))}
             </ul>
+            <p className="font-body text-meta text-(--text-tertiary) mt-3 max-w-[60ch] leading-relaxed">
+              {c.topIndustriesCycleNote}
+            </p>
           </section>
         )}
 
