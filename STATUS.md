@@ -280,7 +280,17 @@ Items 1 and 2 were found while applying migration 012 to prod; item 3 while fixi
 
   Follow-up tracked at [#271](https://github.com/kristenmartino/sift/issues/271): rewrite `meta.test.ts`'s AST walk against `typescript/unstable/ast/*`, or swap it to a different static-analysis approach (e.g. `@typescript-eslint/typescript-estree`, already in the tree transitively).
 
-- **2026-08-17** — **The test suites were audited for whether they can fail, and CI does not gate a merge in either repo.**
+- **2026-08-18** — **CI now gates a merge in both repos, and both gate on their linter.** The finding recorded a day earlier is closed.
+
+  `required_status_checks` rules are active on both `main` branches — **`Type Check & Test`** in `sift`, **`Lint & Test`** in `sift-api` — alongside `pull_request` and `non_fast_forward`. `sift`'s existing ruleset was extended rather than replaced; `sift-api` had **no protection of any kind** and now mirrors it, which means direct pushes to `main` no longer land there. `required_approving_review_count` stays at 0 (a solo maintainer requiring an approval blocks only themselves), and `strict` is off, so a moving `main` does not force a rebase on every PR. No bypass actors: a gate with a hole in it is the state this replaced.
+
+  **It proved itself on the way in.** `sift-api`#262 went `BLOCKED` on push and only became `CLEAN` once `Lint & Test` reported — the same PR that, a day earlier, would have been mergeable red.
+
+  **`sift` gained a `Lint` step** ([#273](https://github.com/kristenmartino/sift/pull/273)), which it had never had: `ci.yml` ran audit, `tsc`, jest and the production build, so the three ESLint errors sitting on `main` were invisible to CI and only ever surfaced by hand. Those are fixed in the same PR — two `react-hooks/set-state-in-effect` (`CoachStrip`, `NewsAggregator`) and an `<a>` to an internal route. `CoachStrip` now reads localStorage through `useSyncExternalStore` like `useTheme` does, and gained the test file its behaviour never had. `sift-api` already ran `ruff check .` inside its required job — verified in the Actions step log, not assumed.
+
+  **The gate starts green in both repos, deliberately.** `eslint .` exits 0, `ruff check .` passes, 886 jest tests, 894 pytest. Switching a required check on over a known-red tree teaches people to bypass it.
+
+- **2026-08-17** — ~~**The test suites were audited for whether they can fail, and CI does not gate a merge in either repo.**~~ **The gating half was closed 2026-08-18 — see the entry above.** The audit findings below stand as written; the claim that no `required_status_checks` rule exists is history.
 
   Audited ~110 test files / ~21k lines across both repos against one question: if the code under test broke, would the test go red? Most of it holds — `sift-api` has had `tests/test_meta_suite.py` failing the build on assertion-free tests since the `stable_hash` defect, and `security.test.ts`, `rate-limit.test.ts` and the cross-repo `$7.38` golden in `usage-tracker.test.ts` are the house standard. Every finding below was **proved by mutation before the test was touched**: break the source, confirm the suite stays green, rewrite, confirm it now goes red.
 
