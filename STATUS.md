@@ -22,9 +22,11 @@ Shipped 2026-08-05 — the uncited-claims class of defect is closed across every
 
 Paused, preserved, not deleted: Android v1 (see Recent decisions), the sift-mcp→sift-api merge ([`sift-api#62`](https://github.com/kristenmartino/sift-api/issues/62)), Ask Sift + Refined Compare ([`sift-api#63`](https://github.com/kristenmartino/sift-api/issues/63)), theme migration 2E QA.
 
-## Open strategic question
+## Open strategic questions
 
-**Is there enough product here to launch?** Raised by the panel and not settled. The strategic thesis (`OPERATING_CONTEXT.md` §2) is that the dossier dataset is the sellable asset.
+### 1. Is there enough product here to launch?
+
+Raised by the panel and not settled. The strategic thesis (`OPERATING_CONTEXT.md` §2) is that the dossier dataset is the sellable asset.
 
 > ⚠️ **This paragraph has now been corrected twice.** A version of it was fixed in [#203](https://github.com/kristenmartino/sift/pull/203) and reverted by a later merge, restoring figures that were wrong by an order of magnitude in places. If you are about to quote a dossier count from this file, query the tables instead — `data/*.csv` and this paragraph have both been wrong.
 
@@ -74,6 +76,58 @@ Both are now answered by the same evidence the wedge question is waiting on, not
 **Rating system + entity coverage — how far past AllSides bias + MBFC factual?**
 
 Surfaced 2026-06-01. The **neutrality rule**, the **"won't do" calls** (MBFC credibility, MBFC's bias scale, the "Questionable" flag — all re-introduce lean-as-value), and the plain-language `Bias rating:` / `Factual Reporting:` labels (#147) are settled in [`docs/DECISIONS.md` D37](./docs/DECISIONS.md). Still open: **MBFC country + press-freedom** (RSF / Freedom House) — the §3-clean expansion, "pursue when prioritized" (paid license + ToS) — and extending the dossier system to journalists / world leaders / a genre taxonomy. See OQ5 + D37 in [`docs/DECISIONS.md`](./docs/DECISIONS.md).
+
+
+### 2. Should source credibility weigh on ranking — and if so, is that a rule we publish or a thumb we hide?
+
+**Raised 2026-08-17, not settled.** Prompted by sift-api#227 (the New York Post filing more `world` stories than BBC World): should outlets that skew tabloid or shock-value rank lower, and should a story carried by only one source rank lower than a corroborated one?
+
+**Two thirds of the instinct is already decided, and unbuilt.**
+
+- *Downweight single-source stories.* Already sanctioned in spirit — D44's empirical scoring includes "marginal novelty (de-prioritize pure syndication overlap)". Corroboration judges the story's uptake, not the outlet's character, so it raises none of the questions below.
+- *Steer readers toward more important news.* This is **D45**, DECIDED June 2026: rank by **civic impact, not coverage volume**. Its "Sift-native impact proxy — stories tied to a bill / policy / dossier" does the work without judging any outlet: a shark attack ties to no bill and sinks on its own merits. **The gap here is build, not decision.**
+
+**The remaining third reopens a settled rule — one this file already states in stronger terms than D37's table row.** Question 1 above records the "won't do" calls as settled: *"MBFC credibility, MBFC's bias scale, the 'Questionable' flag — all re-introduce lean-as-value."* Lean-as-value is precisely what a tabloid-ness weight is. D37 itself says, verbatim, *"reject MBFC credibility/bias-scale"*, and D45's own pairing note draws the line: accessibility and neutrality are *"'serve the reader' signals, **not editorial value judgments**"*. Weighting by tabloid-ness is an editorial value judgment. Taking it means **reversing D37 explicitly**, not adding a coefficient to a ranking formula.
+
+**The distinction that makes it answerable: a published gate versus an invisible weight.** Sift already judges source credibility — D44 applies an **MBFC factual floor** as a hard gate ("exclude Low / Very-Low / Questionable"). So "never judge sources" is not the standing position. A gate is binary, applied once at curation, and publicly stateable on `/methodology`. A per-story ranking weight is continuous, invisible, and applied to everything a reader sees. A serious publication can defend the first in print. The second has to be either published or concealed, and concealing it is the part that fails.
+
+**The specific case does not support the specific fix.** The Post is inside the curated set, which means it *passed* the factual floor. The finding in #227 is not low credibility — it is that local crime is being **misfiled into `world`** by the summarizer, confidently rather than by fallback. Fix the classifier and the problem leaves the tab without any ranking change. Installing a source weight now would be **compensating for a bug with a policy**, and the policy would outlive the bug with nobody remembering why it is there. This trap has already been sprung once one layer up: sift-api#227 records that "ranking was the symptom; this is one of the causes."
+
+**Measured 2026-08-17, and this is the finding that most constrains the answer: the lower-factual outlets are disproportionately how Sift has any right-of-centre coverage at all.** From `sift-api/data/outlet_profiles.csv` (57 rows), 8 sit at MBFC **mixed or below**:
+
+| outlet | factual | lean |
+|---|---|---|
+| Fox News | **low** | lean-right |
+| The Washington Times | mixed | lean-right |
+| The Daily Caller | mixed | right |
+| The Daily Wire | mixed | right |
+| The Federalist | mixed | right |
+| New York Post | mixed | right |
+| MSNBC | mixed | left |
+| The Free Press | mixed | (none) |
+
+**Six of the eight are right or lean-right; one is left.** Set against the whole file — center 15, lean-left 11, left 8, lean-right 5, right 5, 13 unrated — that means **6 of the 10 right-of-centre outlets are mixed-or-below (60%), against 1 of 19 on the left (5%).**
+
+So a factual-rating weight would remove roughly **60% of the right-of-centre supply and 5% of the left's**. That is not a subtle skew; it would gut one side of the spectrum in a product whose pitch is showing the spectrum. The probable cause is structural rather than a Sift oversight — the set of highly-rated right-of-centre outlets is small, so carrying any right coverage means carrying Mixed — but the consequence for this proposal is the same either way.
+
+**Two live tensions this surfaces, independent of the ranking question:**
+
+- **Fox News is rated `low`, and D44's hard gate says to exclude Low / Very-Low / Questionable.** The gate was written for the ~200 expansion (sift#151, not yet run), so this is not a violation today — but when #151 runs, either the floor drops the largest right-of-centre outlet by reach, or the floor gets revisited. Worth deciding before the expansion, not during.
+- **`Inside Climate News` carries no `mbfc_factual` value at all**, so it is neither above nor below any floor.
+
+**If it is ever taken, one thing must be instrumented from day one.** Tabloid-ness correlates with lean. D44 selects under a **spectrum-symmetry constraint** and D37 §3 targets a symmetric L/C/R distribution, which we publish (e.g. left 51 / center 45 / right 46 on `/term/temporary-protected-status`). Downweighting shock-value outlets will move that distribution; if it moves asymmetrically we have built a measurable partisan skew while `lib/copy.ts` says *"Never partisan. Never editorializing."* The precedent for refusing this is the LCV scorecard — a conservative counterpart was attempted, was not obtainable, and the page says "Advocacy-group scorecards" rather than claiming a general rating.
+
+**Sequence, so the question gets asked against real numbers rather than an anecdote:**
+
+1. Ship sift-api#227 and re-measure the `world` tab source mix.
+2. Ask whether the problem still exists. Best guess: mostly gone.
+3. If a gap remains, **build D45** — the decided-but-unbuilt civic-impact ranking.
+4. Only if D45 proves insufficient, reopen D37 — and record it as a reversal.
+
+**A narrower variant worth separating: ordering inside Compare.** Rather than weighting the feed, do not *lead* a Compare with a mixed-factual source even when it is included — the reader chose the set, so this is presentation order, not inclusion, and the factual rating is already displayed on the card (#147 / D37), so it hides nothing. **But the skew above applies here too, and more visibly:** ordering mixed-factual last puts the right-hand column last nearly every time, side by side where the pattern is legible. If Compare needs a defensible order, **order by spectrum position (left → right) or by publication time** — both are neutral, self-evident, publishable, and sidestep credibility ordering entirely.
+
+**Deliberately not a GitHub issue**, per the CLAUDE.md decision tree: strategic questions get answered through usage and conversation, not engineering work. sift-api#71 ("do sports & entertainment belong in 'news with footnotes'?") is the same genre and the closest sibling.
+
 
 ## Next 3
 
