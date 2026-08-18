@@ -1,7 +1,7 @@
 # Sift — Architecture Decision Register
 
 **Last updated:** June 3, 2026
-**Status:** D1–D30 settled (v1 production live); D31–D35 added for v1.5 / v2 direction (May 2026); D36–D45 added June 2026 (editorial theme, content + source quality, native + agentic scope)
+**Status:** D1–D30 settled (v1 production live); D31–D35 added for v1.5 / v2 direction (May 2026); D36–D45 added June 2026 (editorial theme, content + source quality, native + agentic scope); D46–D61 added Jul–Aug 2026 (evidence-first re-plan, IGO sourcing, infra economics, test validity, generated-prose constraints). **Prose bodies exist only for D1–D47 and D54 — the rest are table rows, and the bodies are not in numeric order.**
 
 ---
 
@@ -66,6 +66,7 @@
 | D58 | A collection page leads with a finding | `/glossary` opens with the measured fact that ~1 story in 5 turns on a term the coverage never names, before the list — following `/agencies`, on the reasoning that a reader who stops after the first screen should still leave with the thing worth sending on. Computed live, never hardcoded, so the sentence cannot drift from the corpus it describes | $0 | SETTLED (Aug 2026) |
 | D59 | A test that cannot fail is not a test | Test suites are audited on whether a realistic bug turns them red, not on coverage — and every fix is proved by mutation first (break the source, confirm green, rewrite, confirm red). Two standing guards enforce it rather than relying on review: `__tests__/meta.test.ts` here and the hardened `tests/test_meta_suite.py` in `sift-api` reject assertion-free bodies, self-comparisons (`expect(f(x)).toBe(f(x))` — the original form of the `stable_hash` defect, which no lint rule sees) and tests defined where the runner will not collect them; Stryker (`npm run mutate`) and mutmut run by hand over a narrow set of pure, high-consequence modules, never in CI. The motivating case: `/api/compare` mocked its own rate limiter and CSRF gate and asserted on the mocks, so deleting the limiter outright left the suite green | $0 (dev-only; mutation runs are manual, ~80s scoped) | SETTLED (Aug 2026) |
 | D60 | CI that does not gate is documentation | A green check nothing depends on is advisory. Both repos' workflows were built for branch-protection semantics — path-filtered jobs post green when skipped, precisely so they can be required — but no `required_status_checks` rule was ever configured in either, so a red suite blocked no merge and `sift-api` accepted direct pushes to `main`. The rule is that a suite worth writing is worth making load-bearing; the settings change itself is the owner's to make | $0 | OPEN — audited and documented Aug 2026, not yet switched on |
+| D61 | The living-persons rule binds generated prose, not just dossiers | `OPERATING_CONTEXT.md` §5 said "no **dossier** claim about a living person without a citation to the primary record" — the pre-reversal framing. `LAUNCH_DECISION_MEMO.md` §2.2(b) inverted that ranking 2026-07-27 (hand-seeded dossier tables vs a summarizer emitting unreviewed prose about named people across 59 feeds every 30 min), and its B2 put the constraint into all three generators the same week — so the rule was enforced in code on a surface its own text did not cover. §5 now names summaries, primers, context and synthesis explicitly. Measured, half-clean: **0 of 38** legal-matter summaries escalate a charge into guilt (judge calibrated 12/12), while the reverse failure — dropping the source's "alleged" — is **unmeasured**, the judge scoring 0/5 on it. Evidence: sift-api#243/#264 | $0 | SETTLED (Aug 2026); the measurement half OPEN |
 
 **Total estimated monthly cost: ~$30-50/mo**
 
@@ -957,3 +958,22 @@ Tracked here so they don't get lost between session restarts. Promoted to settle
 | OQ3 | Monetization — when, what, and at what tier | Not until v1.5 KPIs validate D30 ≥ 20% |
 | OQ4 | Cross-platform vs native-per-platform if both ship | Decide after platform-first is settled |
 | OQ5 | Outlet ratings beyond AllSides bias + MBFC factual — how far? | MBFC country + press-freedom (RSF / Freedom House) is the §3-clean next step; pursue when prioritized (paid license + ToS). See D37. |
+
+
+---
+
+### D61. The living-persons rule binds generated prose, not just dossiers
+**Decision (status: SETTLED, Aug 2026; the measurement half OPEN):** `OPERATING_CONTEXT.md` §5's living-persons constraint covers **every surface where Sift generates prose about a named living person** — summaries, primers, context and synthesis — not only the dossier layer its text used to name.
+
+**The gap was between the doc and the code, and the code was right.** [`LAUNCH_DECISION_MEMO.md`](./LAUNCH_DECISION_MEMO.md) §2.2(b) read the actual prompts on 2026-07-27 and inverted [`GROWTH_STRATEGY.md`](./GROWTH_STRATEGY.md) §4(d)'s ranking: the dossier tables are hand-seeded, sparse, and mostly render database fields, whereas the summarizer emits unreviewed sentences about real people across 59 feeds every 30 minutes. Its item B2 put the constraint block into `summarizer`, `story_synthesizer` and `context_generator` that same week, and `sift-api/tests/test_generation_constraints.py` has asserted its presence in all three since. **§5's own text was never updated to match**, so for three weeks the sharper of the two risks was the one the non-negotiable did not mention.
+
+**What is now measured, and what is not** (sift-api [#243](https://github.com/kristenmartino/sift-api/issues/243) / [#264](https://github.com/kristenmartino/sift-api/pull/264)):
+- **Escalation — clean.** Across 38 production summaries carrying a legal matter, **zero** turn a charge into guilt. The instrument is calibrated at **12/12** on that exact failure, unanimously, so the zero means something.
+- **Deletion — unmeasured, and it is the likelier failure.** A summary that drops the source's "alleged" is invisible to the three-axis judge: **0/5**, unanimous, and 0/6 under all three readings of the `legal_safe` axis. A narrower per-claim question reaches 3/5 with 0/38 false positives and **refuses to report a rate** until `sift-api/data/eval/legal_review.csv` is adjudicated by hand.
+
+**Why the second bullet is in a decision log at all.** #240 made `parse_feed` read `content:encoded`, which was a clear quality win and simultaneously raised how often the summarizer makes concrete claims about named individuals. The rules governing those claims did not change when their frequency did. Recording "we checked and found nothing" without recording "and we could not check the other half" would reproduce the retracted 0.288 — a confident number from an instrument nobody had shown could fail. See D59.
+
+**Considered and rejected:** rewriting `_build_prompt` to require verbatim hedge carry-through, which would make compliance mechanically checkable. Deferred to sift-api#265 rather than done, because it changes what Sift publishes in order to mitigate a risk that has not yet been shown to occur, and the ~20 minutes of labelling that would settle that has not been spent.
+
+**Source:** `sift-api` #243 / #264 / #265; `LAUNCH_DECISION_MEMO.md` §2.2(b), B2; `GROWTH_STRATEGY.md` §4(d), corrected in the same change.
+**Cost:** $0 to decide.
