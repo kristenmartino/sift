@@ -1,6 +1,6 @@
 # Sift — Architecture Decision Register
 
-**Last updated:** June 3, 2026
+**Last updated:** August 18, 2026
 **Status:** D1–D30 settled (v1 production live); D31–D35 added for v1.5 / v2 direction (May 2026); D36–D45 added June 2026 (editorial theme, content + source quality, native + agentic scope); D46–D61 added Jul–Aug 2026 (evidence-first re-plan, IGO sourcing, infra economics, test validity, generated-prose constraints). **Prose bodies exist only for D1–D47 and D54 — the rest are table rows, and the bodies are not in numeric order.**
 
 ---
@@ -49,8 +49,8 @@
 | D41 | sift-mcp → sift-api | Merge into one service, two transports (REST + MCP), shared handlers | $0 | DECIDED, phased (May 2026) |
 | D42 | Mobile protocol | REST/SSE only; agent loop server-side, MCP internal; hosted MCP deferred | $0 | SETTLED (May 2026) |
 | D43 | Agentic surfaces | Refined Compare (`lens`) + Ask Sift in v1.5 (web + Android); depends on D41 | $0 to decide | SETTLED scope; **build PAUSED by D46** (Jul 2026) |
-| D44 | Source expansion | Grow ~50 → ~200 by empirical set-cover; "curated AND rated," factual floor + resolvable/ingestable gates | $0 to decide | DECIDED; **PAUSED by D46** — it is building, not evidence (Jul 2026) |
-| D45 | Rank by civic impact | Rank by civic impact + reader accessibility (paywall) signal, not coverage volume; validate empirically. Signal model + staged v2 plan: [`RANKING_SIGNALS.md`](./RANKING_SIGNALS.md) | $0 to decide | DECIDED, in design (Jun 2026); signal model adopted Aug 2026 |
+| D44 | Source expansion | Grow ~50 → ~200 by empirical set-cover; "curated AND rated," factual floor + resolvable/ingestable gates | $0 to decide; expansion priced Aug 2026 | DECIDED; **PAUSED by D46** — it is building, not evidence (Jul 2026). D46's blanket feature-work pause lifted 2026-08-05; whether *this* is un-paused has not been decided |
+| D45 | Rank by civic impact | Rank by civic impact + reader accessibility (paywall) signal, not coverage volume; validate empirically. Signal model + staged v2 plan: [`RANKING_SIGNALS.md`](./RANKING_SIGNALS.md) | $0 to decide | **IMPLEMENTED Aug 2026** — v2 stages 1–7 live (D48–D52), scored by blind pairs; paywall half still unbuilt (sift#160) |
 | D46 | Android paused; launch re-planned around evidence | Pause Android v1 for 90 days; replace the feature roadmap with a ~10-hr week-one evidence test; re-baseline budget to 6 hrs/wk | $0 to decide | SETTLED (Jul 2026); **feature-work pause LIFTED 2026-08-05** — Android stays paused, the week-one test stays the next action, but building is no longer prohibited |
 | D47 | Q8 closed: global civic content | Sift covers non-US civic institutions. Entry point is IGOs sourced to founding treaties, not more foreign heads of state | $0 to decide | SETTLED (Aug 2026) |
 | D48 | Feed balance: cap and dampen, never hide | One outlet caps at 6 of the 50-article pool; low-importance grim items (tone=grim, importance ≤3) rank ×0.6 (≈12h older); importance 4–5 somber news ranks untouched. Answer to the doom-stacked 'top' feed (NYP held 23/50) | ~$0.05/day (tone tag rides the existing Haiku call) | SETTLED (Aug 2026); fully live 2026-08-10 — cap, dampener, non-grim hero, tone backfilled (sift#211/#212, sift-api#186/#187/#188) |
@@ -884,6 +884,20 @@ Both share tool handlers, the cost-cap pool, the Anthropic SDK pattern, and SSE;
 
 ---
 
+**Update 2026-08-18 — the economics were measured, and two of the blockers moved.** No expansion has been executed; the outlet set is still 56, ingested through 59 feeds. What changed is that the cost of doing it is no longer a guess: [`sift-api/docs/SOURCE_SCALING.md`](https://github.com/kristenmartino/sift-api/blob/main/docs/SOURCE_SCALING.md) (2026-08-11) prices expansion from measured per-stage tokens rather than from estimates.
+
+| expansion | at $2.69/1k (today) | at $3.88/1k (pre-narrowing) |
+|---|---:|---:|
+| +50 outlets | $173–224/mo | $197/mo |
+| +100 outlets | $212–324/mo | $252–322/mo |
+| +1000 outlets | $1,000–2,971/mo | $1,384–3,747/mo |
+
+That doc named two changes that should precede any expansion, and **both have since shipped**: make the entity linker cheaper — by roster narrowing, explicitly *not* by batching, which was built and rejected on recall — and rank on **distinct outlets** rather than article rows. Roster narrowing alone **paid for roughly the first 50 outlets**: +50 now costs less per month than the status quo did before it landed.
+
+So the shape of this decision has changed. It was gated on cost and on the seeder; it is now gated on the seeder alone (D40 / sift-api#93), with one ceiling likely to bind before economics do — `MAX_ENTRIES_PER_FEED`, which caps what each feed contributes regardless of how many feeds there are. Threading queue load is the other constraint worth watching: +1000 outlets models at 227% of it.
+
+---
+
 ### D45. Rank by civic impact — including reader accessibility (paywall) — not coverage volume
 **Decision (status: DECIDED, in design; June 2026):** Rank the feed by **civic impact**, not by coverage volume (which would magnify mainstream bias — the trap raw clicks fall into). Evaluate empirically rather than by gut:
 - a **human importance gold-set** (rank ↔ importance correlation + a high-importance / low-volume "burial" rate),
@@ -896,6 +910,24 @@ Both share tool handlers, the cost-cap pool, the Anthropic SDK pattern, and SSE;
 
 **Source:** STATUS 2026-06-01 (d); the accessibility / paywall extension is a 2026-06-03 decision recorded here.
 **Cost:** $0 to decide.
+
+---
+
+⚠️ **Status correction 2026-08-18 — this shipped, and the entry still said "in design."** Ranking v2 was implemented in seven stages on 2026-08-10/11 and registered as **D48–D52**, but nothing connected those back here, so the parent decision read as unbuilt for a week while its own implementation sat four rows above it in the index.
+
+The feed is now ranked on seven factors multiplying one core, all in `sift/lib/db.ts` with the evidence for each constant in the comment above it — see [`RANKING_SIGNALS.md`](./RANKING_SIGNALS.md). Coverage volume is *not* one of them, which is what this decision asked for: corroboration enters only through a saturating `ln` on **distinct outlets**, multiplied by member importance, so wire pickup cannot outrank consequence.
+
+**Of the three empirical asks above, one shipped, one shipped in a different form, one did not:**
+
+| asked for | state |
+|---|---|
+| Sift-native impact proxy (stories tied to a bill / policy / dossier) | **built** — the civic-density boost, weighting bill and politician links 1.0 and org 0.5, capped at +30% |
+| human importance gold-set | **partly** — `sift-api/scripts/eval_ranking_pairs.py` scores blind hand-labeled *pairs*, which is a preference test rather than the rank↔importance correlation named here. **Burial rate is still not measured.** |
+| depth-engagement signals (compare / dossier / bookmark opens) | **not built.** No engagement signal feeds ranking. |
+
+**The eval found something the decision did not anticipate.** Against 22 blind pairs, the current formula agrees with the labeler 14/22 (64%) against pre-v2's 10/22 — but on the 9 *control* pairs, where all three formulas agree, all three scored 4/9, **below chance**. Nothing shipped that day touched `importance × decay`, so the first evidence to come out of this decision's own validation harness is that the shared core it was built on top of is the weak part. Worth stating plainly, because this entry's premise is that ranking should be evaluated empirically rather than by gut, and the first empirical result was unflattering.
+
+**The paywall half is still unbuilt and that is deliberate** — it needs a curated `outlet_profiles.paywall` field that does not exist, which is cheap once curated and pointless before. Still tracked at sift#160, still gated on the authoritative seeder (D40 / sift-api#93).
 
 ---
 
