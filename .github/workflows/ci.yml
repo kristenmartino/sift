@@ -10,6 +10,12 @@ jobs:
   typecheck-test:
     name: Type Check & Test
     runs-on: ubuntu-latest
+    # GitHub's default job timeout is 360 minutes. On 2026-08-17 this job
+    # wedged for 22 minutes on `apt-get update` (see the DB step below, since
+    # rewritten) and would have burned six hours of runner time on a two-file
+    # Markdown diff had nobody cancelled it. A healthy run is ~1m41s; 12
+    # minutes is generous headroom that still fails fast.
+    timeout-minutes: 12
 
     # Throwaway Postgres used ONLY by the production-build prerender step below.
     # Schema comes from ci/build-db-schema.sql (empty tables) — no production
@@ -31,35 +37,81 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Needed for the base..head diff in the next step.
+          fetch-depth: 0
+
+      # A Markdown-only PR cannot break a type check or a build, but it was
+      # running the full pipeline anyway: pgvector container, npm ci, tsc,
+      # production build, jest with coverage -- ~1m41s plus a Vercel preview.
+      #
+      # Same in-job diff shape as sift-api's clustering-replay and feed-perf
+      # jobs rather than a workflow-level `paths-ignore:`, and for the reason
+      # documented there: the job must still REPORT a status on every PR.
+      # `main` is unprotected today, so `paths-ignore` would work -- but it
+      # would silently become a merge-blocker the day branch protection is
+      # switched on, because a required check that never runs never passes.
+      #
+      # Fails open. Anything other than a clean docs-only PR diff -- a push to
+      # main, a shallow clone, a git error -- leaves docs_only false and runs
+      # everything.
+      - name: Detect docs-only change
+        id: scope
+        run: |
+          docs_only=false
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+            if changed=$(git diff --name-only "$base" "$head"); then
+              if [ -n "$changed" ] && ! printf '%s\n' "$changed" \
+                 | grep -qvE '(\.md$|^docs/|^LICENSE$)'; then
+                docs_only=true
+              fi
+            fi
+          fi
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "docs-only change: $docs_only"
 
       - uses: actions/setup-node@v7
+        if: steps.scope.outputs.docs_only != 'true'
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
 
       - run: npm ci
+        if: steps.scope.outputs.docs_only != 'true'
 
       - name: Security audit
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm audit --audit-level=high
         continue-on-error: true
 
       - name: Type check
+        if: steps.scope.outputs.docs_only != 'true'
         run: npx tsc --noEmit
 
       # Give `next build` an empty, throwaway DB so the three DB-backed ISR
       # pages (/, /methodology, /civic) can prerender in CI without a live
       # database. Queries return zero rows; runtime behavior is unchanged.
       - name: Initialize CI build database
-        env:
-          PGPASSWORD: postgres
+        if: steps.scope.outputs.docs_only != 'true'
+        # Uses the psql already inside the pgvector service container rather
+        # than apt-installing a client on the runner. The apt route added an
+        # unbounded network call to Ubuntu's mirrors on every single run, and
+        # on 2026-08-17 it hung there for 22 minutes -- the reason this job
+        # now carries a timeout. `docker exec` has no such dependency and
+        # drops ~9s from every run.
         run: |
-          sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
-          psql -h localhost -U postgres -d sift_ci -v ON_ERROR_STOP=1 -f ci/build-db-schema.sql
+          docker exec -i "${{ job.services.postgres.id }}" \
+            psql -U postgres -d sift_ci -v ON_ERROR_STOP=1 \
+            < ci/build-db-schema.sql
 
       - name: Production build
+        if: steps.scope.outputs.docs_only != 'true'
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sift_ci
         run: npm run build
 
       - name: Test
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm test -- --ci --coverage
