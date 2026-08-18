@@ -22,6 +22,7 @@ Before opening the PR:
 - Did this change a public contract (API shape, page route, env var)? Update the relevant doc in `docs/` ([`TECHNICAL_SPEC.md`](./docs/TECHNICAL_SPEC.md), [`ARCHITECTURE.md`](./docs/ARCHITECTURE.md), `README.md`).
 - Did this change how the app boots / runs locally? Update the Quick Start in `README.md`.
 - Touched `docs/IOS_*.md` (plan / assessment / platform analysis)? Update the status banner at the top to reflect current state (Active / Under review / Archived).
+- **Republished a hosted artifact this session? Commit the source file too.** `sift-system-walkthrough.html` is published to claude.ai and is built by nothing, so no test, lint or deploy fails when the repo copy falls behind the live page. It has already happened once: the 2026-08-10 revision went live uncommitted and the repo copy sat 13 days stale, missing six features that were live on the page. **Before editing it, `WebFetch` its artifact URL and diff against the file** — publishing over a stale base silently reverts whatever the last session shipped. Same rule for any other standalone HTML here that gets published (`sift-product-os.html` is the other candidate).
 
 ## Where to file new work (decision tree)
 
