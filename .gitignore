@@ -39,3 +39,6 @@ next-env.d.ts
 # Stryker mutation-testing workspace (generated; see stryker.conf.json)
 .stryker-tmp/
 reports/
+
+# Hook telemetry — local, bounded, safe to delete. See MISTAKES.md.
+.claude/hook-activity.log
