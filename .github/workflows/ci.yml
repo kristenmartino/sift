@@ -81,10 +81,14 @@ jobs:
       - run: npm ci
         if: steps.scope.outputs.docs_only != 'true'
 
+      # No `continue-on-error`. It carried one until 2026-08-17, which meant a
+      # high-severity advisory printed and the build passed — the one step in
+      # this workflow whose entire purpose is to fail could not. Measured 0
+      # vulnerabilities at high or above when the flag came off, so this gate
+      # started green rather than being switched on over a known-red tree.
       - name: Security audit
         if: steps.scope.outputs.docs_only != 'true'
         run: npm audit --audit-level=high
-        continue-on-error: true
 
       - name: Type check
         if: steps.scope.outputs.docs_only != 'true'

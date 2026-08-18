@@ -22,11 +22,16 @@ const mockGetLastRefreshed = jest.fn<Promise<Date | null>, [string]>();
 // Tests pre-date both, so default to empty results (= API returns articles
 // without outlet/entityLinks, which is the graceful-degradation path the UI
 // tolerates).
+// Controllable so the spectrumBuckets tests can hand specific outlets back;
+// defaults to null in beforeEach, which is the pre-existing behaviour every
+// other test in this file was written against.
+const mockResolveOutlet = jest.fn();
+
 jest.mock("@/lib/db", () => ({
   getStoriesWithArticles: (...args: [string]) => mockGetStoriesWithArticles(...args),
   getLastRefreshed: (...args: [string]) => mockGetLastRefreshed(...args),
   getOutletProfilesMap: jest.fn().mockResolvedValue(new Map()),
-  resolveOutletForSourceName: jest.fn().mockReturnValue(null),
+  resolveOutletForSourceName: (...args: unknown[]) => mockResolveOutlet(...args),
   getArticleEntityLinks: jest.fn().mockResolvedValue(new Map()),
 }));
 
@@ -99,6 +104,8 @@ function makeRequest(category?: string) {
 beforeEach(() => {
   mockGetStoriesWithArticles.mockReset();
   mockGetLastRefreshed.mockReset();
+  mockResolveOutlet.mockReset();
+  mockResolveOutlet.mockReturnValue(null);
   mockGetStoriesWithArticles.mockResolvedValue(makeDefaultReturn());
   mockGetLastRefreshed.mockResolvedValue(MOCK_LAST_REFRESHED);
 });
@@ -461,5 +468,190 @@ describe("GET /api/news", () => {
       await GET(makeRequest("world"));
       expect(mockGetLastRefreshed).toHaveBeenCalledWith("world");
     });
+  });
+});
+
+// ─── Sanitization at the API boundary ───────────────────
+//
+// `stripHtml` itself is covered thoroughly in __tests__/sanitize.test.ts. What
+// was missing until 2026-08-17 was any coverage of its CALL SITES: no fixture
+// in this file contained a single HTML tag, so all six `stripHtml(...)` calls
+// in app/api/news/route.ts could be deleted with the whole suite green
+// (verified). Story headlines, summaries, framings and entities are all
+// LLM-synthesized from external article text and land in the client render
+// path, so this is the boundary where the escaping has to hold.
+
+describe("GET /api/news — sanitizes external text", () => {
+  const MARKUP = '<img src=x onerror=alert(1)>Fed holds';
+  const ENCODED = '&lt;script&gt;alert(1)&lt;/script&gt;Cuts likely';
+
+  function storyWithMarkup() {
+    return {
+      stories: [{
+        id: "story1",
+        headline: MARKUP,
+        summary: `<b>Bold</b> claim`,
+        category: "technology",
+        framings: [{
+          source_name: `<i>Reuters</i>`,
+          framing: ENCODED,
+          tone: "neutral",
+        }],
+        entities: [{
+          people: [`<b>Alice</b>`],
+          organizations: [`<span>Acme</span>`],
+          locations: [`<em>NYC</em>`],
+          event_description: `<script>x</script>A rate decision`,
+        }],
+        article_count: 1,
+        outlet_count: 1,
+        grim_share: null,
+        opinion_share: null,
+        avg_importance: 3,
+        max_importance: 3,
+        representative_image_url: null,
+        published_date: new Date("2026-03-28T10:00:00Z"),
+        synthesis_status: "complete",
+      }],
+      storyArticles: { story1: [{ ...MOCK_DB_ROWS[0], story_id: "story1" }] },
+      standaloneArticles: [],
+    };
+  }
+
+  it("strips markup from the story headline and summary", async () => {
+    mockGetStoriesWithArticles.mockResolvedValue(storyWithMarkup());
+    const body = await (await GET(makeRequest("technology"))).json();
+
+    expect(body.stories[0].headline).toBe("Fed holds");
+    expect(body.stories[0].summary).toBe("Bold claim");
+  });
+
+  it("strips markup from framing source names and framing text", async () => {
+    mockGetStoriesWithArticles.mockResolvedValue(storyWithMarkup());
+    const body = await (await GET(makeRequest("technology"))).json();
+    const framing = body.stories[0].framings[0];
+
+    expect(framing.sourceName).toBe("Reuters");
+    // `stripHtml` decodes entities FIRST and then removes tags, so an encoded
+    // <script> cannot survive as text a client later un-escapes into markup.
+    // It removes tags, not the text between them — hence the bare "alert(1)".
+    // That is the intended contract (lib/sanitize.ts:23-28): the security
+    // property is that no bracket survives, which the backstop below pins.
+    expect(framing.framing).toBe("alert(1)Cuts likely");
+  });
+
+  it("strips markup from every entity list and the event description", async () => {
+    mockGetStoriesWithArticles.mockResolvedValue(storyWithMarkup());
+    const body = await (await GET(makeRequest("technology"))).json();
+    const entities = body.stories[0].entities[0];
+
+    expect(entities.people).toEqual(["Alice"]);
+    expect(entities.organizations).toEqual(["Acme"]);
+    expect(entities.locations).toEqual(["NYC"]);
+    // Tags removed, inner text kept — see the note above.
+    expect(entities.eventDescription).toBe("xA rate decision");
+  });
+
+  it("leaves no angle bracket anywhere in the serialized story", async () => {
+    mockGetStoriesWithArticles.mockResolvedValue(storyWithMarkup());
+    const body = await (await GET(makeRequest("technology"))).json();
+
+    // A backstop for call sites added later: any new unsanitized story field
+    // fails here even if no one adds a test for it by name.
+    expect(JSON.stringify(body.stories[0])).not.toMatch(/[<>]/);
+  });
+});
+
+// ─── Ranking v2 stage 1: spectrumBuckets ────────────────
+//
+// `countOccupiedBuckets` is unit-tested in __tests__/crossSpectrum.test.ts,
+// but until 2026-08-17 the string "spectrumBuckets" did not appear anywhere in
+// this suite — the route's WIRING of it was untested, including the stage-4
+// `reportedSources` filter that stops op-ed-only framings counting as
+// cross-spectrum corroboration (sift-api#200).
+
+describe("GET /api/news — spectrumBuckets", () => {
+  const OUTLETS: Record<string, { allSidesRating: string }> = {
+    Reuters: { allSidesRating: "center" },
+    "The Nation": { allSidesRating: "left" },
+    "NY Post": { allSidesRating: "right" },
+  };
+
+  function storyAcrossSpectrum(childOverrides: Array<Record<string, unknown>>) {
+    return {
+      stories: [{
+        id: "story1",
+        headline: "Rate decision",
+        summary: "A synthesized summary.",
+        category: "technology",
+        framings: [
+          { source_name: "Reuters", framing: "Timeline", tone: "neutral" },
+          { source_name: "The Nation", framing: "Labor angle", tone: "neutral" },
+          { source_name: "NY Post", framing: "Markets angle", tone: "neutral" },
+        ],
+        entities: [],
+        article_count: 3,
+        outlet_count: 3,
+        grim_share: null,
+        opinion_share: null,
+        avg_importance: 3,
+        max_importance: 3,
+        representative_image_url: null,
+        published_date: new Date("2026-03-28T10:00:00Z"),
+        synthesis_status: "complete",
+      }],
+      storyArticles: {
+        story1: childOverrides.map((o, i) => ({
+          ...MOCK_DB_ROWS[0],
+          id: `child${i}`,
+          story_id: "story1",
+          ...o,
+        })),
+      },
+      standaloneArticles: [],
+    };
+  }
+
+  beforeEach(() => {
+    mockResolveOutlet.mockImplementation(
+      (_map: unknown, sourceName: string) => OUTLETS[sourceName] ?? null,
+    );
+  });
+
+  it("counts the distinct L/C/R buckets the reported framings occupy", async () => {
+    mockGetStoriesWithArticles.mockResolvedValue(
+      storyAcrossSpectrum([
+        { source_name: "Reuters", is_opinion: false },
+        { source_name: "The Nation", is_opinion: false },
+        { source_name: "NY Post", is_opinion: false },
+      ]),
+    );
+    const body = await (await GET(makeRequest("technology"))).json();
+    expect(body.stories[0].spectrumBuckets).toBe(3);
+  });
+
+  it("does not count framings whose outlet only filed opinion pieces", async () => {
+    // Stage 4: op-eds across lanes are disagreement, not corroboration. Only
+    // Reuters filed a REPORTED piece, so one bucket is occupied, not three.
+    mockGetStoriesWithArticles.mockResolvedValue(
+      storyAcrossSpectrum([
+        { source_name: "Reuters", is_opinion: false },
+        { source_name: "The Nation", is_opinion: true },
+        { source_name: "NY Post", is_opinion: true },
+      ]),
+    );
+    const body = await (await GET(makeRequest("technology"))).json();
+    expect(body.stories[0].spectrumBuckets).toBe(1);
+  });
+
+  it("omits spectrumBuckets entirely when no framing resolves to a bucket", async () => {
+    // Omitted rather than 0 — the client re-rank defines "no signal" itself,
+    // and a second definition here is how the two ends drifted apart before.
+    mockResolveOutlet.mockReturnValue(null);
+    mockGetStoriesWithArticles.mockResolvedValue(
+      storyAcrossSpectrum([{ source_name: "Reuters", is_opinion: false }]),
+    );
+    const body = await (await GET(makeRequest("technology"))).json();
+    expect(body.stories[0]).not.toHaveProperty("spectrumBuckets");
   });
 });
