@@ -35,6 +35,27 @@ describe("rateLimit", () => {
     jest.setSystemTime(new Date(BASE.getTime() + ms));
   }
 
+  it("expires a timestamp exactly on the window boundary, not one tick later", () => {
+    // Found by mutation testing 2026-08-17 (npm run mutate): `t > cutoff`
+    // mutated to `t >= cutoff` survived the whole suite, because no test put a
+    // timestamp exactly on the boundary. The off-by-one is small but real — it
+    // holds each request in the window one extra millisecond, so a caller
+    // pacing itself exactly at the limit collects spurious 429s.
+    for (let i = 0; i < 3; i++) expect(rateLimit("edge", WINDOW).allowed).toBe(true);
+    expect(rateLimit("edge", WINDOW).allowed).toBe(false);
+
+    // One tick before the window closes: cutoff = 999 - 1000 = -1, and the
+    // first timestamp (0) is still > -1, so it still counts. Blocked.
+    at(999);
+    expect(rateLimit("edge", WINDOW).allowed).toBe(false);
+
+    // Exactly at the window length: cutoff == 0, so `t > cutoff` drops the
+    // timestamp at 0 and a slot frees. `>=` would keep it and this stays
+    // blocked — which is the mutant this test exists to kill.
+    at(1_000);
+    expect(rateLimit("edge", WINDOW).allowed).toBe(true);
+  });
+
   it("allows requests up to the cap and counts down remaining", () => {
     expect(rateLimit("a", WINDOW)).toEqual({
       allowed: true,
