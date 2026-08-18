@@ -212,11 +212,14 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     updateIndicator();
   }, [activeCategory, activeCustomTopic, showBookmarks, searchMode, compareMode, updateIndicator]);
 
-  const exitCompareMode = () => {
+  // Memoized so the Cmd+K effect below can declare it instead of suppressing
+  // exhaustive-deps. `clearCompare` is useCallback([])-stable in useCompare,
+  // so this identity never changes and the listener still binds exactly once.
+  const exitCompareMode = useCallback(() => {
     setCompareMode(false);
     setCompareInputValue("");
     clearCompare();
-  };
+  }, [clearCompare]);
 
   // Cmd+K / Ctrl+K keyboard shortcut for search
   useEffect(() => {
@@ -233,7 +236,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [clearTopicSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clearTopicSearch, exitCompareMode]);
 
   // Fetch full bookmarked articles from DB when viewing bookmarks (signed in).
   // The key derives from view + user + bookmark set, so closing the view or
