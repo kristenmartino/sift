@@ -132,6 +132,8 @@ So a factual-rating weight would remove roughly **60% of the right-of-centre sup
 ## Next 3
 
 1. **[week 1] The week-one test — send it.** `LAUNCH_DECISION_MEMO.md` §5.1: publish the dossiers as one static page, send to ~40 librarians and ~20 policy staffers with one question ("is this useful, and does your organization pay for anything like it?"), count replies. Answers Q1, Q2 and Q3 at once; if nobody replies, Q9 triggers in week one rather than day 180. **Every prerequisite is now met** — B1/B2/B7 shipped, B6 shipped, and the page it points at is 67 sourced dossiers rather than 25. `effort-days`.
+
+   > **Deferred 2026-08-17 — a decision, not a slip.** The send is postponed in favour of engineering work; the prerequisites above are still met and nothing new blocks it. Recorded here because this item reads as the live instruction and a session opening this file would otherwise treat it as one. **The line above it in this file still applies:** shipping is the more comfortable of the two jobs, and un-pausing the build did not answer Q1–Q3. No new date set — set one when the deferral ends, so the next reader can tell a decision from a drift.
 2. ~~**`role_verified_at` on the publish floor.**~~ **Shipped 2026-08-07** ([#202](https://github.com/kristenmartino/sift/pull/202)). `ROLE_VERIFICATION_MAX_AGE_DAYS = 90` in `lib/publishFloor.ts`, mirrored as a SQL interval in `listSitemapEntries`; only foreign rows decay, because a US executive's title comes from a statute and their departure from a roll-call, both permanent. A stale row keeps rendering and drops out of the sitemap.
 3. **[gated on #1]** Ten conversations in two rounds, per the pre-registered decision rules in the memo §6 (Q1/Q2). Only happens if replies arrive. `effort-week`.
 
