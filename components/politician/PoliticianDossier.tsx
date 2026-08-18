@@ -416,7 +416,7 @@ export default function PoliticianDossier({
 
         <hr className="border-0 border-t border-(--border) my-10" />
 
-        {/* Footer: methodology hint placeholder + back link */}
+        {/* Footer: methodology link + back link */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <Link
             href="/"
@@ -424,11 +424,12 @@ export default function PoliticianDossier({
           >
             <span aria-hidden>←</span> Back to Sift
           </Link>
-          {/* Methodology link goes live with Phase 2.D (PR #79). Until that
-              merges, render the hint as plain text rather than a 404 link. */}
-          <span className="font-body text-meta text-(--text-tertiary) italic">
+          <Link
+            href="/methodology"
+            className="font-body text-meta text-(--text-tertiary) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
+          >
             {c.methodologyHint}
-          </span>
+          </Link>
         </div>
       </main>
     </div>

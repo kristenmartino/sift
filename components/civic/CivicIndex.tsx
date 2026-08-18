@@ -323,9 +323,12 @@ export default function CivicIndex({
           >
             ← {c.backLink}
           </Link>
-          <p className="font-body text-[12px] text-(--text-tertiary) italic">
+          <Link
+            href="/methodology"
+            className="font-body text-meta text-(--text-tertiary) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
+          >
             {c.methodologyHint}
-          </p>
+          </Link>
         </div>
       </main>
     </div>
