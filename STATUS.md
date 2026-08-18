@@ -272,6 +272,14 @@ Items 1 and 2 were found while applying migration 012 to prod; item 3 while fixi
 
 ## Recent decisions
 
+- **2026-08-17** — **`@testing-library/jest-dom` bumped to 7.0.0; `typescript` stays pinned at 6.0.3 — TS 7's compiler API broke the suite's own integrity guard.** ([#195](https://github.com/kristenmartino/sift/pull/195) merged; [#194](https://github.com/kristenmartino/sift/pull/194) left open.)
+
+  jest-dom 7 was a clean bump — its only breaking changes (`@testing-library/dom` now a required peer, Node floor raised to 22) were already satisfied here, and the full suite plus `tsc --noEmit` passed unchanged.
+
+  TypeScript 7.0.2 is not routine: it's the native-compiler rewrite, and its package now maps the default `"typescript"` import to a version-string stub — the compiler/AST API moved to explicitly-labeled `typescript/unstable/ast/*` subpaths in a different shape entirely. `__tests__/meta.test.ts` (the #267 guard that checks the test suite can actually fail) uses `ts.createSourceFile`/`ts.isCallExpression`/`ts.forEachChild` and broke outright — 50 `tsc` errors, and at runtime the suite crashes on load (`Cannot read properties of undefined (reading 'Latest')`); the other 57 suites / 874 tests were unaffected. Porting the guard to the new `unstable` API is a real rewrite against a surface Microsoft itself calls unstable, not an annotation fix — exactly the "large refactor smuggled into a dependency bump" this kind of PR should never carry, so it's pinned rather than forced through. Also found and fixed en route: `ts-jest` was a dead `devDependency` (never wired into `jest.config.ts`, which uses `next/jest`'s SWC transform) whose `typescript@">=4.3 <7"` peer range was blocking `npm install` outright — removed, since it wasn't doing anything. No interaction found with `@types/node@26` (#196) — every TS7 error traces to the compiler-API move, none to Node's types.
+
+  Follow-up if this gets picked back up: rewrite `meta.test.ts`'s AST walk against `typescript/unstable/ast/*`, or swap it to a different static-analysis approach (e.g. `@typescript-eslint/typescript-estree`, already in the tree transitively). Not filed as an issue — it's a deferred dependency pin, not committed work.
+
 - **2026-08-17** — **The test suites were audited for whether they can fail, and CI does not gate a merge in either repo.**
 
   Audited ~110 test files / ~21k lines across both repos against one question: if the code under test broke, would the test go red? Most of it holds — `sift-api` has had `tests/test_meta_suite.py` failing the build on assertion-free tests since the `stable_hash` defect, and `security.test.ts`, `rate-limit.test.ts` and the cross-repo `$7.38` golden in `usage-tracker.test.ts` are the house standard. Every finding below was **proved by mutation before the test was touched**: break the source, confirm the suite stays green, rewrite, confirm it now goes red.
