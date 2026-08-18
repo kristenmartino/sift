@@ -55,6 +55,13 @@ jobs:
       # Fails open. Anything other than a clean docs-only PR diff -- a push to
       # main, a shallow clone, a git error -- leaves docs_only false and runs
       # everything.
+      #
+      # The two root-level .html files count as docs. They are standalone
+      # hand-written pages, not app source: nothing imports them and `next
+      # build` never sees them. sift-system-walkthrough.html is published to
+      # claude.ai and read there, not served from this app. Matched by exact
+      # name rather than `\.html$` so a real .html entering the app tree still
+      # runs the full pipeline.
       - name: Detect docs-only change
         id: scope
         run: |
@@ -64,7 +71,7 @@ jobs:
             head="${{ github.event.pull_request.head.sha }}"
             if changed=$(git diff --name-only "$base" "$head"); then
               if [ -n "$changed" ] && ! printf '%s\n' "$changed" \
-                 | grep -qvE '(\.md$|^docs/|^LICENSE$)'; then
+                 | grep -qvE '(\.md$|^docs/|^LICENSE$|^sift-(system-walkthrough|product-os)\.html$)'; then
                 docs_only=true
               fi
             fi
