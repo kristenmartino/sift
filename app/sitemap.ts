@@ -32,6 +32,9 @@ const STATIC_ROUTES: Array<{
   { path: "/civic", changeFrequency: "weekly", priority: 0.8 },
   { path: "/agencies", changeFrequency: "monthly", priority: 0.7 },
   { path: "/think-tanks", changeFrequency: "monthly", priority: 0.7 },
+  // Weekly, not monthly: the coverage counts this page argues from move
+  // every pipeline cycle, unlike the statutory text on /agencies.
+  { path: "/glossary", changeFrequency: "weekly", priority: 0.7 },
   { path: "/methodology", changeFrequency: "monthly", priority: 0.5 },
   { path: "/colophon", changeFrequency: "monthly", priority: 0.3 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.2 },

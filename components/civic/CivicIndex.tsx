@@ -215,6 +215,17 @@ export default function CivicIndex({
                 {c.thinkTanksCrossLink}
               </Link>
             </p>
+            {/* Third cut of the same corpus. A term page is the one dossier
+                type that is not an entity, so it belongs beside these rather
+                than in the politician/org lists above. */}
+            <p className="font-body text-[14px] mt-2 leading-relaxed">
+              <Link
+                href="/glossary"
+                className="text-(--accent) no-underline hover:underline"
+              >
+                {c.termIndexCrossLink}
+              </Link>
+            </p>
           </header>
 
           {orgTypeGroups.length === 0 ? (

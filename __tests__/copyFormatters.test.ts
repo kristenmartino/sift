@@ -356,3 +356,53 @@ describe("term.coverageMethod", () => {
     expect(COPY.term.coverageMethod).not.toMatch(/\bsource\b|\bcited\b|\bdefines\b/i);
   });
 });
+
+describe("termIndex formatters", () => {
+  const c = COPY.termIndex;
+
+  it("does not shadow COPY.glossary, which is the entity-chip layer", () => {
+    // The first draft of this page used `glossary` for both. It type-checked
+    // as a duplicate object key, silently shadowed the chip namespace, and
+    // broke EntityChipTooltip and EntityLinksList. Pinning both shapes so a
+    // future rename cannot quietly do it again.
+    expect(COPY.glossary.eyebrow).toBe("Mentioned in this story");
+    expect(COPY.glossary.typeGlyphs).toBeDefined();
+    expect(c.eyebrow).toBe("Civic glossary");
+  });
+
+  it("states the finding with real numbers and names the starkest term", () => {
+    const f = c.finding(1030, 4828, "Prior Restraint");
+    expect(f).toContain("1,030");
+    expect(f).toContain("4,828");
+    expect(f).toContain("21 in every 100");
+    expect(f).toContain("Prior Restraint");
+  });
+
+  it("says nothing about held-back terms when none are held back", () => {
+    // A "0 further terms are held back" sentence is noise, and the negative
+    // case would read as an error.
+    expect(c.gapNote(24, 24)).toBe("");
+    expect(c.gapNote(24, 20)).toBe("");
+  });
+
+  it("pluralizes the held-back note", () => {
+    expect(c.gapNote(24, 25)).toContain("1 further term is");
+    expect(c.gapNote(24, 27)).toContain("3 further terms are");
+  });
+
+  it("pluralizes the per-row coverage line", () => {
+    expect(c.rowCoverage(1, 1)).toBe("1 story · 1 outlet");
+    expect(c.rowCoverage(1234, 23)).toBe("1,234 stories · 23 outlets");
+  });
+
+  it("omits the never-named share when every story names the term", () => {
+    expect(c.rowUnnamed(0, 100)).toBe("");
+    expect(c.rowUnnamed(128, 128)).toBe("100% never name it");
+    expect(c.rowUnnamed(69, 75)).toBe("92% never name it");
+  });
+
+  it("pluralizes the term count", () => {
+    expect(c.countLabel(1)).toContain("1 term,");
+    expect(c.countLabel(24)).toContain("24 terms,");
+  });
+});

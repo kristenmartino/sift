@@ -623,6 +623,24 @@ export interface TermProfile {
   notes: string | null;
 }
 
+/**
+ * A term as it appears on `/glossary` — identity plus the two numbers the
+ * list is sorted and argued by.
+ *
+ * `unnamedCount` is the interesting one: how many of a term's stories match
+ * only through the primer, i.e. turn on the term without ever printing it.
+ * Across the curated set that is 1,030 of 4,828 stories, and for some terms
+ * every single one — which is the case for the route existing at all.
+ */
+export interface TermListItem {
+  slug: string;
+  term: string;
+  category: string | null;
+  articleCount: number;
+  outletCount: number;
+  unnamedCount: number;
+}
+
 /** One outlet's share of a term's coverage, with its published lean. */
 export interface TermOutletCoverage {
   sourceName: string;
