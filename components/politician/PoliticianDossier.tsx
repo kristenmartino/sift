@@ -4,7 +4,10 @@ import LandingMasthead from "@/components/landing/LandingMasthead";
 import ShareActions from "@/components/ShareActions";
 import { PartyTag } from "@/components/primitives";
 import { COPY } from "@/lib/copy";
-import { formatPoliticianLede } from "@/lib/politician";
+import {
+  formatPoliticianLede,
+  isCongressionalChamber,
+} from "@/lib/politician";
 import type { PoliticianProfile } from "@/lib/types";
 import { formatUsdCompact } from "@/lib/utils";
 
@@ -149,10 +152,20 @@ export default function PoliticianDossier({
   const industriesEmpty = politician.topIndustriesCurrentCycle.length === 0;
   const ratingsEmpty = ratingsEntries.length === 0;
   // The "not yet enriched" caption is about OpenSecrets/Vote Smart data for
-  // members of Congress. An executive official has no PAC industries or
-  // interest-group ratings to be missing, so showing it there would invent a
-  // gap that doesn't exist.
-  const showNotYetEnriched = industriesEmpty && ratingsEmpty && !hasOffice;
+  // members of Congress. An executive official, a foreign head of state or a
+  // Justice has no PAC industries or interest-group ratings to be missing, so
+  // showing it there would invent a gap that doesn't exist.
+  //
+  // This gates on chamber, not on `hasOffice`. `hasOffice` only asks whether
+  // the row carries a *sourced* statutory title, and the ~33 foreign-executive
+  // rows whose title is still unsourced have none — so keying off it told every
+  // one of them that their PAC data was missing "common for senators not on
+  // that year's ballot".
+  const showNotYetEnriched =
+    industriesEmpty && ratingsEmpty && isCongressionalChamber(politician.chamber);
+  // Only the Senate gets the not-on-the-ballot rationale; see lib/copy.ts.
+  const notYetEnrichedCopy =
+    politician.chamber === "senate" ? c.notYetEnrichedSenate : c.notYetEnriched;
 
   return (
     <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
@@ -360,12 +373,13 @@ export default function PoliticianDossier({
           </section>
         )}
 
-        {/* "Not yet enriched" caption when both donor + rating sections
-            absent — common case before sift-api Phase 3.E refresh runs. */}
+        {/* "Not yet enriched" caption when both donor + rating sections are
+            absent on a house/senate row — common case before sift-api Phase
+            3.E refresh runs. Non-congressional rows render nothing here. */}
         {showNotYetEnriched && (
           <section className="mb-10">
             <p className="font-body text-[14px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed">
-              {c.notYetEnriched}
+              {notYetEnrichedCopy}
             </p>
           </section>
         )}

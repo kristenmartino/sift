@@ -401,19 +401,23 @@ export const COPY = {
       ballotpedia: "Ballotpedia",
       wikipedia: "Wikipedia",
     } as Record<string, string>,
-    // Footer note shown when donor and rating data are both absent. Common
-    // for senators not on the 2022 ballot (no PAC contributions during the
-    // cycle) and for politicians without a public OpenSecrets profile.
-    // Sift's PAC industry data comes from OpenSecrets bulk imports \u2014
-    // re-runs cycle-to-cycle, not on a daily refresh (the OpenSecrets API
-    // was discontinued April 2025). Interest-group ratings aren't yet
-    // imported.
+    // Footer note shown when donor and rating data are both absent, and only
+    // on house/senate rows \u2014 an executive, foreign head of state or Justice has
+    // no campaign-finance record to be missing, so the caption there would
+    // invent a gap. Sift's PAC industry data comes from OpenSecrets bulk
+    // imports \u2014 re-runs cycle-to-cycle, not on a daily refresh (the
+    // OpenSecrets API was discontinued April 2025). Interest-group ratings
+    // aren't yet imported.
     notYetEnriched:
+      "PAC contribution data isn't on file for the 2022 cycle. Interest-group ratings aren't yet imported.",
+    // Senate-only rationale: roughly a third of seats are on any given ballot,
+    // so a senator with no 2022 contributions is unremarkable. Every House seat
+    // is on every ballot, so the same sentence on a House row would explain an
+    // absence falsely \u2014 which is why this is a separate string and not the
+    // default.
+    notYetEnrichedSenate:
       "PAC contribution data isn't on file for the 2022 cycle \u2014 common for senators not on that year's ballot. Interest-group ratings aren't yet imported.",
     methodologyHint: "Data comes from public records. Read the methodology.",
-    // Empty-state when industries/ratings are partially populated.
-    industriesEmpty: "No donor-industry data yet for this cycle.",
-    ratingsEmpty: "No interest-group ratings yet recorded.",
   },
   orgDossier: {
     eyebrow: "Org dossier",

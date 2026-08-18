@@ -179,7 +179,44 @@ describe("PoliticianDossier — executive office section", () => {
     expect(screen.queryByText(/PAC contribution data isn't on file/i)).toBeNull();
   });
 
-  it("still renders the caption for a sitting member with no enrichment", () => {
+  // The caption used to be gated on `Boolean(role.roleTitle)` — whether the row
+  // carried a *sourced* statutory title — as a proxy for "is a member of
+  // Congress". Roughly 33 of the 46 foreign-executive rows are still unsourced,
+  // so all of them failed that proxy and told a foreign head of state that PAC
+  // data was missing "common for senators not on that year's ballot". The gate
+  // is the chamber now; these two cases are the ones the proxy got wrong.
+  it("does not show the caption on an unsourced foreign head of state", () => {
+    render(
+      <PoliticianDossier
+        politician={{
+          ...austin,
+          name: "Kim Jong Un",
+          chamber: "foreign-executive",
+          party: "WPK",
+          state: "KP",
+          externalLinks: {},
+          role: emptyRole,
+        }}
+      />,
+    );
+    expect(screen.queryByText(/PAC contribution data isn't on file/i)).toBeNull();
+  });
+
+  it("does not show the caption on an unsourced Justice", () => {
+    render(
+      <PoliticianDossier
+        politician={{
+          ...austin,
+          chamber: "scotus",
+          externalLinks: {},
+          role: emptyRole,
+        }}
+      />,
+    );
+    expect(screen.queryByText(/PAC contribution data isn't on file/i)).toBeNull();
+  });
+
+  it("renders the caption with the ballot rationale for a senator", () => {
     render(
       <PoliticianDossier
         politician={{
@@ -193,6 +230,30 @@ describe("PoliticianDossier — executive office section", () => {
     expect(
       screen.getByText(/PAC contribution data isn't on file/i),
     ).toBeInTheDocument();
+    // Only a third of Senate seats are on any given ballot, so this explains
+    // the absence truthfully here.
+    expect(
+      screen.getByText(/not on that year's ballot/i),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the caption without the ballot rationale for a House member", () => {
+    render(
+      <PoliticianDossier
+        politician={{
+          ...austin,
+          chamber: "house",
+          externalLinks: {},
+          role: emptyRole,
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(/PAC contribution data isn't on file/i),
+    ).toBeInTheDocument();
+    // Every House seat is on every ballot — the senator rationale would be a
+    // false explanation here, not merely an odd one.
+    expect(screen.queryByText(/not on that year's ballot/i)).toBeNull();
   });
 
   it("surfaces the official .gov link in the citations list", () => {

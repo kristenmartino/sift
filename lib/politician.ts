@@ -66,6 +66,20 @@ export function formatChamberLabel(
   return CHAMBER_LABELS[chamber] ?? null;
 }
 
+/**
+ * True for the chambers whose rows have an OpenSecrets / Vote Smart record to
+ * be missing in the first place. Mirrors the house/senate arm of
+ * `isPublishablePolitician` in lib/publishFloor.ts — executive,
+ * foreign-executive and scotus rows have no campaign-finance record at all, so
+ * an absence there is not a gap to explain. `former` is excluded because
+ * `isPublishablePolitician` already refuses it, so it never reaches a page.
+ */
+export function isCongressionalChamber(
+  chamber: PoliticianChamber | null | undefined,
+): boolean {
+  return chamber === "house" || chamber === "senate";
+}
+
 const ROLE_FROM_CHAMBER: Record<PoliticianChamber, string> = {
   senate: "Senator",
   house: "Representative",
