@@ -1297,7 +1297,15 @@ export async function listAllBillsLite(): Promise<BillListItem[]> {
 export type SitemapEntry = { path: string; lastModified: Date };
 
 /**
- * The `/term/*` branch of the sitemap union, held apart for two reasons.
+ * The `/term/*` branch of the sitemap union.
+ *
+ * Was a lateral recomputing coverage across the corpus per term. It now reads
+ * the count migration 034 stores, which is both far cheaper and the ONLY way
+ * this can agree with `isPublishableTerm` — two implementations of the same
+ * floor drift, and when they do a page says noindex while the sitemap
+ * advertises it.
+ *
+ * Historical note, kept because it is a trap worth not re-entering:
  *
  * **`String.raw` is mandatory here, not stylistic.** This SQL contains POSIX
  * word-boundary escapes (`\m`, `\M`) and a bracket expression of regex
@@ -1314,60 +1322,16 @@ export type SitemapEntry = { path: string; lastModified: Date };
  * branch is much larger than the other four — see the `listSitemapEntries`
  * header for what the rule is and why.
  */
-const SITEMAP_TERM_BRANCH = String.raw`
-       SELECT path, updated_at FROM (
-         SELECT '/term/' || t.slug AS path,
-                t.updated_at,
-                COUNT(DISTINCT m.id) AS n
-           FROM term_profiles t
-           -- One row per surface form, so each gets its own index-scannable
-           -- predicate. Do NOT collapse this into an
-           -- EXISTS (SELECT ... WHERE tsv @@ phraseto_tsquery(f.s)) over the
-           -- forms: that correlates the tsquery per *article*, the planner
-           -- gives up on idx_articles_fulltext, and the whole thing becomes a
-           -- seq scan of the corpus once per term — measured 7,000 ms for four
-           -- terms against 13 ms for this shape.
-           CROSS JOIN LATERAL (
-             SELECT t.term AS s
-             UNION
-             SELECT jsonb_array_elements_text(t.aliases)
-           ) f
-           -- LEFT, so a term with no coverage still produces a row and is
-           -- counted as 0 rather than vanishing before the outer WHERE.
-           LEFT JOIN LATERAL (
-             SELECT a.id
-               FROM articles a
-              WHERE a.from_search = false
-                AND a.summary IS NOT NULL AND a.summary <> ''
-                AND LOWER(a.summary) NOT LIKE 'unable to provide%'
-                -- Same two halves as termMatchSql, and they must stay the
-                -- same: this decides the sitemap, that decides the page, and
-                -- a disagreement means a page says noindex while the sitemap
-                -- lists it.
-                AND (
-                     (to_tsvector('english', COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))
-                        @@ phraseto_tsquery('english', f.s)
-                      -- Prefilter above, exact predicate below — both
-                      -- load-bearing. All-caps forms match case-sensitively,
-                      -- mirroring isAcronym in lib/term.ts.
-                      AND CASE WHEN f.s = UPPER(f.s)
-                               THEN (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~
-                                    ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
-                               ELSE (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~*
-                                    ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
-                          END)
-                     -- The primer half (migration 033). An article counts
-                     -- when Sift's reading-aid layer defined the term for it,
-                     -- even if the headline never says it.
-                     OR primer_term_keys(a.context_primer) && ARRAY[lower(btrim(f.s))]
-                    )
-           ) m ON TRUE
-          WHERE t.definition IS NOT NULL AND t.definition_source IS NOT NULL
-          GROUP BY t.slug, t.updated_at
-       ) tc
-        -- COUNT(DISTINCT) above, because an article matching both "Temporary
-        -- Protected Status" and "TPS" is one article, not two.
-        WHERE tc.n >= ${TERM_MIN_ARTICLES}`;
+const SITEMAP_TERM_BRANCH = `
+       SELECT '/term/' || slug, updated_at
+         FROM term_profiles
+        WHERE definition IS NOT NULL
+          AND definition_source IS NOT NULL
+          -- Stored count (migration 034), the same column isPublishableTerm
+          -- reads. NULL is never-measured and is excluded rather than
+          -- treated as unknown, so a freshly seeded term stays out of the
+          -- sitemap until refresh_term_coverage.py has measured it.
+          AND article_count >= ${TERM_MIN_ARTICLES}`;
 
 /**
  * Dossier URLs that are substantial enough to advertise to crawlers.
@@ -1680,18 +1644,20 @@ export async function listPublishedTerms(): Promise<TermListItem[]> {
       slug: string;
       term: string;
       category: string | null;
-      article_count: string;
-      outlet_count: string;
-      unnamed_count: string;
+      article_count: number | null;
+      outlet_count: number | null;
+      unnamed_count: number | null;
+      coverage_computed_at: Date | string | null;
     }>(GLOSSARY_QUERY);
     return result.rows
       .map((r) => ({
         slug: r.slug,
         term: r.term,
         category: r.category,
-        articleCount: Number(r.article_count),
-        outletCount: Number(r.outlet_count),
-        unnamedCount: Number(r.unnamed_count),
+        articleCount: r.article_count ?? 0,
+        outletCount: r.outlet_count ?? 0,
+        unnamedCount: r.unnamed_count ?? 0,
+        computedAt: toIsoDate(r.coverage_computed_at),
       }))
       .filter((t) => t.articleCount >= TERM_MIN_ARTICLES);
   } catch (err) {
@@ -1725,55 +1691,26 @@ export async function countDefinedTerms(): Promise<number> {
 }
 
 /**
- * `String.raw` for the same reason `SITEMAP_TERM_BRANCH` is — the POSIX
- * word-boundary escapes `\m` and `\M` are eaten by an ordinary template
- * literal, which would silently turn word matching into substring matching.
+ * Reads the counts `scripts/refresh_term_coverage.py` measured (migration
+ * 034) instead of recomputing them across the corpus.
+ *
+ * The query this replaced was a lateral over term x surface-form x corpus:
+ * 785 ms at 24 terms, 1,522 ms at 37, and the slope steepened because more
+ * terms means more matched rows to aggregate. This is 66 ms and flat — the
+ * work no longer depends on corpus size at all.
+ *
+ * No `String.raw` here any more, and nothing to get wrong: the word-boundary
+ * escapes that made the old version fragile now live only in the refresh
+ * script.
  */
-const GLOSSARY_QUERY = String.raw`
-  WITH per AS (
-    SELECT t.slug, t.term, t.category, a.id, a.source_name,
-           -- Named in the text by ANY of its surface forms. Per (term,
-           -- article), so a story that says "TPS" but not "Temporary
-           -- Protected Status" still counts as named.
-           bool_or(
-             to_tsvector('english', COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))
-               @@ phraseto_tsquery('english', f.s)
-             AND CASE WHEN f.s = UPPER(f.s)
-                      THEN (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~
-                           ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
-                      ELSE (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~*
-                           ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
-                 END
-           ) AS in_text
-      FROM term_profiles t
-      CROSS JOIN LATERAL (
-        SELECT t.term AS s UNION SELECT jsonb_array_elements_text(t.aliases)
-      ) f
-      JOIN articles a
-        ON a.from_search = false
-       AND a.summary IS NOT NULL AND a.summary <> ''
-       AND LOWER(a.summary) NOT LIKE 'unable to provide%'
-       AND ( (to_tsvector('english', COALESCE(a.title,'') || ' ' || COALESCE(a.summary,''))
-                @@ phraseto_tsquery('english', f.s)
-              AND CASE WHEN f.s = UPPER(f.s)
-                       THEN (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~
-                            ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
-                       ELSE (COALESCE(a.title,'') || ' ' || COALESCE(a.summary,'')) ~*
-                            ('\m' || regexp_replace(f.s, '([.*+?^$(){}|\[\]\\])', '\\\1', 'g') || '\M')
-                  END)
-             OR primer_term_keys(a.context_primer) && ARRAY[lower(btrim(f.s))] )
-     WHERE t.definition IS NOT NULL AND t.definition_source IS NOT NULL
-     GROUP BY t.slug, t.term, t.category, a.id, a.source_name
-  )
-  SELECT p.slug, p.term, p.category,
-         COUNT(*)::text AS article_count,
-         COUNT(DISTINCT COALESCE(sa.outlet_slug, op.slug, LOWER(p.source_name)))::text AS outlet_count,
-         COUNT(*) FILTER (WHERE NOT p.in_text)::text AS unnamed_count
-    FROM per p
-    LEFT JOIN source_name_aliases sa ON LOWER(sa.raw_source_name) = LOWER(p.source_name)
-    LEFT JOIN outlet_profiles op ON LOWER(op.name) = LOWER(p.source_name)
-   GROUP BY p.slug, p.term, p.category
-   ORDER BY COUNT(*) DESC`;
+const GLOSSARY_QUERY = `
+  SELECT slug, term, category,
+         article_count, outlet_count, unnamed_count, coverage_computed_at
+    FROM term_profiles
+   WHERE definition IS NOT NULL
+     AND definition_source IS NOT NULL
+     AND article_count IS NOT NULL
+   ORDER BY article_count DESC`;
 
 async function getTermBySlugUncached(slug: string): Promise<TermProfile | null> {
   const trimmed = slug.trim().toLowerCase();
@@ -1782,7 +1719,7 @@ async function getTermBySlugUncached(slug: string): Promise<TermProfile | null> 
   try {
     const result = await pool.query<DbTermProfileRow>(
       `SELECT slug, term, definition, definition_source, definition_checked,
-              aliases, category, notes
+              aliases, category, notes, article_count, coverage_computed_at
          FROM term_profiles
         WHERE slug = $1
         LIMIT 1`,

@@ -84,6 +84,13 @@ export default function TermIndex({ terms, heldCount }: TermIndexProps) {
 
   const gapNote = c.gapNote(terms.length, terms.length + heldCount);
 
+  // The oldest stamp across the set, not the newest — the page is only as
+  // fresh as its stalest row, and quoting the newest would overstate it.
+  const measuredAt = terms
+    .map((t) => t.computedAt)
+    .filter((d): d is string => d !== null)
+    .sort()[0] ?? null;
+
   return (
     <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
       <LandingMasthead />
@@ -130,6 +137,15 @@ export default function TermIndex({ terms, heldCount }: TermIndexProps) {
             <p className="font-body text-[14px] text-(--text-tertiary) mb-1.5 leading-relaxed">
               {c.countLabel(terms.length)}
             </p>
+            {/* When, not "now". The numbers above come from a periodic
+                measurement, and a reader who clicks into a term page may see
+                a slightly higher figure — better to explain that than to let
+                them find it. */}
+            {measuredAt && (
+              <p className="font-body text-[13px] text-(--text-tertiary) mb-1.5 leading-relaxed">
+                {c.asOf(measuredAt)}
+              </p>
+            )}
             {gapNote && (
               <p className="font-body text-[14px] text-(--text-tertiary) mb-8 max-w-[62ch] leading-relaxed">
                 {gapNote}

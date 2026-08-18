@@ -612,6 +612,19 @@ export interface OutletProfile {
 export interface TermProfile {
   slug: string;
   term: string;
+  /**
+   * Stored coverage count (migration 034), and when it was measured.
+   *
+   * The publish floor reads THESE, not a freshly computed figure, and does so
+   * on the term page as well as in the sitemap — the two must agree or a page
+   * emits noindex while the sitemap advertises it. `null` means never
+   * measured, which the floor treats as zero rather than unknown.
+   *
+   * The page still renders live coverage. Only indexability is decided from
+   * the stored number.
+   */
+  coverageArticleCount: number | null;
+  coverageComputedAt: string | null;
   /** Never non-null without `definitionSource`. See lib/term.ts. */
   definition: string | null;
   definitionSource: string | null;
@@ -639,6 +652,8 @@ export interface TermListItem {
   articleCount: number;
   outletCount: number;
   unnamedCount: number;
+  /** ISO YYYY-MM-DD the counts were measured. Rendered as "as of". */
+  computedAt: string | null;
 }
 
 /** One outlet's share of a term's coverage, with its published lean. */

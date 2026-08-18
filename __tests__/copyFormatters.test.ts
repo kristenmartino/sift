@@ -406,3 +406,18 @@ describe("termIndex formatters", () => {
     expect(c.countLabel(24)).toContain("24 terms,");
   });
 });
+
+describe("termIndex.asOf", () => {
+  it("dates the counts instead of implying they are live", () => {
+    const s = COPY.termIndex.asOf("2026-08-18");
+    expect(s).toContain("2026-08-18");
+    expect(s).toMatch(/measured/i);
+  });
+
+  it("warns that per-term pages can be ahead", () => {
+    // /glossary reads stored counts; /term/<slug> computes live. A reader
+    // clicking through will sometimes see a bigger number, and finding that
+    // unexplained reads as one of them being wrong.
+    expect(COPY.termIndex.asOf("2026-08-18")).toMatch(/computed live|ahead/);
+  });
+});

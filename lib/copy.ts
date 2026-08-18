@@ -637,6 +637,14 @@ export const COPY = {
       "you cannot look up a word the article never used.",
     countLabel: (terms: number) =>
       `${terms} ${terms === 1 ? "term" : "terms"}, each with its source and its coverage.`,
+    // The counts on this page are measured periodically rather than on every
+    // load (migration 034 — recomputing them across the corpus was 1.5s at 37
+    // terms and getting worse). So the page says when, instead of implying
+    // now. The per-term pages still compute live, which is why they can
+    // differ slightly and why that is worth saying out loud.
+    asOf: (date: string) =>
+      `Counts measured ${date}. Each term's own page is computed live, so its ` +
+      "figures may be a little ahead of these.",
     // Says out loud what is missing, rather than showing only the flattering
     // subset. Mirrors agencies.contextNote's honesty about omissions.
     gapNote: (published: number, held: number) =>

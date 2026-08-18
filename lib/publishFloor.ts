@@ -36,7 +36,6 @@ import type {
   OrgProfile,
   OutletProfile,
   PoliticianProfile,
-  TermCoverage,
   TermProfile,
 } from "./types";
 
@@ -186,7 +185,7 @@ export function isPublishableOutlet(o: OutletProfile): boolean {
 export const TERM_MIN_ARTICLES = 8;
 
 /**
- * A sourced definition **and** enough coverage to be about something.
+ * A sourced definition **and** enough measured coverage to be about something.
  *
  * Both halves, deliberately. `lib/term.ts` already drops a definition that
  * lost its source, so a null definition here means the row cannot state what
@@ -194,14 +193,20 @@ export const TERM_MIN_ARTICLES = 8;
  * page. Unlike the other four types, this floor reads a computed value rather
  * than a column, because coverage is not stored anywhere.
  */
-export function isPublishableTerm(
-  t: TermProfile,
-  coverage: TermCoverage,
-): boolean {
+export function isPublishableTerm(t: TermProfile): boolean {
   return (
     present(t.definition) &&
     present(t.definitionSource) &&
-    coverage.articleCount >= TERM_MIN_ARTICLES
+    // Stored count, not a freshly computed one. Both the sitemap query and
+    // this predicate now read the same column, which is the only way they can
+    // agree — and they have to, or a page emits noindex while the sitemap
+    // advertises it.
+    //
+    // null (never measured) is treated as zero, so a freshly seeded term is
+    // withheld until scripts/refresh_term_coverage.py has looked at it. Fails
+    // closed: the cost is a term publishing a refresh late, versus a term
+    // publishing on a number nobody has checked.
+    (t.coverageArticleCount ?? 0) >= TERM_MIN_ARTICLES
   );
 }
 
