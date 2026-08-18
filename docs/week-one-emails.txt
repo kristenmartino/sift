@@ -6,9 +6,18 @@ GENERATED FILE — do not edit by hand.
   regenerate: node scripts/build-week-one-emails.mjs
   guard:      __tests__/weekOneEmails.test.ts fails if the two drift
 
-Generated 2026-08-10.
+Generated 2026-08-18.
 
-Artifact:  https://siftnews.io/agencies
+Artifacts:  the two batches link DIFFERENT pages -- see the doc for why.
+
+  Librarian -> https://siftnews.io/glossary
+           Verified 2026-08-18: HTTP 200, 37 terms, every definition linked
+           to a statute / constitutional clause / regulation, no auth wall,
+           no AI-generated text.
+           Figures quoted in the email MOVE as the corpus grows. Re-check with
+           sift-api: scripts/refresh_term_coverage.py --check
+
+  Staffer  -> https://siftnews.io/agencies
            Verified 2026-08-05: HTTP 200, 25 cited agencies, 96 links to
            law.cornell.edu, no auth wall, no AI-generated text.
 
@@ -47,24 +56,26 @@ Success is NOT a reply count. It is enough named humans to book five calls.
 EMAIL 1 — LIBRARIANS  (send 5 now)
 ================================================================================
 
-Subject: A cited page on who controls federal agencies — useful for your guide?
+Subject: A cited glossary of the words news stories never actually say — useful for your guide?
 
 Hi [name],
 
 I saw your [research guide on government information], specifically that you link [the specific resource they link].
 
-I've put together a page on who actually controls 25 federal agencies: how many members, who appoints them, term lengths, and whether the authorizing statute caps how many can share a political party. Thirteen of the twenty-five have that cap written into law. The FEC's six commissioners are limited to three per party — which is the structural reason it deadlocks 3–3, rather than a personality problem. The NLRB has no cap at all.
+I've built a glossary of 37 civic terms — each defined from the primary record (the statute, the constitutional clause, the regulation), then shown as it's actually being covered: which outlets, how many stories, over what span.
 
-Every line links to the section of the U.S. Code it came from. Nothing on the page is AI-generated.
+The part I didn't expect: 128 stories in the index turn on prior restraint, and not one of them uses the phrase. Certiorari, 94%. Qualified immunity, 92%. A patron can't look up a word the article never used.
 
-https://siftnews.io/agencies
+Every definition links to the section it came from. Nothing on the page is AI-generated.
+
+https://siftnews.io/glossary
 
 Two things, if you have a minute:
 
 1. Is this useful to you or your patrons?
 2. If something like this were worth paying for, could your library actually buy it from one person, invoiced directly — or does that route not really exist?
 
-I'm working through the other 68 agencies. Want me to send you the next batch?
+I'm adding terms as I source them. Want me to send you the next batch?
 
 Either answer helps. If it's not useful, that's the most useful thing you can tell me.
 

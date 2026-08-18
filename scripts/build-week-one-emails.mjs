@@ -66,7 +66,16 @@ GENERATED FILE — do not edit by hand.
 
 Generated ${generatedOn}.
 
-Artifact:  https://siftnews.io/agencies
+Artifacts:  the two batches link DIFFERENT pages -- see the doc for why.
+
+  Librarian -> https://siftnews.io/glossary
+           Verified 2026-08-18: HTTP 200, 37 terms, every definition linked
+           to a statute / constitutional clause / regulation, no auth wall,
+           no AI-generated text.
+           Figures quoted in the email MOVE as the corpus grows. Re-check with
+           sift-api: scripts/refresh_term_coverage.py --check
+
+  Staffer  -> https://siftnews.io/agencies
            Verified 2026-08-05: HTTP 200, 25 cited agencies, 96 links to
            law.cornell.edu, no auth wall, no AI-generated text.
 

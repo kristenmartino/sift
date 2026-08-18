@@ -48,24 +48,41 @@ You selected the one profession whose job description is answering polite, well-
 
 ## Librarian version
 
-**Subject:** A cited page on who controls federal agencies — useful for your guide?
+⚠️ **Do not blockquote editorial notes in this section.**
+`scripts/build-week-one-emails.mjs` treats every `>` line under a `##` header
+as the email body, so a note written as a blockquote is pasted into a real
+email to a real librarian. This paragraph is deliberately unquoted; the first
+draft of it was not, and it landed in the paste-ready file.
+
+**Updated 2026-08-18 — now leads with `/glossary`, not `/agencies`.** The
+agencies hook ("13 of 25 have a party cap in statute") is a *structural* fact.
+This audience's professional problem is **findability**, and the glossary has a
+fact aimed straight at it: a patron cannot look up a word the article never
+used. The staffer version deliberately keeps `/agencies` — an aide wants agency
+control structures, not vocabulary. Every figure below was re-verified against
+prod on 2026-08-18; re-check before sending, because they move (certiorari was
+85 stories that morning and 88 by the afternoon).
+
+**Subject:** A cited glossary of the words news stories never actually say — useful for your guide?
 
 > Hi [name],
 >
 > I saw your [research guide on government information], specifically that you link [the specific resource they link].
 >
-> I've put together a page on **who actually controls 25 federal agencies**: how many members, who appoints them, term lengths, and whether the authorizing statute caps how many can share a political party. Thirteen of the twenty-five have that cap written into law. The FEC's six commissioners are limited to three per party — which is the structural reason it deadlocks 3–3, rather than a personality problem. The NLRB has no cap at all.
+> I've built **a glossary of 37 civic terms** — each defined from the primary record (the statute, the constitutional clause, the regulation), then shown as it's actually being covered: which outlets, how many stories, over what span.
 >
-> Every line links to the section of the U.S. Code it came from. Nothing on the page is AI-generated.
+> The part I didn't expect: **128 stories in the index turn on prior restraint, and not one of them uses the phrase.** Certiorari, 94%. Qualified immunity, 92%. A patron can't look up a word the article never used.
 >
-> https://siftnews.io/agencies
+> Every definition links to the section it came from. Nothing on the page is AI-generated.
+>
+> https://siftnews.io/glossary
 >
 > Two things, if you have a minute:
 >
 > 1. Is this useful to you or your patrons?
 > 2. If something like this were worth paying for, could your library actually buy it from one person, invoiced directly — or does that route not really exist?
 >
-> I'm working through the other 68 agencies. Want me to send you the next batch?
+> I'm adding terms as I source them. Want me to send you the next batch?
 >
 > Either answer helps. If it's not useful, that's the most useful thing you can tell me.
 >
@@ -73,7 +90,19 @@ You selected the one profession whose job description is answering polite, well-
 >
 > P.S. Unrelated, if you have a second: when a story develops over several days, is there anything you use — or point patrons to — that shows *what changed*? Which facts are new, which got corrected, which outlets came late. I can't find one, and I'd like to know whether that's because nobody needs it.
 
-~205 words, of which ~55 are the P.S.
+~210 words, of which ~55 are the P.S.
+
+**Numbers as of 2026-08-18** — verify before sending, they only grow:
+
+| claim in the email | value |
+|---|---|
+| terms in the glossary | 37 |
+| prior restraint, stories / never naming it | 128 / **100%** |
+| certiorari | 88 / 94% |
+| qualified immunity | 75 / 92% |
+
+`scripts/refresh_term_coverage.py --check` in sift-api confirms the counts are
+current before you quote them.
 
 ---
 
@@ -108,7 +137,9 @@ Different reader, different opening. A legislative aide doesn't curate resources
 
 ## Why they're built this way
 
-**The fact leads, not the product.** Both readers get pitched constantly. *"I built a resource"* is noise; *"the FEC can only ever be 3–3, here's the statute"* is usable tomorrow. If they read one sentence, it should be that one.
+**The fact leads, not the product.** Both readers get pitched constantly. *"I built a resource"* is noise; *"128 stories turn on prior restraint and none of them say it"* (librarian) or *"the FEC can only ever be 3–3, here's the statute"* (staffer) is usable tomorrow. If they read one sentence, it should be that one.
+
+**The two versions now point at different pages, on purpose.** The librarian gets `/glossary`, because a reference desk's problem is findability and the glossary's fact is a findability fact. The staffer keeps `/agencies`, because an aide wants to know who controls a commission, not what certiorari means. Same product, different door.
 
 **"Nothing on the page is AI-generated"** (librarian version) pre-empts the live objection to civic reference tools. Dropped from the staffer version, where the citation itself carries more weight than the disclaimer.
 
@@ -118,7 +149,9 @@ Different reader, different opening. A legislative aide doesn't curate resources
 
 **The pay question is §6's falsifier, not the one §6 rejected.** *"Does your institution pay for anything like it"* returns a competitor map — CQ, ProQuest Congressional, Bloomberg Government — which is already known and doesn't touch the question that actually kills the institutional path. *"Could you buy it from one person, invoiced directly"* does. A librarian knows the answer instantly and it costs them nothing to say.
 
-**"Want the next batch?" is the only return mechanism in this plan.** `/agencies` is static, there is no email capture anywhere in the app, and Q9's kill criterion is denominated in *unprompted returns*. Without this sentence the test provably yields zero on the project's own metric. One sentence, zero build, converts a reply into permission to contact.
+**"Want the next batch?" is the only return mechanism in this plan.** There is no email capture anywhere in the app, and Q9's kill criterion is denominated in *unprompted returns*. Without this sentence the test provably yields zero on the project's own metric. One sentence, zero build, converts a reply into permission to contact.
+
+*Slightly better than it was:* the paragraph above used to note that `/agencies` is static, so a reader had no reason to come back. `/glossary` is not — the coverage counts move with the pipeline and the term list grows. That is a weak reason to return unprompted and should not be counted on, but it is no longer *zero*.
 
 ⚠️ **This creates a tension worth naming.** The rule above is one ask; there are now three things in the email. That is a real risk to reply rate, and it is exactly what the five-send pilot exists to detect. If the first five answer only question 1, the rest are too much — cut the pay question from the remaining fifty-five and ask it on the call instead.
 
@@ -174,14 +207,16 @@ Fifty-five personalized sends at ~2 minutes of research each is roughly five hou
 
 Pick five you're least worried about burning. A bad email costs one contact each; a bad email × 60 costs the list.
 
-### 2. Record the `/agencies` pageview baseline
+### 2. Record the `/glossary` **and** `/agencies` pageview baselines
 
 Without it, two very different futures look identical:
 
 - **0 replies, 30 pageviews** → they read it and didn't care. A *product* signal.
 - **0 replies, 2 pageviews** → the email failed. A *channel* signal.
 
-**Take the number from the Vercel dashboard (Project → Analytics, filtered to `/agencies`) immediately before the first send, and write it into this doc.** Post-hoc you cannot subtract traffic you never counted. Your own visits count too, so a handful at baseline is expected — the delta is what matters.
+**Take both numbers from the Vercel dashboard (Project → Analytics, filtered to each route) immediately before the first send, and write them into this doc.** Post-hoc you cannot subtract traffic you never counted. Your own visits count too, so a handful at baseline is expected — the delta is what matters.
+
+Two routes now, because the two batches point at different pages: the librarian sends link `/glossary`, the staffer sends link `/agencies`. Recording only one makes the other batch unmeasurable. `/glossary` also gets a third baseline worth noting — `/term/*` pageviews in aggregate, since a librarian who finds the index useful will click through, and that click is a stronger signal than the landing.
 
 > ⚠️ **Correction, 2026-07-29.** An earlier version of this section asserted Web Analytics was *not enabled*, on the basis that the Vercel analytics API returned `404 Web Analytics not found`. That was reading a tool error as a fact about the project. The stronger evidence says it **is** enabled: `/_vercel/insights/script.js` serves `200`, which Vercel only does for provisioned projects, and `@vercel/analytics/react` injects its tag client-side so its absence from server HTML proves nothing. Verify in the dashboard, not through the API. (Re-verified 2026-07-30: still `200`.)
 
