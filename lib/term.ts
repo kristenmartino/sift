@@ -27,6 +27,9 @@ export interface DbTermProfileRow {
   aliases: unknown; // JSONB — validated below
   category: string | null;
   notes: string | null;
+  // Migration 034. Read by the publish floor; see TermProfile.
+  article_count: number | null;
+  coverage_computed_at: Date | string | null;
 }
 
 /** Coerce a Postgres DATE (Date | ISO string | null) to `YYYY-MM-DD`. */
@@ -83,6 +86,9 @@ export function parseDbTermProfile(
   return {
     slug,
     term,
+    coverageArticleCount:
+      typeof row.article_count === "number" ? row.article_count : null,
+    coverageComputedAt: asIsoDate(row.coverage_computed_at),
     definition: sourced ? row.definition!.trim() : null,
     definitionSource: sourced ? row.definition_source!.trim() : null,
     definitionChecked: sourced ? asIsoDate(row.definition_checked) : null,

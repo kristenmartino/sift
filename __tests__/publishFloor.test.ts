@@ -13,7 +13,6 @@ import type {
   OrgProfile,
   OutletProfile,
   PoliticianProfile,
-  TermCoverage,
   TermProfile,
 } from "@/lib/types";
 
@@ -375,7 +374,7 @@ describe("dossierRobotsMeta", () => {
 
 // ─── Terms ──────────────────────────────────────────────────────────────
 
-const term: TermProfile = {
+const term = (over: Partial<TermProfile> = {}): TermProfile => ({
   slug: "temporary-protected-status",
   term: "Temporary Protected Status",
   definition: "A federal designation that lets nationals of a named country stay.",
@@ -384,48 +383,40 @@ const term: TermProfile = {
   aliases: ["TPS"],
   category: "immigration",
   notes: null,
-};
-
-const coverage = (articleCount: number): TermCoverage => ({
-  articleCount,
-  outlets: [],
-  firstSeen: null,
-  lastSeen: null,
+  coverageArticleCount: 146,
+  coverageComputedAt: "2026-08-18",
+  ...over,
 });
 
 describe("isPublishableTerm", () => {
-  it("publishes a sourced definition with real coverage", () => {
-    expect(isPublishableTerm(term, coverage(146))).toBe(true);
+  it("publishes a sourced definition with measured coverage", () => {
+    expect(isPublishableTerm(term())).toBe(true);
   });
 
   it("withholds a term whose definition lost its source", () => {
     // lib/term.ts nulls the pair, so this is what an unsourced row looks like
-    // by the time the floor sees it. Publishing it would state what a legal
-    // term means on Sift's own authority.
-    const unsourced = { ...term, definition: null, definitionSource: null };
-    expect(isPublishableTerm(unsourced, coverage(146))).toBe(false);
-  });
-
-  it("withholds a well-sourced term with no corpus coverage", () => {
-    // `prior-restraint` in the shipped CSV: real term, cited to Cornell, zero
-    // articles. Without the coverage half the page is a definition Cornell
-    // wrote and we re-stated — strictly worse than Cornell, and exactly the
-    // "one row poured into a template" shape the floor exists to keep out.
-    expect(isPublishableTerm(term, coverage(0))).toBe(false);
+    // by the time the floor sees it.
+    expect(isPublishableTerm(term({ definition: null, definitionSource: null }))).toBe(false);
   });
 
   it("draws the line at TERM_MIN_ARTICLES", () => {
-    expect(isPublishableTerm(term, coverage(TERM_MIN_ARTICLES - 1))).toBe(false);
-    expect(isPublishableTerm(term, coverage(TERM_MIN_ARTICLES))).toBe(true);
+    expect(isPublishableTerm(term({ coverageArticleCount: TERM_MIN_ARTICLES - 1 }))).toBe(false);
+    expect(isPublishableTerm(term({ coverageArticleCount: TERM_MIN_ARTICLES }))).toBe(true);
   });
 
-  it("mirrors the SQL: definition AND source AND count, all three", () => {
-    // listSitemapEntries filters on
-    //   t.definition IS NOT NULL AND t.definition_source IS NOT NULL
-    //   ... WHERE tc.n >= TERM_MIN_ARTICLES
-    // Change one, change the other.
-    expect(isPublishableTerm({ ...term, definition: null }, coverage(146))).toBe(false);
-    expect(isPublishableTerm({ ...term, definitionSource: null }, coverage(146))).toBe(false);
-    expect(isPublishableTerm(term, coverage(1))).toBe(false);
+  it("treats a never-measured term as zero, not as unknown", () => {
+    // A freshly seeded term has no count until refresh_term_coverage.py runs.
+    // Failing closed costs a term publishing one refresh late; failing open
+    // would publish a page on a number nobody has looked at.
+    expect(isPublishableTerm(term({ coverageArticleCount: null }))).toBe(false);
+  });
+
+  it("reads the STORED count, so it cannot disagree with the sitemap", () => {
+    // The sitemap filters `article_count >= TERM_MIN_ARTICLES` on the same
+    // column. This predicate previously took a freshly computed TermCoverage,
+    // which meant two numbers for one decision — and a page emitting noindex
+    // while the sitemap advertised it. There is now one source.
+    expect(isPublishableTerm(term({ coverageArticleCount: 1000 }))).toBe(true);
+    expect(isPublishableTerm(term({ coverageArticleCount: 0 }))).toBe(false);
   });
 });

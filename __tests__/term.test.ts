@@ -24,6 +24,8 @@ const row = (over: Partial<DbTermProfileRow> = {}): DbTermProfileRow => ({
   aliases: ["TPS"],
   category: "immigration",
   notes: null,
+  article_count: 146,
+  coverage_computed_at: "2026-08-18",
   ...over,
 });
 
@@ -36,6 +38,8 @@ const profile = (over: Partial<TermProfile> = {}): TermProfile => ({
   aliases: ["TPS"],
   category: "immigration",
   notes: null,
+  coverageArticleCount: 146,
+  coverageComputedAt: "2026-08-18",
   ...over,
 });
 
@@ -170,5 +174,30 @@ describe("termPatterns", () => {
     // The coverage queries short-circuit on this rather than building a
     // `WHERE ()` that Postgres rejects.
     expect(termPatterns(profile({ term: "", aliases: [] }))).toEqual([]);
+  });
+});
+
+describe("parseDbTermProfile — stored coverage (migration 034)", () => {
+  it("carries the stored count and stamp through to the profile", () => {
+    const t = parseDbTermProfile(row())!;
+    expect(t.coverageArticleCount).toBe(146);
+    expect(t.coverageComputedAt).toBe("2026-08-18");
+  });
+
+  it("keeps a never-measured term as null rather than coercing to 0", () => {
+    // The floor treats null as zero, but the PARSER must not — "never
+    // measured" and "measured, found nothing" are different facts, and only
+    // the parser can still tell them apart.
+    const t = parseDbTermProfile(
+      row({ article_count: null, coverage_computed_at: null }),
+    )!;
+    expect(t.coverageArticleCount).toBeNull();
+    expect(t.coverageComputedAt).toBeNull();
+  });
+
+  it("keeps a measured zero distinct from never-measured", () => {
+    const t = parseDbTermProfile(row({ article_count: 0 }))!;
+    expect(t.coverageArticleCount).toBe(0);
+    expect(t.coverageComputedAt).toBe("2026-08-18");
   });
 });

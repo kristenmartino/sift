@@ -252,6 +252,8 @@ describe("termJsonLd", () => {
     aliases: ["TPS"],
     category: "immigration",
     notes: "133 corpus articles as of 2026-08-10.",
+    coverageArticleCount: 146,
+    coverageComputedAt: "2026-08-18",
   };
 
   it("emits a DefinedTerm with the definition and its citation", () => {

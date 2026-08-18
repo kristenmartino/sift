@@ -26,10 +26,11 @@ export async function generateMetadata({
   const term = await getTermBySlug(slug);
   if (!term) return { title: "Term not found" };
 
-  // The floor reads coverage, so metadata has to compute it too. Both this
-  // and the page body call `getTermBySlug` + `getTermCoverage`; `getTermBySlug`
-  // is React-cached and the coverage query is 34-81ms on the GIN index, so the
-  // duplicate is one indexed lookup per render, not a second page load.
+  // Coverage is still fetched for the description, but indexability is NOT
+  // decided from it — `isPublishableTerm` reads the stored count (migration
+  // 034), the same column the sitemap query filters on. Deciding it from a
+  // freshly computed number here would let this page and the sitemap disagree
+  // about the same term.
   const coverage = await getTermCoverage(term);
 
   return dossierMetadata({
@@ -41,7 +42,7 @@ export async function generateMetadata({
       coverage.articleCount > 0
         ? `What ${term.term} means, and how ${coverage.outlets.length} outlets across the political spectrum are covering it — ${coverage.articleCount} stories in Sift's index.`
         : `What ${term.term} means, with its primary source, on Sift.`,
-    indexable: isPublishableTerm(term, coverage),
+    indexable: isPublishableTerm(term),
     ogType: "article",
   });
 }
