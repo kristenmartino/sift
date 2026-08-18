@@ -421,3 +421,16 @@ describe("termIndex.asOf", () => {
     expect(COPY.termIndex.asOf("2026-08-18")).toMatch(/computed live|ahead/);
   });
 });
+
+describe("civicIndex.termIndexCrossLink", () => {
+  it("states a floor, not a ratio", () => {
+    // This shipped as "one story in five" and was false within a day —
+    // adding 13 terms moved the corpus-wide share 21% -> 16%. A ratio drifts
+    // both ways as the table grows; a floor only becomes more true. The live
+    // figure is computed on /glossary; this string cannot be, so it must not
+    // carry anything that rots.
+    const s = COPY.civicIndex.termIndexCrossLink;
+    expect(s).toContain("over a thousand");
+    expect(s).not.toMatch(/one story in (five|six|seven)|\d+%/);
+  });
+});
