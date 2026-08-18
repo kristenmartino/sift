@@ -5,6 +5,25 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # TypeScript majors are held back deliberately, not by neglect. TS 7 is the
+    # native-compiler rewrite: the default `typescript` import became a
+    # version-string stub and the compiler/AST API moved to
+    # `typescript/unstable/ast/*`. Two things block the bump, and the second one
+    # is not ours to fix:
+    #
+    #   1. `__tests__/meta.test.ts` — the guard that proves the suite can fail
+    #      (#267) — drives `ts.createSourceFile` / `ts.isCallExpression` /
+    #      `ts.forEachChild` and breaks outright. Porting it is a rewrite
+    #      against an API Microsoft itself labels unstable.
+    #   2. `@typescript-eslint` 8.60.0 peer-requires `typescript >=4.8.4 <6.1.0`
+    #      across 13 packages, and `npm run lint` is a required check (#275).
+    #      Nothing we do to (1) unblocks this.
+    #
+    # Lift the ignore when typescript-eslint ships TS 7 support; port the meta
+    # guard after that, not before. See STATUS.md 2026-08-17 and #194.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       production-dependencies:
         dependency-type: "production"
