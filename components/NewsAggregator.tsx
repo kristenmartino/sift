@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { civicBoost, weightedCivicLinks } from "@/lib/civicWeight";
@@ -48,6 +49,30 @@ function useInitialParams() {
   return initial;
 }
 
+/**
+ * The compare a shared ?compare= link asks for, resolved once at mount, or
+ * null when there isn't one.
+ *
+ * This used to be assembled inside an effect that then called four setters.
+ * That is `react-hooks/set-state-in-effect`: state derivable at first render
+ * should be derived there, not written back a render later. Deriving it here
+ * also removes the frame where the feed rendered before compare took over.
+ */
+function compareSeedFrom(params: {
+  compare: string | null;
+  compareSources: string | null;
+}): { topic: string; sources: string[] } | null {
+  const topic = params.compare?.trim();
+  if (!topic || topic.length < 3) return null;
+  const validKeys = (params.compareSources ?? "")
+    .split(",")
+    .filter((key) => COMPARE_SOURCES.some((s) => s.key === key));
+  return {
+    topic,
+    sources: validKeys.length >= 2 ? validKeys.slice(0, 5) : [...DEFAULT_COMPARE_SOURCES],
+  };
+}
+
 interface NewsAggregatorProps {
   userId: string | null;
   authSlot: React.ReactNode;
@@ -55,13 +80,20 @@ interface NewsAggregatorProps {
 
 export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps) {
   const initialParams = useInitialParams();
+  // A shared compare link wins the first render over ?view=bookmarks, which is
+  // the precedence the effect below used to establish one render late.
+  const [compareSeed] = useState(() => compareSeedFrom(initialParams));
 
   const [activeCategory, setActiveCategory] = useState<CategoryId>(initialParams.category);
-  const [showBookmarks, setShowBookmarks] = useState(initialParams.view === "bookmarks");
+  const [showBookmarks, setShowBookmarks] = useState(
+    initialParams.view === "bookmarks" && !compareSeed,
+  );
   const [searchMode, setSearchMode] = useState(false);
-  const [compareMode, setCompareMode] = useState(false);
+  const [compareMode, setCompareMode] = useState(compareSeed !== null);
   const [compareInputValue, setCompareInputValue] = useState("");
-  const [selectedSources, setSelectedSources] = useState<string[]>([...DEFAULT_COMPARE_SOURCES]);
+  const [selectedSources, setSelectedSources] = useState<string[]>(
+    compareSeed?.sources ?? [...DEFAULT_COMPARE_SOURCES],
+  );
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
 
   const [activeCustomTopic, setActiveCustomTopic] = useState<CustomTopic | null>(null);
@@ -134,23 +166,14 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
   // state belongs to the user's own clicks. Signed-out visitors land on the
   // sign-in empty state via the 401 path, which is the funnel until the
   // anonymous daily example covers them.
+  // The state this needs is already seeded above; all that is left here is the
+  // network call, which is what an effect is actually for.
   const compareFromUrlRan = useRef(false);
   useEffect(() => {
-    if (compareFromUrlRan.current) return;
+    if (compareFromUrlRan.current || !compareSeed) return;
     compareFromUrlRan.current = true;
-    const topic = initialParams.compare?.trim();
-    if (!topic || topic.length < 3) return;
-    const validKeys = (initialParams.compareSources ?? "")
-      .split(",")
-      .filter((key) => COMPARE_SOURCES.some((s) => s.key === key));
-    const sources =
-      validKeys.length >= 2 ? validKeys.slice(0, 5) : [...DEFAULT_COMPARE_SOURCES];
-    setSelectedSources(sources);
-    setCompareMode(true);
-    setShowBookmarks(false);
-    setSearchMode(false);
-    runCompare(topic, sources);
-  }, [initialParams, runCompare]);
+    runCompare(compareSeed.topic, compareSeed.sources);
+  }, [compareSeed, runCompare]);
 
   // Sync state to URL (shallow replace, no scroll). Compare wins the address
   // bar while active so the result screen is linkable — the single most
@@ -1165,12 +1188,12 @@ function DailyExampleBlock({
         <span className="text-(--text-secondary)">
           {COPY.compare.dailyBody(timeAgo(example.generatedAt))}
         </span>{" "}
-        <a
+        <Link
           href="/sign-in"
           className="text-(--accent) no-underline hover:underline whitespace-nowrap"
         >
           {COPY.compare.dailySignIn} &rarr;
-        </a>
+        </Link>
       </div>
       <CompareView
         topic={example.topic}
