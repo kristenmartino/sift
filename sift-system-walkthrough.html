@@ -1064,8 +1064,8 @@ note:"<b>Four rows crossed from right to left this month, and one arrived on the
   hood:[["sources","<span class='p'>sift-api/STATUS.md</span> &middot; sift/docs/HOW_IT_WORKS.md &middot; sift/docs/DECISIONS.md (D1&ndash;D61)"],
         ["metrics","<span class='p'>services/cluster_metrics.py</span> &mdash; ARI, V-measure, pairwise P/R/F1, plus multi_outlet_precision, which applies the &ge;2-outlet gate to both partitions so it scores what readers actually see"],
         ["replayable","each eval fixture stores prompt_sha256 &mdash; a changed prompt fails loudly instead of being scored against a stale response"],
-        ["half updated","sift/docs/DECISIONS.md D26/D27 retracted its ~97% claim in July with a notice saying neither number should be cited, but has not been given the August measurement. Correctly silent rather than correctly current."],
-        ["stale, do not cite","sift/docs/ARCHITECTURE.md &mdash; claims 1024 dims (actually 512), &ldquo;100+ feeds&rdquo; (actually 59), and a 5-node pipeline"],
+        ["now recorded","sift/docs/DECISIONS.md D26/D27 &mdash; retracted the ~97% in July, and as of 2026-08-18 carries the August measurement and its caveat. D26 is marked superseded: the four nodes were sound, the rescan loop around them was not."],
+        ["was stale, now redrawn","sift/docs/ARCHITECTURE.md sat at March 2026 for five months &mdash; 1024 dims (actually 512), &ldquo;100+ feeds&rdquo; (actually 59), a 5-node pipeline (actually 8), a feed ordered by published_date, and no threading, dossiers or MCP in it at all. Rewritten against main on 2026-08-18, with a header that says what it got wrong rather than presenting v3.0 as always-accurate."],
         ["corpora","data/eval/clustering_corpus.jsonl &mdash; labeled batches, awaiting hand review"]]
 }
 ];
