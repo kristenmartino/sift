@@ -154,8 +154,19 @@ const GOLDEN_STABLE_HASH: Record<string, string> = {
   "https://www.npr.org/2026/06/04/x": "c9vv14",
 };
 
+// Two cases were removed here on 2026-08-17: `stableHash(url) === stableHash(url)`
+// (a tautology — no implementation of a pure function fails it) and a
+// length/typeof check that asserted a type rather than a value. Both were
+// fully subsumed by the golden-value test below, which pins the exact hashes
+// shared with sift-api's services/rss.py. Don't add them back.
 describe("stableHash", () => {
   it("matches the golden values shared with sift-api", () => {
+    // Self-guard, and the worked example __tests__/meta.test.ts points at: every
+    // assertion below sits inside the loop, so an emptied GOLDEN_STABLE_HASH
+    // would run zero of them and still report green — on the test guarding the
+    // primary key of every row in `articles`.
+    expect(Object.keys(GOLDEN_STABLE_HASH).length).toBeGreaterThanOrEqual(5);
+
     for (const [input, expected] of Object.entries(GOLDEN_STABLE_HASH)) {
       expect(stableHash(input)).toBe(expected);
     }
@@ -167,19 +178,8 @@ describe("stableHash", () => {
     expect(Math.abs(-2147483648).toString(36)).toBe("zik0zk");
   });
 
-  it("returns same hash for same input", () => {
-    const url = "https://reuters.com/article/123";
-    expect(stableHash(url)).toBe(stableHash(url));
-  });
-
   it("returns different hash for different input", () => {
     expect(stableHash("https://a.com")).not.toBe(stableHash("https://b.com"));
-  });
-
-  it("returns a non-empty string", () => {
-    const hash = stableHash("test");
-    expect(hash.length).toBeGreaterThan(0);
-    expect(typeof hash).toBe("string");
   });
 
   it("handles empty string", () => {

@@ -67,46 +67,67 @@ describe("COPY strings", () => {
     });
   });
 
+  // Exact values, not `toBeTruthy()`. This block used to assert only that ~20
+  // keys were non-empty, which passes for any wrong-but-present string — you
+  // could swap `topics.confirm` and `topics.cancel`, or set `error.body` to
+  // "x", and it stayed green. These keys are referenced nowhere else in the
+  // suite, so presence checks were the only thing standing behind them.
   describe("static strings", () => {
-    it("has header tagline", () => {
-      expect(COPY.header.tagline).toBeTruthy();
-    });
-
-    it("has footer text", () => {
-      expect(COPY.footer.main()).toBeTruthy();
+    it("has the header tagline and footer", () => {
+      expect(COPY.header.tagline).toBe("The news, with footnotes");
+      expect(COPY.footer.main()).toContain(
+        "Sift curates outlets across the political spectrum",
+      );
+      expect(COPY.footer.main()).toContain("Every link goes to the original.");
     });
 
     it("has error strings", () => {
-      expect(COPY.error.title).toBeTruthy();
-      expect(COPY.error.body).toBeTruthy();
-      expect(COPY.error.button).toBeTruthy();
+      expect(COPY.error.title).toBe("We hit a snag pulling today's stories");
+      expect(COPY.error.body).toBe(
+        "Our AI is having a slow morning. Give it another shot — it usually sorts itself out.",
+      );
+      expect(COPY.error.button).toBe("Try again");
     });
 
     it("has loading strings", () => {
-      expect(COPY.loading.slow).toBeTruthy();
-      expect(COPY.loading.slowTopic).toBeTruthy();
-      expect(COPY.loading.refresh).toBeTruthy();
+      expect(COPY.loading.slow).toBe(
+        "Still reading through sources… good stories take a moment",
+      );
+      expect(COPY.loading.slowTopic).toBe(
+        "Searching articles… good matches take a moment",
+      );
+      expect(COPY.loading.refresh).toBe("Checking for new stories…");
     });
 
     it("has topic modal strings", () => {
-      expect(COPY.topics.modalTitle).toBeTruthy();
-      expect(COPY.topics.modalPlaceholder).toBeTruthy();
-      expect(COPY.topics.generating).toBeTruthy();
-      expect(COPY.topics.previewTitle).toBeTruthy();
-      expect(COPY.topics.confirm).toBeTruthy();
-      expect(COPY.topics.cancel).toBeTruthy();
-      expect(COPY.topics.edit).toBeTruthy();
-      expect(COPY.topics.maxReached).toBeTruthy();
+      expect(COPY.topics.modalTitle).toBe("What do you want to track?");
+      expect(COPY.topics.modalPlaceholder).toBe(
+        "e.g. Florida utilities, AI in healthcare, Series A funding",
+      );
+      expect(COPY.topics.generating).toBe("Interpreting your topic…");
+      expect(COPY.topics.previewTitle).toBe("Here\u2019s what I\u2019ll track");
+      expect(COPY.topics.maxReached).toBe(
+        "You\u2019ve hit the 5-topic limit. Remove one to add another.",
+      );
+    });
+
+    it("keeps the confirm / cancel / edit actions distinct and correctly labelled", () => {
+      // Named separately because a swap between these three is the one copy
+      // bug with a destructive outcome — a reader clicking "Add topic" and
+      // getting the cancel path. `toBeTruthy()` could never see it.
+      expect(COPY.topics.confirm).toBe("Add topic");
+      expect(COPY.topics.cancel).toBe("Cancel");
+      expect(COPY.topics.edit).toBe("Edit");
     });
 
     it("has compare strings", () => {
-      expect(COPY.compare.button).toBeTruthy();
-      expect(COPY.compare.placeholder).toBeTruthy();
+      expect(COPY.compare.button).toBe("Compare coverage");
+      expect(COPY.compare.placeholder).toContain("Compare coverage across sources");
     });
 
     it("has bookmark strings", () => {
-      expect(COPY.bookmarks.title).toBeTruthy();
-      expect(COPY.bookmarks.emptyTitle).toBeTruthy();
+      expect(COPY.bookmarks.title).toBe("Saved Articles");
+      expect(COPY.bookmarks.emptyTitle).toBe("Nothing saved yet");
     });
   });
 

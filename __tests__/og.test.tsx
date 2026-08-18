@@ -11,7 +11,6 @@ import {
   clampOgTitle,
   dossierOgCard,
   loadOgFonts,
-  OG,
   OG_SIZE,
   siftIconCard,
 } from "@/lib/og";
@@ -80,9 +79,12 @@ describe("dossierOgCard", () => {
     expect(text).not.toContain("null");
   });
 
-  it("uses the warm dark palette, not the retired indigo", () => {
-    expect(OG.bg).toBe("#15120C");
-    expect(OG.accent).toBe("#ec5b39");
+  it("renders at the 1200x630 size social scrapers expect", () => {
+    // Kept because this is an EXTERNAL contract — Open Graph consumers crop or
+    // reject other ratios, so the numbers are not ours to change freely.
+    // The `OG.bg` / `OG.accent` assertions that used to sit here were dropped:
+    // they restated lib/og.tsx with no invariant behind them, so they enforced
+    // nothing and only made a palette change a two-file edit.
     expect(OG_SIZE).toEqual({ width: 1200, height: 630 });
   });
 });
@@ -111,6 +113,9 @@ describe("loadOgFonts", () => {
   });
 
   it("memoizes so repeat renders do not re-read the files", async () => {
+    // meta-ok: this reads as a self-comparison but is not one. `toBe` is
+    // identity, so an unmemoized loadOgFonts returning a fresh array each call
+    // fails here — which is precisely the behaviour under test.
     expect(await loadOgFonts()).toBe(await loadOgFonts());
   });
 });
