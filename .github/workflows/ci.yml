@@ -94,6 +94,17 @@ jobs:
         if: steps.scope.outputs.docs_only != 'true'
         run: npx tsc --noEmit
 
+      # Added 2026-08-18, in the same PR that cleared the three errors `main`
+      # had been carrying. Without a step here nothing noticed them: the two
+      # `react-hooks/set-state-in-effect` violations sat on `main` from
+      # whenever the React-compiler rule landed until someone happened to run
+      # `npm run lint` by hand. Placed beside the type check so both cheap
+      # static gates fail before the ~2-minute production build, and gated on
+      # `docs_only` like every other step so a docs PR still skips it.
+      - name: Lint
+        if: steps.scope.outputs.docs_only != 'true'
+        run: npm run lint
+
       # Give `next build` an empty, throwaway DB so the three DB-backed ISR
       # pages (/, /methodology, /civic) can prerender in CI without a live
       # database. Queries return zero rows; runtime behavior is unchanged.
