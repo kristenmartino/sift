@@ -1064,10 +1064,19 @@ export const COPY = {
     thinkTanksCrossLink:
       "How these organizations describe themselves \u2014 in their own words, quoted and linked \u2192",
     // Third cross-link, same rule as the two above: state the payoff, not the
-    // destination. "See the glossary" gives nobody a reason to click; one
-    // story in five turning on an unnamed term does.
+    // destination. "See the glossary" gives nobody a reason to click; stories
+    // turning on a term nobody names does.
+    //
+    // Phrased as a floor ("over a thousand") rather than a ratio on purpose.
+    // This shipped as "one story in five" and was wrong within a day: adding
+    // 13 terms took the corpus-wide share from 21% to 16%, because the new
+    // ones are mostly named in headlines (IPO 1% unnamed, Medicaid 1%). A
+    // ratio moves in BOTH directions as the table grows; a floor only ever
+    // becomes more true, since both the term count and the corpus grow.
+    // /glossary itself computes the live figure -- this is the one place the
+    // number could not be computed without an extra query on /civic.
     termIndexCrossLink:
-      "The words the news assumes you know \u2014 one story in five turns on a term it never names \u2192",
+      "The words the news assumes you know \u2014 over a thousand stories turn on a term the coverage never names \u2192",
     emptyBills: "No bills curated yet.",
     billsMoreSoon: "More bills as they're curated.",
     backLink: "Back to Sift",
