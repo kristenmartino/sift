@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "See the header of sift-api/setup.cfg for the doctrine this follows. Mutation testing answers what coverage cannot: do these tests catch bugs, or do they only execute lines? A surviving mutant is a line the tests run but do not check. SCOPE IS DELIBERATELY NARROW and this is NOT wired into CI \u2014 run it by hand every month or two (npm run mutate), record the result in a comment at the top of the matching test file, and fix only the survivors that represent real gaps. Pointing it at all of lib/ would burn 30+ minutes on DB and LLM wrappers whose mutants are unkillable because the tests mock the client.",
+  "packageManager": "npm",
+  "reporters": [
+    "html",
+    "clear-text",
+    "progress"
+  ],
+  "testRunner": "jest",
+  "jest": {
+    "configFile": "jest.config.ts"
+  },
+  "coverageAnalysis": "off",
+  "mutate": [
+    "lib/security.ts",
+    "lib/rate-limit.ts",
+    "lib/utils.ts",
+    "lib/usage-tracker.ts",
+    "lib/crossSpectrum.ts"
+  ],
+  "_mutate_comment": "Pure, deterministic, high-consequence. security.ts is the CSRF gate; rate-limit.ts is the spend ceiling on /api/compare; utils.ts holds stableHash, the article primary key shared with sift-api's services/rss.py; usage-tracker.ts prices every AI call; crossSpectrum.ts decides what counts as corroboration.",
+  "thresholds": {
+    "high": 90,
+    "low": 70,
+    "break": null
+  },
+  "_thresholds_comment": "break is null on purpose: a score gate on a manual run produces alarms you learn to ignore. Read the survivors, do not chase the number.",
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true,
+  "_coverageAnalysis_comment": "'off', not 'perTest'. perTest is much faster but requires replacing jest's testEnvironment with @stryker-mutator/jest-runner's wrapper in jest.config.ts \u2014 changing how the suite runs for everyone, in exchange for speed on a tool run by hand every month or two. Not a trade worth making. 'all' hits the same requirement. With 'off' the scoped run below takes ~1 minute.",
+  "_baseline_comment": "Baseline 2026-08-17, first run: 85.34% overall, 1m18s, 56 survivors. crossSpectrum.ts 100.00 | security.ts 91.30 | usage-tracker.ts 88.14 | utils.ts 78.62 | rate-limit.ts 71.43. The survivors were read, not chased. rate-limit.ts is the lowest and shows both kinds. REAL GAP: `t > cutoff` -> `t >= cutoff` survived the entire suite because no test sat a timestamp exactly on the window boundary \u2014 an off-by-one that holds every request one extra millisecond, so a caller pacing itself at the limit collects spurious 429s. Closed by the boundary test in __tests__/rate-limit.test.ts; that is what took the file from 69.05 to 71.43. EQUIVALENT MUTANT, leave it: `if (entry.timestamps.length === 0) store.delete(key)` survives because the cleanup sweep is unobservable through the public API. Update this line on each run so the number cannot drift unnoticed."
+}
