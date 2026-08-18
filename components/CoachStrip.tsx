@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import { STORAGE_KEYS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
@@ -12,23 +12,39 @@ import { reportError } from "@/lib/observability";
  * Renders nothing after dismissal or on any later visit — the note is a
  * pointer, not a tour, and it never comes back on its own.
  *
- * Starts hidden and flips visible in an effect so SSR/hydration match; the
- * strip fading in a beat after first paint reads as intentional.
+ * Renders nothing on the server and on the hydrating render, then appears a
+ * beat after first paint — reading it any earlier would need localStorage
+ * during SSR. localStorage is an external store, so that is
+ * `useSyncExternalStore` rather than a setState in an effect: the server
+ * snapshot says "seen" (render nothing, matching the SSR markup) and the
+ * first client snapshot after hydration reads the real value. Same shape as
+ * `useTheme` in lib/hooks.ts.
  */
-export default function CoachStrip() {
-  const [visible, setVisible] = useState(false);
 
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem(STORAGE_KEYS.seenIntro)) setVisible(true);
-    } catch {
-      // Storage unavailable (private mode) — skip the strip rather than
-      // show one that would reappear every visit.
-    }
-  }, []);
+// Never fires: the flag cannot change under us within a session — a dismissal
+// goes through `dismissed` below, which is ordinary React state.
+const subscribeSeenIntro = () => () => {};
+
+function readSeenIntro(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.seenIntro) !== null;
+  } catch {
+    // Storage unavailable (private mode) — report it as seen, so we skip the
+    // strip rather than show one that would reappear every single visit.
+    return true;
+  }
+}
+
+export default function CoachStrip() {
+  const seenIntro = useSyncExternalStore(
+    subscribeSeenIntro,
+    readSeenIntro,
+    () => true,
+  );
+  const [dismissed, setDismissed] = useState(false);
 
   const dismiss = () => {
-    setVisible(false);
+    setDismissed(true);
     try {
       localStorage.setItem(STORAGE_KEYS.seenIntro, "1");
     } catch (err) {
@@ -37,7 +53,7 @@ export default function CoachStrip() {
     }
   };
 
-  if (!visible) return null;
+  if (seenIntro || dismissed) return null;
 
   return (
     <div className="animate-fade-slide-in mb-5 flex items-center justify-between gap-3 rounded-[12px] border border-(--border) bg-(--surface-raised) px-4 py-3">
