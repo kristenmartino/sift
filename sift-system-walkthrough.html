@@ -371,7 +371,7 @@ var MAP_NODES = [
   { id:"claude", x:560, y:56,  w:134, h:38, l:"Claude Haiku 4.5", r:"summarizes &amp; clusters", lab:"", step:4 },
   { id:"voyage", x:560, y:98,  w:134, h:38, l:"Voyage 3-lite",    r:"turns text into vectors", lab:"", step:7 },
   { id:"neon",   x:346, y:164, w:164, h:92, l:"articles + stories", r:"the only source of truth", lab:"Neon Postgres", step:9 },
-  { id:"mcp",    x:158, y:196, w:140, h:56, l:"5 tools, read-only", r:"for AI clients", lab:"MCP server", step:17 }
+  { id:"mcp",    x:158, y:196, w:140, h:56, l:"5 tools, read-only", r:"for AI clients", lab:"MCP server", step:18 }
 ];
 function mapSvg(interactive){
   var s = "";
@@ -426,7 +426,7 @@ var STEPS = [
   body:
     "<p>An adaptive primer on what you should know first. Inline glossary tooltips. Structured dossiers on every politician, organization, bill and outlet, sourced from public records. And cross-spectrum framing: the same event, as four newsrooms chose to tell it.</p>" +
     "<p>This walkthrough follows <b>one real article</b> from the moment it appears in a publisher&rsquo;s feed to the moment it reaches a reader &mdash; and then follows three more, because the interesting thing happens when they meet.</p>" +
-    "<p>Everything on the following pages was read out of the source. The article is a real row from Sift&rsquo;s labeled clustering corpus, with its real summary and its real extracted entities.</p>",
+    "<p>Everything on the following pages was read out of the source. The article is a real row from Sift&rsquo;s labeled clustering corpus, with its real summary and its real extracted entities.</p><p class='lede' style='font-size:16px; margin-top:18px'>Current as of <b>18 August 2026</b>, read from <code>main</code> in each repository. Where production and the seeded data disagree, the page says both numbers &mdash; and the dossier counts were queried against production, because the seed files are wrong.</p>",
   fig: function(){
     return fig({
       t:"The article we are going to follow",
@@ -441,7 +441,9 @@ var STEPS = [
     });
   },
   hood:[["source","data/eval/clustering_corpus.jsonl &middot; batch <span class='p'>business-4</span> &middot; event <span class='p'>trump-eu-probe-google-fine</span>"],
-        ["scale","59 feeds &middot; 56 outlets &middot; 10 categories"],
+        ["scale","59 feeds &middot; 56 outlets &middot; 10 categories &middot; ~2,000 articles/day"],
+        ["as of","third revision. 47 commits separated the first draft from the second; <b>179 more</b> separated the second from this one &mdash; ranking grew from one factor to seven, a fifth dossier type appeared, and the accuracy number this page called unmeasurable was measured."],
+        ["schema","migrations 001&ndash;030 &mdash; three of them numbered 017, and two numbered 021"],
         ["services","Vercel &middot; Railway &middot; Neon Postgres + pgvector"]]
 },
 {
@@ -463,7 +465,8 @@ var STEPS = [
   hood:[["graph","<span class='p'>workflows/pipeline_workflow.py</span> &middot; build_pipeline_graph(), 8 nodes, strictly linear"],
         ["schedule","REFRESH_INTERVAL = 30 &times; 60. Was 10 min; stretched to cut spend ~66%. Production only."],
         ["trigger","POST /v1/pipeline/refresh &middot; X-Pipeline-Key via hmac.compare_digest &middot; 5/minute"],
-        ["also","story_workflow.py &middot; compare_workflow.py &mdash; three compiled state machines in all"]]
+        ["also","story_workflow.py &middot; compare_workflow.py &mdash; three compiled state machines in all"],
+        ["collision","three migration files are numbered 017 and two are numbered 021 &mdash; worth knowing before you add 031"]]
 },
 
 /* ─────────── ACT 2 · INGEST ─────────── */
@@ -473,7 +476,10 @@ var STEPS = [
   lede:"Fifty-nine feeds are fetched at once. Our article arrives as four fields and a hash.",
   body:
     "<p>Each feed yields at most ten entries. Title, body, image and date are parsed out, and a content hash is computed from the normalized title plus the first 500 characters of the body &mdash; enough to catch the same wire story republished under a different URL, short enough not to be defeated by a trailing edit.</p>" +
-    "<p>Nothing here costs money. That is deliberate, and it is why this step and the next one run before any model is called.</p>",
+    "<h3>The body was there the whole time</h3>" +
+    "<p>Until August this step kept whichever text the feed put in its summary field, which for most outlets is a teaser. Reading the full content element instead moved articles carrying at least 100 words from <b>21 to 163</b> per fetch, and mean body length from <b>42 words to 327</b>.</p>" +
+    "<p>The rule is not &ldquo;longest wins.&rdquo; The Atlantic&rsquo;s photo posts carry ~900 words of caption and photographer credits; Ars Technica opens with navigation furniture; Politico ships a 68-word teaser and an <em>empty</em> content element. Content displaces the teaser only at &ge;100 words <em>and</em> &ge;3&times; its length.</p>" +
+    "<p>Nothing here costs money &mdash; that is deliberate, and it is why this step and the next one run before any model is called. It does make the next step dearer: better input is +$0.129 per 1,000 articles on the summarizer, about $7.50 a month, and it is the reason a faithfulness eval became possible at all.</p>",
   spine: function(){
     return spine("after step 01", [
       ["source_name", '<span class="v">The Hill</span>'],
@@ -492,6 +498,7 @@ var STEPS = [
   hood:[["entry","<span class='p'>services/rss.py</span> &middot; fetch_feeds()"],
         ["limits","<span class='c'>MAX_ENTRIES_PER_FEED <i>10</i></span><span class='c'>FETCH_TIMEOUT <i>20.0</i></span><span class='c'>MIN_IMAGE_WIDTH <i>300</i></span>"],
         ["hash","sha256(norm_title + \"\\n\" + norm_content[:500]) &middot; CONTENT_HASH_PREFIX_CHARS = 500"],
+        ["body text","the content element displaces the RSS teaser at &ge;100 words AND &ge;3&times; its length &middot; 21 &rarr; 163 articles/fetch at &ge;100 words"],
         ["fail loud","zip(FEEDS, results, strict=True)"],
         ["not ingested","AP and Reuters retired public RSS. Their wire copy still arrives via NPR / CBS / ABC / BBC / Guardian syndication."]]
 },
@@ -511,9 +518,17 @@ var STEPS = [
       ["intra-batch", '<span class="new">3 siblings, 3 different hashes → all kept</span>']
     ], "Four articles enter the paid section of the pipeline. Sift does not yet know they belong together.");
   },
+  war:{
+    t:"The duplicate the hash cannot see",
+    body:"<p>The previous revision of this page left a rate unknown here: duplicate <code>source_url</code>s <em>within</em> a single batch, with two observations that disagreed &mdash; one in 33, then none in 40. It has since been measured properly.</p>" +
+         "<p><b>22 of 581 fetched articles. 3.79%.</b> The cause is named now too: outlets that run section feeds publish the same URL to both &mdash; NPR alongside NPR World and NPR Health, The Hill alongside The Hill Politics. Dedup keys on <code>content_hash</code> and has no intra-batch <code>source_url</code> rule, so both copies are summarized <em>and</em> entity-linked at full price before collapsing at store time on <code>ON CONFLICT (source_url)</code>.</p>" +
+         "<p>Roughly $3 a month of work thrown away at the last moment, and one line beside the existing hash check would stop it. It was found sideways, by a sampler reporting &ldquo;150 scored&rdquo; against a run that had summarized 147.</p>",
+    fix:"not yet shipped &middot; measured, named, and left in the open rather than rounded to zero"
+  },
   hood:[["entry","<span class='p'>services/deduplicator.py</span>"],
         ["query","source_url = ANY($1) OR content_hash = ANY($2) &mdash; one round-trip, not one per article"],
-        ["counters","dropped_url &middot; dropped_hash_db &middot; dropped_hash_intra"],
+        ["counters","dropped_url &middot; dropped_hash_db &middot; dropped_hash_intra &middot; dup_url_intra_kept"],
+        ["answered","that fourth counter&rsquo;s rate is no longer unknown &mdash; 22 of 581, 3.79%, measured 2026-08-13. Cause: section feeds publishing the same URL twice. Still unfixed."],
         ["bypass","force=True skips dedup entirely"]]
 },
 {
@@ -551,18 +566,25 @@ var STEPS = [
     "<p>This is the first of two steps that do not wait for an answer. The request goes to Anthropic&rsquo;s Batch API &mdash; half price, with results arriving minutes later instead of immediately &mdash; and the node hands back empty dictionaries. Our article will be stored, and served, with this column still empty.</p>" +
     "<h3>The rubric is strict on purpose</h3>" +
     "<p>One sentence. Maximum eighteen words. A concrete, verifiable stake that is <em>not</em> already in the title or the summary. A list of banned phrasings. And the instruction that matters most: <em>when in doubt, return an empty string.</em></p>" +
-    "<p>An absent line renders nothing at all. Null-over-filler is the intended outcome, not a failure &mdash; and the next act shows exactly what that policy cost and what it bought.</p>",
+    "<p>An absent line renders nothing at all. Null-over-filler is the intended outcome, not a failure &mdash; and the next act shows exactly what that policy cost and what it bought.</p>" +
+    "<h3>One call, four answers</h3>" +
+    "<p>This call has grown twice since. It now returns four keys, not two: the stakes line, an importance score, a <b>tone</b> tag (<code>grim | neutral | light</code>) and a <b>genre</b> tag (<code>news | feature | soft</code>). Anything unexpected clamps to the no-penalty value.</p>" +
+    "<p>Neither new tag is displayed anywhere. Both exist to feed ranking, five steps from here &mdash; and both are free, because the model has already read the article. The same argument that put summarization and classification in one call put these here.</p>" +
+    "<p>The importance rubric was rewritten at the same time to measure <em>scope of consequence, not drama</em>. That one sentence is what the ranking step is built on.</p>",
   spine: function(){
     return spine("after step 04", [
       ["why_it_matters", '<span class="null">NULL — a job was submitted, nothing came back yet</span>'],
       ["importance_score", '<span class="null">NULL — arrives with the same batch</span>'],
+      ["tone", '<span class="null">NULL — third key on the same call</span>'],
+      ["genre", '<span class="null">NULL — fourth key on the same call</span>'],
       ["api_batches", '<span class="new">one row, kind=context, status=processing</span>']
     ], "The batch row carries a manifest mapping each custom_id back to its article URLs. That manifest is the only thing that will let the poller find this article again.");
   },
   hood:[["model","<span class='p'>claude-haiku-4-5-20251001</span> &middot; Batch API, flat 50% discount, SLA up to 24h"],
         ["entry","<span class='p'>services/context_generator.py</span> &middot; submit_context_batch()"],
-        ["limits","<span class='c'>BATCH_SIZE <i>10</i></span><span class='c'>BATCH_KIND <i>context</i></span><span class='c'>custom_id <i>ctx-{n}</i></span>"],
-        ["rubric","one sentence &middot; &le;18 words &middot; not a restatement &middot; when in doubt return \"\""],
+        ["limits","<span class='c'>BATCH_SIZE <i>10</i></span><span class='c'>max_tokens <i>850</i></span><span class='c'>BATCH_KIND <i>context</i></span><span class='c'>custom_id <i>ctx-{n}</i></span>"],
+        ["four keys","c = why-it-matters &middot; s = importance 1&ndash;5 &middot; t = tone (migration 020) &middot; g = genre (migration 025)"],
+        ["rubric","one sentence &middot; &le;18 words &middot; not a restatement &middot; when in doubt return \"\" &middot; importance is scope of consequence, not drama"],
         ["judge","optional Sonnet pass, disabled by default (why_it_matters_judge_enabled = false)"]]
 },
 {
@@ -572,7 +594,7 @@ var STEPS = [
   body:
     "<p>The prompt carries an explicit do-not-pick list. <em>Filibuster, cloture, basis points, certiorari</em> are worth defining. <em>Tariffs, IPO, recession, data center, pollen season</em> are not.</p>" +
     "<p>The term count was tightened from three-to-five down to zero-to-four, and the floor of zero is the important half of that change. A civic-literacy layer that explains words everyone already knows trains people to ignore it &mdash; at which point it stops working for the words that actually needed explaining.</p>" +
-    "<p>Our article is a plausible case for zero: <em>tariff</em> is on the do-not-pick list by name, and the mechanics of an EU competition fine are carried by the summary itself.</p>",
+    "<p>Our article is a plausible case for zero: <em>tariff</em> is on the do-not-pick list by name, and the mechanics of an EU competition fine are carried by the summary itself.</p><p>The prompt has since gained a rules block that <em>overrides everything above it</em>, including the instruction to supply background at all: no new claims about the conduct, motives or state of mind of a living named person. Charged is not guilty; settled is not found liable; a campaign contribution is not an endorsement. Define the term, not the person &mdash; and return an empty string rather than break one of those rules.</p>",
   spine: function(){
     return spine("after step 05", [
       ["context_primer", '<span class="null">NULL — second job submitted, nothing back yet</span>'],
@@ -590,7 +612,7 @@ var STEPS = [
   title:"embed",
   lede:"Title and summary become a 512-dimension vector. On failure the embedder returns nothing at all — never a zero.",
   body:
-    "<p>The text handed to Voyage is simply the title, a period, and the summary. What comes back is stored in pgvector and is what later powers semantic search and the topic feed.</p>" +
+    "<p>The text handed to Voyage is simply the title, a period, and the summary. What comes back is stored in pgvector and is what powers semantic search, the topic feed, and &mdash; since the threading cutover &mdash; the free half of story threading, where a Postgres nearest-neighbour query proposes which articles might be the same event before any model is asked.</p>" +
     "<h3>Why never a zero vector</h3>" +
     "<p>A zero vector is not a missing value. It is a real point in the space, roughly equidistant from everything, and it would quietly surface as a plausible result for any query at all. So the embedder returns <code>None</code> on failure and the column stays empty, which the read path already knows how to skip.</p>",
   spine: function(){
@@ -608,30 +630,42 @@ var STEPS = [
 {
   act:"Ingest", num:"07", paid:true,
   title:"link_entities",
-  lede:"Sift asks which of its dossiers the article is actually about. For this article the honest answer is: almost none of them.",
+  lede:"A free regex pass decides whether this article is worth a paid call at all. Then Claude resolves what the regex found.",
   body:
-    "<p>The dossier catalog &mdash; outlets, members of Congress, organizations, bills &mdash; is loaded and sent with the article, marked for prompt caching so repeat calls read it at roughly a tenth of the price. Claude returns the entities it can resolve <em>to a dossier that exists</em>.</p>" +
-    "<h3>What our article gets</h3>" +
-    "<p>Trump, Google and the European Union are all unmistakably in this article. None of them resolves. The seeded catalog is Congress-only &mdash; 536 sitting members, no executive branch &mdash; and its 25 organizations are think tanks and federal agencies, not companies or foreign institutions. So the only link is the outlet itself.</p>" +
-    "<p>That is the system working as designed. An unresolvable name is left alone rather than guessed at, because a wrong dossier link is far worse than a missing one.</p>",
+    "<p>The order here was inverted in August 2026, and the reason is the sharpest cost story in the project. The LLM linker exists to <em>disambiguate</em> candidates &mdash; Susan Collins the Senator versus Susan Collins the Boston Fed President &mdash; not to <em>discover</em> names that never appear in the text. So an article where a free regex finds no catalog name at all has nothing to disambiguate, and can be answered with an empty list for nothing.</p>" +
+    "<p>The catalog now loads a fifth table alongside outlets, politicians, organizations and bills: <code>entity_aliases</code>, 98 curated surface forms. They are hand-written and validated against the live catalog, never derived &mdash; the earlier lesson was that <em>derived</em> aliases are unsafe, not that aliases are.</p>" +
+    "<h3>What our article gets now</h3>" +
+    "<p>When this walkthrough was first written, none of Trump, Google or the European Union resolved, and the only link was the outlet. One of those has since changed. A curated alias maps <code>trump</code> to the executive dossier <code>EXEC-TRUMP-DJ</code> &mdash; and across the corpus that single alias accounts for 26,706 of the newly linked articles.</p>" +
+    "<p>Google and the European Union still do not resolve: no company dossiers exist, and while seven intergovernmental organizations were added, the European <em>Commission</em> is in the catalog and the European <em>Union</em> is not. The rule holds &mdash; an unresolvable name is left alone rather than guessed at.</p>" +
+    "<h3>Then the surviving calls got smaller too</h3>" +
+    "<p>The gate decides <em>whether</em> to call. A second change decided <em>how much to send</em>. The call used to carry the whole roster &mdash; all 856 rows &mdash; so that Claude could pick from it. It now carries only the candidates the regex already matched, plus their same-surname siblings, which is all that disambiguation ever needed.</p>" +
+    "<p>Measured end to end against production: <b>2.1 roster rows per call</b>, input tokens from ~7,300 down to ~650, <b>$0.0042 to $0.00086 per call &mdash; 80% off</b>. The linker went from $1.50 to $0.31 per 1,000 articles.</p>" +
+    "<p>The alternative that was <em>not</em> taken is the more interesting half. Batching ten articles into one call had been modelled at roughly &minus;60% and was the obvious lever; it was built, tested, and <b>rejected on recall</b>. Cheaper per call is not cheaper if it stops finding things.</p>" +
+    "<p>One deliberate hole remains: an article the regex narrowed to <em>nothing</em> is still called with the full roster. A confident empty answer for an article nobody narrowed would be a failure wearing a verdict&rsquo;s clothes.</p>",
   spine: function(){
     return spine("after step 07", [
-      ["entity_links", '<span class="new">[{ type: outlet, canonical_id: the-hill }]</span>'],
-      ["Trump", '<span class="null">no politician dossier in the seeded catalog</span>'],
-      ["Google", '<span class="null">no org dossier</span>'],
-      ["European Union", '<span class="null">no org dossier</span>']
-    ], "Verified against the seed data in sift-api/data/: politician_profiles.csv holds 536 rows, all Congress, none executive; org_profiles.csv holds 25, all think tanks and federal agencies. The live database may carry more.");
+      ["regex pre-gate", '<span class="new">finds &ldquo;Trump&rdquo; via alias → forwarded to the LLM</span>'],
+      ["Trump", '<span class="new">EXEC-TRUMP-DJ — resolves via curated alias</span>'],
+      ["Google", '<span class="null">no company dossiers exist</span>'],
+      ["European Union", '<span class="null">european-commission is in the catalog; the Union is not</span>'],
+      ["The Hill", '<span class="null">blocklisted from the regex matcher — see below</span>']
+    ], "Verified against main: data/entity_aliases.csv holds 98 aliases (71 org, 20 politician, 7 outlet). Corpus-wide chip coverage went from 7.6% to 19.1% — 55,137 of 287,978 articles — almost entirely by naming dossiers that already existed.");
   },
   war:{
-    t:"Cloud, Banks and Hill",
-    body:"<p>The regex fallback that catches whatever the model misses matches full canonical names only &mdash; never surnames. This looks over-cautious until you notice that sitting members of Congress are named Cloud, Banks and Hill.</p>" +
-         "<p>Surname matching turned weather stories into civic dossiers. Ambiguous keys are now dropped from the search dictionary entirely rather than resolved to a best guess.</p>",
-    fix:"canonical names only &middot; _MIN_KEY_LENGTH = 4 &middot; ambiguous keys dropped, not ranked"
+    t:"Cloud, Banks, Hill — and then The Hill itself",
+    body:"<p>The regex matches full canonical names only, never surnames. That looks over-cautious until you notice sitting members of Congress named Cloud, Banks and Hill.</p>" +
+         "<p>Then the same problem arrived from the other direction. Outlet names that are ordinary English &mdash; <em>Nature</em>, <em>Reason</em>, <em>Slate</em>, <em>Variety</em>, <em>Wired</em>, <em>The Hill</em> &mdash; matched constantly in body copy. A regex-mode backfill manufactured 5,838 false chips across 3,872 articles from five of them.</p>" +
+         "<p>The measured fix is unsentimental: <em>the hill</em> is 86% false even when correctly capitalized, so it is withheld from the regex dictionary entirely. Eighteen names are now blocklisted. They stay in the LLM catalog, where context can tell a newspaper from a landform.</p>",
+    fix:"18 names withheld from the regex dict &middot; restored selectively via case-sensitive aliases (only 2 of 98: ICE and The Athletic)"
   },
-  hood:[["model","<span class='p'>claude-haiku-4-5-20251001</span> &middot; one call per article &middot; timeout 8.0s &middot; concurrency 4"],
-        ["cache","catalog block marked cache_control: ephemeral &mdash; 5-min window. Write $1.25/M, read $0.10/M against $1.00/M base."],
-        ["catalog","outlet_profiles &middot; politician_profiles &middot; org_profiles &middot; bill_profiles &mdash; four tables, loaded per run"],
-        ["cost note","the repo&rsquo;s own status doc calls this the largest single cost lever; batching to ~10 articles/call models at roughly &minus;60%"]]
+  hood:[["order","catalog + aliases &rarr; search dict &minus; blocklist &rarr; <span class=\'p\'>regex pre-gate</span> &rarr; LLM on forwarded only &rarr; regex fallback"],
+        ["gate","<span class=\'p\'>entity_linker_regex_gate_enabled</span> default true. Measured over 12,690 articles / 7 days: forwards 26%, retains 98.11% of the ungated path&rsquo;s links. Prod observes ~22% forwarded."],
+        ["aliases","migration 014_entity_aliases &middot; 017 added match_case &middot; 98 rows, 2 case-sensitive"],
+        ["model","<span class=\'p\'>claude-haiku-4-5-20251001</span> &middot; catalog marked cache_control: ephemeral &middot; timeout 8.0s"],
+        ["narrowing","<span class='p'>entity_linker_roster_narrowing_enabled</span> default on &mdash; 2.1 roster rows/call, ~7,300 &rarr; ~650 input tokens, $0.0042 &rarr; $0.00086 (&minus;80%). An empty narrowing falls back to the FULL roster on purpose."],
+        ["cost","was 46.2% of Anthropic spend ($4.15/day) &mdash; the largest single line. Gate + narrowing together took the linker to <b>$0.31 per 1k articles</b>, from $1.50."],
+        ["rejected","batching ~10 articles per call modelled at &minus;60%, was built, and was rejected on recall. Narrowing shipped instead."],
+        ["caveat","the 98.11% recall figure is contaminated: a backfill wrote the regex&rsquo;s own output into entity_links for 54,240 articles, so it partly scores itself. STATUS says quote pass-through, not recall."]]
 },
 {
   act:"Ingest", num:"08", paid:false,
@@ -641,7 +675,7 @@ var STEPS = [
     "<p>The article is upserted on <code>source_url</code>. Its ID comes from a hash of URL plus title, using a djb2 variant with deliberate 32-bit signed overflow, hand-ported from the frontend&rsquo;s TypeScript so both sides compute the same ID for the same article.</p>" +
     "<p>On conflict, <code>title</code>, <code>image_url</code> and <code>published_date</code> are pointedly <em>not</em> updated. A publisher quietly rewriting a headline should not rewrite what Sift already showed a reader.</p>" +
     "<h3>The cheapest step starts the most spend</h3>" +
-    "<p>The write itself makes no model call. But this is where the entity-extraction batch is submitted and where story threading is triggered &mdash; and threading alone is roughly 39% of Anthropic spend. Threading is also skipped unless a category gained at least three new articles, or an hour has passed since its stories were last touched.</p>",
+    "<p>The write itself makes no model call. But this is where the entity-extraction batch is submitted and where story threading is triggered &mdash; and threading is <b>43.4%</b> of Anthropic spend, measured from five full days of the usage ledger. The code comment guessed 39%; the ledger says it guessed low. Threading is also skipped unless a category gained at least three new articles, or an hour has passed since its stories were last touched.</p>",
   spine: function(){
     return spine("after step 08 — the row is live", [
       ["id", '<span class="v">stable_hash(source_url + title)</span>'],
@@ -692,18 +726,20 @@ var STEPS = [
     });
   },
   hood:[["poller","<span class='p'>services/batch_poller.py</span> &middot; POLL_INTERVAL_SECONDS = 60 &middot; production only"],
+        ["idle means blocked","the loop is event-driven: with nothing pending it waits on a signal rather than sleeping and re-querying. Sixty seconds is the interval between real polls, not a heartbeat against the database &mdash; which is what lets the Neon compute actually sleep."],
         ["manifest","api_batches &mdash; batch_id PK, kind &isin; context | primer | entity, status, metadata JSONB"],
         ["discount","Batch API &mdash; flat 50% off, SLA up to 24h, typically minutes"],
+        ["now metered","all three handlers call <span class='p'>log_batch_usage()</span>. They previously recorded nothing, which is where ~$1/day of unattributed spend was hiding."],
         ["two entity sets","articles.entities is free text from the extractor. articles.entity_links is only what resolved to a dossier. For our article: four entities extracted, one linked."]]
 },
 {
   act:"What lands later", num:"", paid:true,
   title:"Story threading &mdash; where the four meet",
-  lede:"Now the other three articles matter. A nested state machine finds the same event across outlets and writes one story with each outlet's framing attached.",
+  lede:"Now the other three articles matter. Something has to notice they are one event — and as of 10 August 2026 that job runs on a different engine than the one described below.",
   body:
-    "<p>It runs per category and usually does not run at all &mdash; the skip guard exists because threading is the single most expensive thing in the system. When it does run, it looks at the last 48 hours, at most 50 articles, and only rows whose entity extraction has already landed. An article whose batch has not returned simply waits for the next cycle.</p>" +
-    "<p>Clustering is one Haiku call, with the instruction that &ldquo;same event&rdquo; means the same specific occurrence, not the same broad topic. Our four articles are the same occurrence. Then each cluster is synthesized into a headline, a neutral summary, and a per-outlet framing with a tone label.</p>" +
-    "<h3>The framing spread is the product</h3>" +
+    "<p><b>The rescan path described here was switched off on 2026-08-10</b> and replaced by incremental threading: instead of re-clustering a category every cycle, each new article is matched against its nearest neighbours with a free Postgres vector lookup, and one confirmation call decides whether to attach it to an existing story or start a new one. The rescan design is kept here because it is what produced our four-outlet story, and because how it failed is the more useful half.</p><p>It ran per category and usually did not run at all &mdash; the skip guard existed because threading was the single most expensive thing in the system. When it did run, it looked at the last 48 hours, at most 50 articles, and only rows whose entity extraction had already landed. An article whose batch had not returned simply waited for the next cycle.</p>" +
+    "<p>Clustering was one Haiku call, with the instruction that &ldquo;same event&rdquo; means the same specific occurrence, not the same broad topic. Our four articles are the same occurrence. Each cluster was then synthesized into a headline, a neutral summary, and a per-outlet framing with a tone label &mdash; and that synthesis step is unchanged under the new engine.</p>" +
+    "<h3>It used to rewrite what it already had</h3><p>Story IDs are a hash of the sorted member articles, so an identical ID means an identical member set &mdash; nothing to re-say. Yet synthesis fired before the upsert. Measured: <b>5,491 synthesis calls produced 2,500 stories, so 54% regenerated text that already existed.</b> The workflow now checks for the row first and reuses it unless the previous attempt failed, and reports a reuse rate per run.</p><h3>The framing spread is the product</h3>" +
     "<p>This is what Sift exists to show. The four outlets agree on every fact and differ entirely in posture &mdash; and the difference is legible in the verbs alone:</p>",
   fig: function(){
     return fig({
@@ -718,13 +754,27 @@ var STEPS = [
       note:"Headlines and outlets are verbatim from the corpus. The posture descriptions on the right are this page's reading of them, not model output — Sift's own synthesizer produces a framing and a tone per outlet, from a fixed set: neutral, urgent, analytical, critical, optimistic."
     });
   },
+  fig2: function(){
+    return fig({
+      t:"How the cutover settled",
+      s:"The figures above are the first live cycle. These are the ones that held.",
+      body:'<table class="data"><thead><tr><th>Metric</th><th>Rescan</th><th>First cycle</th><th>Settled</th></tr></thead><tbody>' +
+        '<tr class="hl"><td>Articles grouped into stories</td><td>4.8%</td><td>8.9%</td><td class="up">35.5%</td></tr>' +
+        '<tr><td>story_clusterer.cluster</td><td>$1.54/day</td><td>&mdash;</td><td class="up">$0.00 &mdash; retired</td></tr>' +
+        '<tr><td>story_confirmer.confirm</td><td>&mdash;</td><td>&mdash;</td><td>$0.27 / 1k</td></tr>' +
+        '<tr class="hl"><td>Threading, all in</td><td>$2.34 / 1k</td><td>&mdash;</td><td class="up">$1.11 / 1k</td></tr>' +
+        '<tr><td>Marginal orphan rate</td><td>99.5% of rows</td><td>&mdash;</td><td class="up">0</td></tr>' +
+        "</tbody></table>",
+      note:"<b>The objection the cutover bar does not test.</b> Attach candidates were confirmed at <b>93%</b> (713/763) against <b>53%</b> for new clusters (895/1697), and the gap held from the first sample through 140 runs. A 93% acceptance rate looks like rubber-stamping on the one path that mutates existing stories &mdash; and all three cutover verdicts would have passed regardless. It is recorded as an open objection rather than folded into the win.<br><br>With the marginal orphan rate at zero, the backlog was finally safe to clear: <b>60,020 of 61,143 orphaned story rows</b> deleted on 2026-08-10, archived first, taking the stories table from <b>132 MB to 2.2 MB</b>. The 624 orphans inside the 48-hour window were left alone &mdash; an article could still have been on its way."
+    });
+  },
   spine: function(){
     return spine("after threading", [
-      ["story_id", '<span class="new">sha256 of the sorted member IDs, first 16 chars</span>'],
+      ["story_id", '<span class="new">derived once from the seed members — stable as the story grows</span>'],
       ["article_count", '<span class="new">4</span>'],
       ["synthesis_status", '<span class="new">complete</span>'],
       ["distinct outlets", '<span class="new">4 — passes the single-outlet gate</span>']
-    ], "Story IDs are content-addressable, so if clustering later shifts, this ID changes and the old story row is orphaned. The read path compensates by counting members live and dropping anything below two.");
+    ], "Under the rescan scheme this ID was a hash of the membership, so a fifth outlet would have replaced the story rather than joined it. The incremental engine derives it once from the seed and never changes it. The read path still counts members live and drops anything below two — the compensation outlived the defect it compensated for.");
   },
   war:{
     t:"Zero stories, reported as success",
@@ -732,11 +782,26 @@ var STEPS = [
          "<p>Separately, &ldquo;how four outlets covered this&rdquo; sometimes turned out to be four posts from one outlet. That one was a data problem wearing a copywriting costume.</p>",
     fix:"max_tokens = min(2048, 128 + 40n) &middot; stop_reason logged on every call &middot; clusters with &lt;2 distinct source_name dropped outright"
   },
+  war2:{
+    t:"The first live minute found what 90 shadow runs could not",
+    body:"<p>The replacement cleared every bar and then broke in a way the shadow could not have seen. On its first live run, <b>7 of 54 new stories lost members immediately, three of them down to zero</b>. One story was created with five members and kept none.</p>" +
+         "<p>The candidate finder snapshots the queue before any decision is applied, so the same loose article is offered to several candidates in one pass. Each confirmed create then re-pointed that article, silently stripping it from whichever story claimed it first. It also explains a single-outlet story that looked like it had slipped the two-outlet gate: the gate ran correctly at creation, and the story was hollowed out afterwards.</p>" +
+         "<p>The line worth keeping: <em>the old scheme orphaned stories by re-deriving their ids; this orphaned them by moving their contents.</em> A shadow that cannot write cannot find write bugs.</p>",
+    fix:"_create claims only members still unattached at write time (story_id IS NULL OR id = $article)"
+  },
   hood:[["graph","<span class='p'>workflows/story_workflow.py</span> &middot; fetch &rarr; extract &rarr; cluster &rarr; synthesize"],
         ["window","RECENCY_WINDOW_HOURS = 48 &middot; LIMIT 50 &middot; only rows where jsonb_typeof(entities) = 'object'"],
         ["no LLM","the extract step makes no model call &mdash; it assembles the map from columns the poller already filled"],
         ["synthesis","tone &isin; neutral | urgent | analytical | critical | optimistic"],
-        ["prompt rule","&ldquo;Where the sources disagree about a fact, say they disagree. Do not pick a winner.&rdquo;"]]
+        ["prompt rule","&ldquo;Where the sources disagree about a fact, say they disagree. Do not pick a winner.&rdquo;"],
+        ["reuse","<span class='p'>synthesis_stats</span> per run &mdash; category, clusters, stories, synthesized, reused, skipped_single_outlet"],
+        ["successor — now live","<span class='p'>INCREMENTAL_THREADING_ENABLED=true</span> since 2026-08-10; the rescan path is off. The code default in app/config.py is still False &mdash; production sets it by environment."],
+        ["why it cleared","90 shadow runs: <b>28.4%</b> of articles would group against the rescan path&rsquo;s <b>4.8%</b>, the confirmer rejected 33%, and the near-miss share sat 3 points <em>below</em> chance rather than above it."],
+        ["first live run","200 articles analysed, 37 stories created, grouping <b>4.8% &rarr; 8.9% in one cycle</b>."],
+        ["settled at","grouping <b>35.5%</b>, marginal orphan rate <b>0</b>, queue drained to 40. story_clusterer.cluster is at $0.00 &mdash; the rescan path is not merely off, it is unbilled."],
+        ["synthesis now","runs only when a story&rsquo;s OUTLET SET changes &mdash; a second article from an outlet the story already has adds nothing to synthesize. Output ceiling scales with the cluster instead of being fixed."],
+        ["failed stories","<span class='p'>_sweep_failed</span> retries synthesis_status='failed' at the end of every pass, bounded by synthesis_attempts &mdash; under incremental threading the old retry reader never ran, so such rows were invisible to the feed."],
+        ["the old ceiling","LIMIT 50 made the nominal 48h window effectively ~3.3h for politics, ~3.7h for sports &mdash; same-event articles hours apart never met. 58,259 of 58,557 story rows (99.5%) had zero members."]]
 },
 
 /* ─────────── ACT 4 · KEPT HONEST ─────────── */
@@ -807,28 +872,27 @@ var STEPS = [
   body:
     "<p>If the guard is enabled and the ledger cannot be read, paid calls are blocked rather than allowed. That is the uncomfortable choice &mdash; a database hiccup can stall the pipeline &mdash; but the alternative is that the one failure mode which lets spend run unbounded is also the one hardest to notice. A stalled pipeline is loud. An unmetered one is silent until the invoice.</p>" +
     "<p>Each call writes back into a daily ledger keyed by date, provider, model and operation, so spend is attributable per step rather than as one monthly number.</p>" +
-    "<p>This exists because the estimate was wrong by roughly twenty times: actual spend is around $10 a day, against a long-held belief of about $15 a month. Nothing was broken. The number had simply never been measured.</p>",
+    "<p>This exists because the estimate was wrong by roughly twenty times: the belief was about $15 a month; the bill was about $10 a day. Nothing was broken. The number had simply never been measured.</p><p>It has been measured since. Five full days of the ledger put the pipeline at <b>$8.99/day</b>, and the breakdown was not what the code comments assumed.</p>",
   fig: function(){
     return fig({
-      t:"What our article cost",
-      s:"Rates are the published ones in the repo. Per-article totals are not separately metered, so this is the rate card, not a receipt.",
-      body:'<table class="data"><thead><tr><th>Step</th><th>Service</th><th>Rate</th></tr></thead><tbody>' +
-        "<tr><td>01 fetch_rss</td><td>&mdash;</td><td>free</td></tr>" +
-        "<tr><td>02 deduplicate</td><td>&mdash;</td><td>free</td></tr>" +
-        '<tr class="hl"><td>03 summarize</td><td>Haiku 4.5</td><td>$1.00/M in &middot; $5.00/M out</td></tr>' +
-        '<tr class="hl"><td>04 context</td><td>Haiku 4.5, batch</td><td>&minus;50%</td></tr>' +
-        '<tr class="hl"><td>05 primer</td><td>Haiku 4.5, batch</td><td>&minus;50%</td></tr>' +
-        '<tr class="hl"><td>06 embed</td><td>voyage-3-lite</td><td>$0.02/M</td></tr>' +
-        '<tr class="hl"><td>07 link_entities</td><td>Haiku 4.5 + cache</td><td>cache read $0.10/M vs $1.00/M</td></tr>' +
-        "<tr><td>08 store</td><td>&mdash;</td><td>free, starts two paid jobs</td></tr>" +
+      t:"Where the money actually goes",
+      s:"Five full days of the usage ledger, 2026-07-31 to 08-04. $8.99/day.",
+      body:'<table class="data"><thead><tr><th>Call site</th><th>Share</th><th>Per day</th></tr></thead><tbody>' +
+        '<tr class="hl"><td>entity_linker_llm</td><td>46.2%</td><td>$4.15</td></tr>' +
+        "<tr><td>story_synthesizer</td><td>26.3%</td><td>$2.37</td></tr>" +
+        "<tr><td>story_clusterer</td><td>17.1%</td><td>$1.54</td></tr>" +
+        "<tr><td>summarizer</td><td>10.3%</td><td>$0.93</td></tr>" +
+        "<tr><td>Voyage embeddings</td><td>0.02%</td><td>&mdash;</td></tr>" +
         "</tbody></table>",
-      note:"Web search, used only by Compare, is $0.010 per call."
+      note:"Two things this settled. Threading (clusterer + synthesizer) is <b>43.4%</b>, against the 39% guessed in a code comment. And the single largest line was one realtime call per article in the entity linker &mdash; whose own docstring had budgeted for &ldquo;~100 new articles/day&rdquo; when actual ingest is ~2,000/day. The root cause was a volume assumption, not pricing.<br><br><b>The verification this panel was waiting on has since landed.</b> Comparable scope, per 1,000 articles: <b>$5.38 &rarr; $3.24</b> (&minus;39.8%), threading alone &minus;52.5% &mdash; then roster narrowing took the all-in figure from <b>$3.88 to $2.69 per 1k</b>, roughly <b>$204/mo to $141/mo</b>. Read the ratios before the dollars: the first post-deploy run showed &minus;30% while every structural check said NOT DEPLOYED, because the drop was a light news day rather than a saving."
     });
   },
   hood:[["module","<span class='p'>services/cost_guard.py</span> &middot; check_budget()"],
         ["fail-closed","an unreadable ledger blocks the call rather than allowing it"],
         ["ledger","ai_usage_daily &mdash; PK (usage_date, provider, model, operation)"],
         ["alert","ai_cost_alert_threshold_ratio = 0.8 &mdash; once per UTC day, to logs and Sentry"],
+        ["batch paths","the three Batch API handlers used to record nothing, leaving ~$1/day unattributed between the ledger and the bill. <span class='p'>log_batch_usage()</span> now covers them at BATCH_DISCOUNT = 0.5. STATUS has not caught up to this fix."],
+        ["verification","<span class='p'>scripts/verify_cost_baseline.py</span> is volume-aware &mdash; an early run read &minus;30% purely because article volume was low. It now reports $/1k articles, described in STATUS as the best single number to quote."],
         ["feed health","separate daily monitor; leash_for(active_days) scales tolerance to each outlet&rsquo;s own publishing rhythm"]]
 },
 
@@ -838,16 +902,61 @@ var STEPS = [
   title:"Browse",
   lede:"Everything so far happened on a schedule so that this does not have to. Opening a category is one indexed query.",
   body:
-    "<p>Ranking is a single expression: importance score, decayed exponentially by age. Our article, whose score arrived late from the batch poller, defaults to 3 &mdash; the middle of the 1&ndash;5 scale &mdash; so a missing score is neutral rather than disqualifying.</p>" +
+    "<p>Ranking was a single expression: importance score, decayed exponentially by age. Our article, whose score arrived late from the batch poller, defaults to 3 &mdash; the middle of the 1&ndash;5 scale &mdash; so a missing score is neutral rather than disqualifying. That expression is still in there, and it is now one factor of seven; the next step is what happened to it.</p>" +
     "<h3>The 30-day floor that looks redundant</h3>" +
     "<p>The query also refuses anything older than 30 days, which appears pointless: the exponential decay already multiplies a 30-day-old row by about 1e&minus;13, so it can never rank. But without the floor, Postgres still <em>fetches and sorts</em> every feed-quality row in the category &mdash; 29,000 for business, 73,000 for sports.</p>" +
     "<p>The decay makes old rows unrankable. The floor makes them unread.</p>" +
     "<p>Because our article ended up in a story, it surfaces through the stories query instead, which counts members live and requires at least two &mdash; the compensation for content-addressable story IDs that go stale when clustering shifts.</p>",
   hood:[["queries","<span class='p'>sift/lib/db.ts</span> &middot; getArticlesByCategory, getStoriesWithArticles"],
-        ["ranking","COALESCE(importance_score, 3) * EXP(&minus;days_old)"],
+        ["pool ceiling","MAX_ARTICLES_PER_SOURCE = 6 of the 50-row standalone pool &mdash; NY Post held 23 of 50 in <code>top</code> the day this was added"],
         ["indexes","idx_articles_feed (category, published_date DESC) &middot; idx_articles_story_feed &middot; idx_stories_feed"],
         ["also filtered","from_search = false &middot; non-empty summary &middot; summaries starting &ldquo;unable to provide&rdquo; excluded at read time"],
         ["stack","Next.js 16 &middot; React 19 &middot; Tailwind v4 &middot; Clerk &middot; Sentry &middot; pool max 5"]]
+},
+{
+  act:"When a reader arrives", num:"", paid:false,
+  title:"Ranking, and the eval that grades it",
+  lede:"Seven factors now stand between a row and the top of the feed. The blind eval says the oldest one is the part still wrong.",
+  body:
+    "<p>Importance &times; decay orders a feed by <em>how big</em> and <em>how recent</em>, and nothing else. It cannot tell an op-ed from a report, a week-in-review roundup from the news it rounds up, or a story four newsrooms independently covered from one outlet filing four times. Six factors were added in eleven days to say those things, each one multiplying the same core.</p>" +
+    "<p>Every one of them is a constant in one file with the evidence for its value written above it, and every one reverts to 1.0. That is deliberate: a ranking change that cannot be turned off individually cannot be attributed either.</p>" +
+    "<h3>Stories rank differently, and on outlets</h3>" +
+    "<p>A story&rsquo;s significance is its corroboration curve &mdash; <code>1 + 2.0 &times; ln(1 + distinct outlets)</code> &mdash; multiplied by the mean importance of its members, with a floor: if any single member scores 4 or 5, the story never ranks below that member. A two-outlet story scores just over an importance-3 article; an eighteen-outlet story clears the importance-5 ceiling.</p>" +
+    "<p>&ldquo;Outlets&rdquo; there means <b>distinct outlets, not article rows</b>, and that correction matters more than it sounds. Over seven days of complete stories, 29% had more articles than outlets and 18% were at 1.5&times; or worse &mdash; Sports Illustrated alone files around 298 articles a day. Counting rows let one outlet manufacture the corroboration the curve exists to measure.</p>",
+  fig: function(){
+    return fig({
+      t:"The seven factors",
+      s:"Every one multiplies the core. Every one reverts to 1.0. Source: sift/lib/db.ts.",
+      body:'<table class="data"><thead><tr><th>Factor</th><th>Weight</th><th>Applies when</th></tr></thead><tbody>' +
+        '<tr class="hl"><td>importance &times; decay</td><td>1&ndash;5 &times; e<sup>&minus;days</sup></td><td>always &mdash; the shared core</td></tr>' +
+        '<tr><td>grim</td><td>0.6</td><td>tone = grim AND importance &le; 3</td></tr>' +
+        '<tr><td>civic density</td><td>up to 1.3</td><td>+0.1 per weighted dossier link, capped at 3</td></tr>' +
+        '<tr><td>opinion</td><td>0.6</td><td>outlet-declared op-ed, at any importance</td></tr>' +
+        '<tr><td>roundup</td><td>0.4</td><td>program episodes, briefs, week-in-review</td></tr>' +
+        '<tr><td>low importance</td><td>0.35</td><td>importance &le; 2, in <code>top</code> only</td></tr>' +
+        '<tr><td>non-news genre</td><td>0.5</td><td>genre = feature or soft</td></tr>' +
+        "</tbody></table>",
+      note:"Civic density is the only one that lifts rather than damps, and it is capped on purpose: at +30% maximum it re-orders within a tier but can never promote a routine council vote over a disaster. Its weights come straight from the dossier links of step 07 &mdash; bill and politician count 1.0, an organization 0.5, the outlet itself 0. The two model-supplied inputs, tone and genre, are the free third and fourth keys from step 04."
+    });
+  },
+  fig2: function(){
+    return fig({
+      t:"What the blind eval said",
+      s:"22 hand-scored pairs, blind, sampled where the new formula disagrees with the one it replaced.",
+      body:'<table class="data"><thead><tr><th>Formula</th><th>Agrees with the labeler</th><th></th></tr></thead><tbody>' +
+        "<tr><td>pre-v2 &mdash; importance &times; decay</td><td>10 / 22</td><td>45%</td></tr>" +
+        "<tr><td>v2, stages 1&ndash;5</td><td>7 / 22</td><td>32% &mdash; worse than what it replaced</td></tr>" +
+        '<tr class="hl"><td>current &mdash; stages 1&ndash;7 + floor</td><td class="up">14 / 22</td><td>64%</td></tr>' +
+        "</tbody></table>",
+      note:"<b>Two results here are not wins.</b> First: on the 9 <em>control</em> pairs &mdash; the ones where all three formulas agree &mdash; all three scored 4/9, below chance. Nothing shipped that day touched the shared core, so this is the first evidence that the core is the weak part rather than the safe part. Second: all three misses were <code>world</code>, and they are one pattern &mdash; the labeler picked Afghanistan&rsquo;s 20 million girls and women, the formula picked a beach-trespasser arrest. That is exactly the spectacle-over-consequence failure the low-importance dampener exists to fix, and it is scoped to <code>top</code> only, while <b>46% of <code>world</code> articles score importance &le; 2</b>. The eval was built to grade the changes; what it actually found was the thing nobody changed."
+    });
+  },
+  hood:[["constants","<span class='p'>sift/lib/db.ts</span> &middot; each with its evidence in the comment above it &middot; mirrored in components/NewsAggregator.tsx and lib/civicWeight.ts"],
+        ["story curve","<span class='c'>STORY_BASE <i>1</i></span><span class='c'>STORY_BOOST <i>2.0</i></span><span class='c'>importance center <i>2.5</i></span><span class='c'>floor at member importance <i>&ge;4</i></span>"],
+        ["why base moved with boost","raising the boost alone floods the feed with stories &mdash; sports went 9 &rarr; 14 of the top 20. Lowering the base in step buys more story-vs-story reordering at an identical story/article mix."],
+        ["eval","<span class='p'>scripts/eval_ranking_pairs.py</span> &middot; blind pairs, stratified &middot; the harness refuses a verdict inside a &plusmn;2 band"],
+        ["tripwire","services/feed_balance.py &mdash; daily snapshots to feed_balance (migration 022), so a drift in the mix is visible before a reader notices it"],
+        ["written down first","<span class='p'>sift/docs/RANKING_SIGNALS.md</span> &mdash; the signal model and the staged plan predate stage 1"]]
 },
 {
   act:"When a reader arrives", num:"", paid:true,
@@ -857,12 +966,18 @@ var STEPS = [
     "<p>Three nodes. A parallel fan-out, one Claude call per outlet with the web-search tool. Then a single call that extracts three to eight claims and tags each <code>unanimous</code>, <code>majority</code>, <code>disputed</code> or <code>unique</code>. Then pure validation, with no model call at all.</p>" +
     "<p>Outlet names are validated against an allowlist built from the database itself, and the topic string is sanitized before it reaches a prompt. Both exist because this is the one endpoint where a reader&rsquo;s text becomes part of a paid call.</p>" +
     "<h3>Four timeouts, deliberately ordered</h3>" +
-    "<p>Backend 50s &lt; proxy abort 55s &lt; Vercel maxDuration 60s &lt; client 65s. Invert any pair and the reader gets a platform error page instead of an application error that explains what happened.</p>",
+    "<p>Backend 50s &lt; proxy abort 55s &lt; Vercel maxDuration 60s &lt; client 65s. Invert any pair and the reader gets a platform error page instead of an application error that explains what happened.</p>" +
+    "<h3>Fifteen seconds is a long time to look at a spinner</h3>" +
+    "<p>The workflow now streams. A parallel endpoint emits server-sent events as each stage completes, so the wait is narrated &mdash; searching this outlet, then that one, then extracting &mdash; rather than blank. The claims themselves come back <b>disputed first</b>, because the disputed ones are the reason anybody ran the comparison.</p>" +
+    "<p>And there is now a way in without paying: one real comparison is generated per day and cached, so a reader who has never signed in sees the actual feature working on today&rsquo;s news instead of a static screenshot. It costs one compare a day, inside the same guard as everything else.</p>",
   hood:[["graph","<span class='p'>workflows/compare_workflow.py</span> &middot; search &rarr; extract &rarr; format"],
         ["search","web_search_20250305 &middot; max_uses 3 &middot; PER_SOURCE_TIMEOUT = 20"],
         ["extract","Haiku &middot; max_tokens 4096 &middot; 3&ndash;8 claims"],
         ["guard","COMPARE_COST_ESTIMATE_PER_SOURCE_USD = 0.04, pre-checked against the cost guard &middot; 10/minute"],
-        ["allowlist","outlet_profiles.name &cup; .slug &cup; source_name_aliases.raw_source_name"]]
+        ["allowlist","outlet_profiles.name &cup; .slug &cup; source_name_aliases.raw_source_name"],
+        ["streaming","POST /v1/analyze/compare/stream &middot; SSE, one event per stage &middot; <span class='p'>app/routers/compare.py</span>"],
+        ["daily example","<span class='p'>services/daily_compare.py</span> &middot; migration 021 &middot; one generated comparison per day, refreshed by pipeline key"],
+        ["claim order","disputed &rarr; majority &rarr; unanimous &rarr; unique &mdash; stable sort, so the contested points lead"]]
 },
 {
   act:"When a reader arrives", num:"", paid:false,
@@ -871,7 +986,7 @@ var STEPS = [
   body:
     '<div class="pull">Sift doesn&rsquo;t compute political lean; it surfaces what published raters say verbatim.<span class="src">sift/docs/HOW_IT_WORKS.md</span></div>' +
     "<p>That constraint does a lot of work. Every field traces to a named source &mdash; OpenSecrets, GovTrack, ProPublica, FEC, FARA, AllSides, Media Bias/Fact Check &mdash; so the methodology page is defensible and no reader has to take Sift&rsquo;s word for anything. It also means Sift owns no proprietary score it would have to defend.</p>" +
-    "<p>Our article got one link, to The Hill&rsquo;s outlet dossier: parent company, founding date, funding model, and third-party lean and factuality ratings quoted rather than computed.</p>" +
+    "<p>The catalog has grown well past Congress. Executive-branch, foreign-leader and Supreme Court figures now live in <code>politician_profiles</code> alongside the 536 sitting members, each claim-bearing field paired with the record that backs it.</p><h3>Catalogued is not published</h3><p>A <b>publish floor</b> now separates the two. A dossier below the floor still renders and still resolves an entity chip &mdash; it is simply marked no-index and kept out of the sitemap. A politician needs a sourced role title; an organization needs governance, a self-description or a budget, each with its source. Foreign leaders additionally need a verification no older than 90 days, mirrored in TypeScript and SQL with whole-day UTC arithmetic so the two cannot disagree.</p><p><b>67 dossiers clear the floor</b> &mdash; 47 U.S. executive, 13 foreign, 9 Justices &mdash; taking the sitemap from 674 to 734 URLs.</p>" +
     "<h3>The MCP server</h3>" +
     "<p>A separate service exposes the same database to any MCP client with five read-only tools. Four are plain database reads at roughly 50ms. The fifth, <code>compare_outlets</code>, always reads Sift&rsquo;s own index first and only falls back to live web search when coverage is sparse &mdash; tagging each claim <code>index</code> or <code>web</code> so the caller knows which is which.</p>",
   fig: function(){
@@ -879,45 +994,77 @@ var STEPS = [
       t:"What is actually seeded",
       s:"Row counts from the CSVs in sift-api/data/.",
       body:'<table class="data"><thead><tr><th>Table</th><th>Rows</th><th>Contents</th></tr></thead><tbody>' +
-        "<tr><td>politician_profiles</td><td>536</td><td>sitting members of Congress &mdash; no executive branch</td></tr>" +
-        "<tr><td>outlet_profiles</td><td>57</td><td>parent, founding, funding, AllSides + MBFC ratings</td></tr>" +
-        "<tr><td>org_profiles</td><td>25</td><td>think tanks and federal agencies</td></tr>" +
-        "<tr><td>bill_profiles</td><td>1</td><td>Inflation Reduction Act of 2022</td></tr>" +
+        "<tr><td>politician_profiles</td><td>536 seed / <b>649 prod</b></td><td>+ executive, foreign leaders, 9 Justices; 531 carry a sourced score</td></tr>" +
+        "<tr><td>outlet_profiles</td><td>57 seed / 72 prod</td><td>parent, founding, funding, AllSides + MBFC ratings</td></tr>" +
+        "<tr><td>org_profiles</td><td>25 seed / <b>110 prod</b></td><td>think tanks, federal agencies, and 7 intergovernmental bodies</td></tr>" +
+        "<tr><td>bill_profiles</td><td>1 seed / <b>25 prod</b></td><td>the seed CSV is not the corpus &mdash; this one was quoted as &ldquo;one bill&rdquo; twice</td></tr>" +
+        '<tr class="hl"><td>term_profiles</td><td>&mdash; / <b>37 prod</b></td><td>a fifth dossier type, added after this page was last revised</td></tr>' +
+        "<tr><td>entity_aliases</td><td>98</td><td>curated surface forms &mdash; 71 org, 20 politician, 7 outlet</td></tr>" +
         "</tbody></table>",
-      note:"This is why step 07 linked only the outlet. The discrepancy this panel used to flag — the MCP server querying a fifth table, judge_profiles, with an entity type of <b>judge</b>, against no migration in sift-api/migrations — is <b>resolved as of 2026-08-05</b>. The table was real but came from a branch that never merged, seeded into prod by hand; migration 016 moved its nine Justices into politician_profiles under id_source&nbsp;=&nbsp;'scotus' and dropped it, and the MCP server no longer exposes a judge type. Four dossier types are exposed; four are linked."
+      note:"<b>Do not quote a dossier count from a file.</b> The project&rsquo;s own status document now carries a warning that its inventory paragraph has been wrong twice &mdash; corrected once, then silently reverted by a later merge &mdash; and instructs the reader to query the tables instead. Both the seed CSVs and the prose have been wrong, in places by an order of magnitude (&ldquo;one bill&rdquo; against 25 in production).<br><br>Since 2026-08-07, 531 of those politician dossiers also carry an environmental score from the League of Conservation Voters &mdash; deliberately headed <em>Advocacy-group scorecards</em> rather than <em>Interest-group ratings</em>, because no conservative counterpart is obtainable and presenting one advocacy group&rsquo;s number as a general rating is exactly what the project&rsquo;s own rules forbid. Migration 019 reshaped the column so a rating cannot be stored without the year and the URL backing it &mdash; the third time that same defect has been removed from a table.<br><br>The discrepancy this panel used to flag — the MCP server querying a fifth table, judge_profiles, with an entity type of <b>judge</b>, against no migration in sift-api/migrations — is <b>resolved as of 2026-08-05</b>. The table was real but came from a branch that never merged, seeded into prod by hand; migration 016 moved its nine Justices into politician_profiles under id_source&nbsp;=&nbsp;'scotus' and dropped it, and the MCP server no longer exposes a judge type. Four dossier types are exposed; four are linked."
     });
   },
   hood:[["migrations","006_outlet_profiles.sql &middot; 007_politician_org_bill_profiles.sql &middot; 012/013 org budget provenance"],
         ["linked from","articles.entity_links JSONB, GIN-indexed"],
         ["frontend","/politician/[bioguide] &middot; /org/[slug] &middot; /bill/[id] &middot; /outlet/[slug]"],
-        ["mcp","<span class='p'>sift-mcp</span> &middot; FastMCP &middot; sparse-coverage thresholds: top score &lt; 0.42, &lt; 3 outlets, or &lt; 5 articles"]]
+        ["mcp","<span class='p'>sift-mcp</span> &middot; FastMCP &middot; five tools &middot; sparse-coverage thresholds: top score &lt; 0.42, &lt; 3 outlets, or &lt; 5 articles"],
+        ["withholding","org dossiers gate every claim-bearing field on its source &mdash; an unsourced founding year renders as withheld, and the page says so, rather than rendering blank"],
+        ["for agents","<span class='p'>sift/public/llms.txt</span> &mdash; tells a crawler what this site holds and how to read it"]]
 },
 
 /* ─────────── ACT 6 · CLOSE ─────────── */
 {
+  act:"When a reader arrives", num:"", paid:false,
+  title:"The term layer",
+  lede:"A fifth dossier type, added in August. It is the first one whose value is not the row.",
+  body:
+    "<p>Every dossier type so far answers <em>who</em> or <em>what organization</em>. This one answers the quieter question underneath: the reader who gets through the article and still does not know what <em>cloture</em> is, or <em>reconciliation</em>, or <em>certiorari</em>.</p>" +
+    "<p>Each term gets a page &mdash; a definition, and then the coverage: every article in Sift&rsquo;s index where that term is doing work. Coverage counts the primer as well as the headline, because a term is often explained in the background paragraph rather than named in the title. An index over all of them lives at <code>/glossary</code>.</p>" +
+    "<h3>Why this one is different</h3>" +
+    "<p>The definition is the commodity half. Cornell&rsquo;s Legal Information Institute already wrote it, and wrote it better. The half nobody else can assemble is the second one: <em>here is that term, in this week&rsquo;s news, across these outlets.</em> That only exists because the corpus underneath it exists.</p>" +
+    "<p>It grows at the speed of hand work &mdash; a person reading a statute and writing two sentences &mdash; not at the speed of a seeder, which is why it is reported as a flat count rather than folded into a headline number. Thirty-seven rows, all published.</p>" +
+    "<p>It is also the answer to a question the project has open: if the dossier set turns out to be too thin to be worth paying for, the response is depth from what Sift already holds, not more rows.</p>",
+  hood:[["routes","<span class='p'>sift/app/term/[slug]/page.tsx</span> &middot; <span class='p'>sift/app/glossary/page.tsx</span>"],
+        ["table","term_profiles &mdash; 37 rows in production, queried 2026-08-18. STATUS said 24 the day before."],
+        ["coverage","matched against title, summary AND context_primer &mdash; a term explained only in the primer still counts"],
+        ["not linked","terms are not written into articles.entity_links; the four linkable types are unchanged"],
+        ["sourcing","hand-written against the statute, one definition at a time &mdash; the constraint is deliberate"]]
+},
+{
   act:"Close", num:"", paid:false,
   title:"What isn&rsquo;t measured",
-  lede:"The recurring failure in this system has a name: reporting success while producing nothing.",
+  lede:"The recurring failure in this system has a name: reporting success while producing nothing. The most recent one it found was in a number this page used to be proud of.",
   body:
     "<p>Washington Post returned HTTP 400 for fifteen days. A fixed token limit truncated the clustering response and produced zero stories. A batch response was trusted to line up with its input and attached summaries to the wrong articles. Every one of those paths logged success, and every one was found by hand, weeks late, by someone looking at something else.</p>" +
-    "<p>Most of the machinery in this walkthrough &mdash; the feed stats, the logged stop reason, the exact-set index proof, the strict zip, the daily ledger &mdash; exists to convert that class of silence into noise.</p>" +
-    "<h3>And the part that is still silent</h3>" +
-    "<p>Our four articles clustered correctly. I know that because a human labeled them in the corpus, not because Sift measured it.</p>" +
-    '<div class="pull">Until then, event-clustering accuracy is <b>unmeasured</b> and should not be quoted.<span class="src">sift-api/STATUS.md</span></div>' +
-    "<p>That line is in the repo&rsquo;s own status document, written to stop a future version of its author from citing a number that does not exist. It is the most load-bearing sentence in the project: a system that gates its own output on evidence has to hold its own claims to the same gate.</p>",
+    "<p>Most of the machinery in this walkthrough &mdash; the feed stats, the logged stop reason, the exact-set index proof, the strict zip, the daily ledger &mdash; exists to convert that class of silence into noise.</p><h3>And the newest one, from this week</h3><p>The threading replacement was gated behind 90 shadow runs and cleared every bar set for it. Its worst defect &mdash; new stories being hollowed out to zero members by the very next decision in the same pass &mdash; appeared in the first minute of live traffic. The shadow could not have caught it, because a shadow that cannot write cannot find write bugs.</p><p>The project&rsquo;s own note on it is the right one to keep: <em>a bar that a change clears is not the same as a change that is understood.</em></p>" +
+    "<h3>The part that was silent, and is not any more</h3>" +
+    "<p>Our four articles clustered correctly. I know that because a human labeled them in the corpus, not because Sift measured it.</p><p>For a while the project claimed otherwise. The public decision register asserted <b>&ldquo;~97% accuracy on event-level clustering&rdquo;</b> and ~90% for embedding similarity &mdash; with no eval set, no metric, and no test of the clusterer at all. Both were retracted on 2026-07-30 and marked unmeasured. Two adjacent claims in the same entry were also wrong: that all prompts were batched rather than per-article, and a cost figure that was off by about six times.</p><p>The repo&rsquo;s own note on it is the right epitaph: an unbacked accuracy figure in a public decision register was the single worst artifact in these repositories, and it was load-bearing in interview conversations.</p>" +
+    '<div class="pull">Until then, event-clustering accuracy is <b>unmeasured</b> and should not be quoted.<span class="src">sift-api/STATUS.md, until 2026-08-13</span></div>' +
+    "<p>That line was in the repo&rsquo;s own status document, written to stop a future version of its author from citing a number that does not exist. On 13 August the number was produced.</p>" +
+    "<h3>ARI 0.538</h3>" +
+    "<p>Three hundred labeled articles, ninety carrying an event ID, scored over fifteen repeats: <b>ARI 0.538, pairwise F1 0.779, multi-outlet precision 0.607.</b> The retracted claim was ~97%. The real number is nowhere near it &mdash; which is the whole argument for having retracted it rather than defended it.</p>" +
+    "<p>ARI is the headline on purpose, because it is chance-corrected: an all-singletons prediction &mdash; this system&rsquo;s actual failure mode &mdash; scores about 0.0 rather than looking respectable. Purity would have scored that same failure 1.0, which is exactly why it is not a gate.</p>" +
+    "<p>And the caveat has to travel with the number: <b>the corpus labels have never been human-validated.</b> Forty blind pairs sit in the repo with zero verdicts filled and no annotator provenance recorded. So this measures agreement with the labels, not agreement with the truth &mdash; an LLM-labeled corpus scored by an LLM judge is measuring family resemblance. Roughly twenty minutes of hand labeling would close it, and it is unclosed.</p>" +
+    "<p>The sentence in the status document is still the most load-bearing one in the project, but now for the opposite reason to the one it started with: a system that gates its own output on evidence has to hold its own claims to the same gate, including the flattering ones.</p>",
   fig: function(){
     return fig({
       t:"Measured, and not",
       body:'<table class="data"><thead><tr><th>Measured</th><th>Not measured</th></tr></thead><tbody>' +
-        "<tr><td>why_it_matters quality &mdash; 500 articles, judged</td><td>event-clustering accuracy</td></tr>" +
-        "<tr><td>feed health &mdash; daily, per outlet</td><td>entity-linking precision and recall</td></tr>" +
-        "<tr><td>spend &mdash; per day, model and operation</td><td>summary faithfulness against source text</td></tr>" +
-        "<tr><td>search funnel &middot; primer expansions</td><td>whether readers open the primer twice</td></tr>" +
+        "<tr><td>why_it_matters quality &mdash; 500 articles, judged</td><td>whether the clustering corpus labels are right</td></tr>" +
+        '<tr class="hl"><td>event clustering &mdash; ARI 0.538, 15 repeats</td><td>entity-linking precision and recall</td></tr>' +
+        "<tr><td>feed health &mdash; daily, per outlet</td><td>summary faithfulness against source text</td></tr>" +
+        "<tr><td>category assignment &mdash; 90.6% self-agreement</td><td>whether readers open the primer twice</td></tr>" +
+        "<tr><td>ranking &mdash; 22 blind hand-scored pairs</td><td>anything a reader actually does with a story</td></tr>" +
+        "<tr><td>spend &mdash; per day, model, operation and tokens</td><td>whether the corpus that grades clustering is sound</td></tr>" +
+        "<tr><td>threading grouping rate &mdash; 4.8% &rarr; 35.5%</td><td>whether those groupings are <em>correct</em></td></tr>" +
         "</tbody></table>",
-      note:"The clustering corpus exists and is partly labeled; it needs roughly 3–4 hours of hand review before the first real accuracy number can be produced."
+note:"<b>Four rows crossed from right to left this month, and one arrived on the right by being honest about the left.</b> A summary-faithfulness eval was built, run, and retracted: it scored the incumbent at 0.288 “supported,” which turned out to be measuring RSS teasers rather than the model — most articles carried no body to be faithful to. The harness now refuses to emit a number below 40 articles at 100+ body words, and step 01’s body-text change is what will make the eval possible at all.<br><br>The right-hand column is also where the clustering number now points. Measuring it produced a second, harder question — whether the labels it was scored against are themselves right — and that one is answered by a person, not a harness."
     });
   },
-  hood:[["sources","<span class='p'>sift-api/STATUS.md</span> &middot; sift/docs/HOW_IT_WORKS.md &middot; sift/docs/DECISIONS.md (D1&ndash;D46)"],
+  hood:[["sources","<span class='p'>sift-api/STATUS.md</span> &middot; sift/docs/HOW_IT_WORKS.md &middot; sift/docs/DECISIONS.md (D1&ndash;D61)"],
+        ["metrics","<span class='p'>services/cluster_metrics.py</span> &mdash; ARI, V-measure, pairwise P/R/F1, plus multi_outlet_precision, which applies the &ge;2-outlet gate to both partitions so it scores what readers actually see"],
+        ["replayable","each eval fixture stores prompt_sha256 &mdash; a changed prompt fails loudly instead of being scored against a stale response"],
+        ["half updated","sift/docs/DECISIONS.md D26/D27 retracted its ~97% claim in July with a notice saying neither number should be cited, but has not been given the August measurement. Correctly silent rather than correctly current."],
         ["stale, do not cite","sift/docs/ARCHITECTURE.md &mdash; claims 1024 dims (actually 512), &ldquo;100+ feeds&rdquo; (actually 59), and a 5-node pipeline"],
         ["corpora","data/eval/clustering_corpus.jsonl &mdash; labeled batches, awaiting hand review"]]
 }
@@ -926,11 +1073,16 @@ var STEPS = [
 /* incidents surfaced on the map view */
 var INCIDENTS = [
   { s:2,  t:"Fifteen silent days", d:"A feed returned HTTP 400 for two weeks and the run kept reporting success." },
+  { s:3,  t:"The duplicate the hash cannot see", d:"Section feeds publish the same URL twice. Measured at 3.79% of fetched articles, paid for twice, still unfixed." },
   { s:4,  t:"The model apologized on a live card", d:"Empty RSS bodies produced polite refusals that were written to the summary column." },
-  { s:8,  t:"Cloud, Banks and Hill", d:"Surname matching turned weather stories into civic dossier links." },
+  { s:8,  t:"Cloud, Banks, Hill — and then The Hill itself", d:"Surnames, then outlet names that are ordinary English. 5,838 false chips before eighteen names were withheld." },
   { s:11, t:"Zero stories, reported as success", d:"A fixed token limit truncated the clustering array mid-response." },
+  { s:11, t:"The first live minute found what 90 shadow runs could not", d:"New stories hollowed out to zero members by the next decision in the same pass. A shadow that cannot write cannot find write bugs." },
+  { s:11, t:"Ninety-nine and a half percent orphans", d:"Story identity was a hash of the membership, so every new outlet replaced the story instead of joining it. 60,020 rows pruned." },
   { s:12, t:"Articles carrying other articles' summaries", d:"A batch response was trusted to line up with its input instead of made to prove it." },
-  { s:14, t:"Off by twenty times", d:"Believed spend was ~$15/month. Actual was ~$10/day. Nothing was broken; nothing was measured." }
+  { s:14, t:"Off by twenty times", d:"Believed spend was ~$15/month. Actual was ~$10/day. Nothing was broken; nothing was measured." },
+  { s:20, t:"The 97% that was never true", d:"An unbacked accuracy claim sat in a public decision register. Retracted in July; measured in August at ARI 0.538." },
+  { s:20, t:"An eval that measured the wrong thing", d:"A faithfulness score of 0.288 was scoring RSS teasers, not the model. Built, run, retracted." }
 ];
 
 /* ════════════════════════════════════════════════════════════════
@@ -1002,6 +1154,8 @@ function render(i, animate){
   var dr = "";
   if (s.war) dr += drawer("war", "WHAT WENT WRONG", s.war.t,
     s.war.body + (s.war.fix ? '<div class="fixline"><b>The fix</b>' + s.war.fix + "</div>" : ""));
+  if (s.war2) dr += drawer("war", "WHAT WENT WRONG", s.war2.t,
+    s.war2.body + (s.war2.fix ? '<div class="fixline"><b>The fix</b>' + s.war2.fix + "</div>" : ""));
   if (s.hood) dr += drawer("hood", "UNDER THE HOOD", "Files, models and constants",
     "<dl>" + s.hood.map(function(r){ return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>"; }).join("") + "</dl>");
   if (dr) h += '<div class="drawers">' + dr + "</div>";
@@ -1083,7 +1237,7 @@ function renderMap(){
   var h = '<div class="map-head">' +
     '<p class="eyebrow">Overview</p>' +
     "<h2>The whole system on one page</h2>" +
-    "<p>Every box jumps to the step that covers it. Below, the failures that shaped the design &mdash; each one also a step.</p>" +
+    "<p>Every box jumps to the step that covers it. Below, the failures that shaped the design &mdash; each one also a step. Not all of them are closed.</p>" +
     "</div>" +
     '<div class="fig" style="grid-column:auto"><div class="fig-in"><div class="fig-scroll">' + mapSvg(true) + "</div></div></div>" +
     '<div class="ledger"><div class="ledger-h">What went wrong, and where it is covered</div>' +
@@ -1094,7 +1248,7 @@ function renderMap(){
     "</div>" +
     '<p class="colophon">Compiled from the sift, sift-api and sift-mcp repositories at their current state on disk. ' +
     "Every constant, model ID and metric was read out of the source rather than recalled; the followed article, its summary and its entities are real rows from the labeled clustering corpus. " +
-    "Where a value is illustrative rather than measured, the figure says so.</p>";
+    "Where a value is illustrative rather than measured, the figure says so. Dossier counts were queried against the production database rather than read from the seed files, which the repository&rsquo;s own status document now warns are wrong.<br><br>Revised 10 August 2026: the entity linker gained a free regex pre-gate, curated aliases and an 18-name blocklist; the dossier catalog grew past Congress and gained a publish floor; the cost breakdown moved from guess to ledger; and story threading cut over to an incremental engine that same evening.<br><br>Revised again <b>18 August 2026</b>, against 179 further commits. The threading cutover settled &mdash; grouping 4.8% &rarr; 35.5%, the old clustering call now unbilled, 60,020 orphaned rows pruned. The cost projection this page last flagged as unverified was verified, then beaten: $3.88 &rarr; $2.69 per 1,000 articles. Ranking grew from one expression to seven factors and acquired a blind eval that grades it &mdash; and found the one part nobody had changed. A fifth dossier type, civic terms, arrived. And the figure this page twice declined to quote &mdash; event-clustering accuracy &mdash; was measured at <b>ARI 0.538</b>, against a retracted claim of ~97%. Entity-link recall is still given as a caveat rather than a number.</p>";
   viewMap.innerHTML = h;
   wireMapNodes(viewMap);
   Array.prototype.forEach.call(viewMap.querySelectorAll(".inc"), function(b){
