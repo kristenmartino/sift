@@ -832,29 +832,33 @@ export const COPY = {
         "Sift shows what each outlet chose to emphasize — described, not labeled “biased” or “objective.” You read; the product does the legwork.",
       topicLabel: "Topic",
       topic: "The Federal Reserve's May rate decision",
+      // Shown only before the first daily comparison exists (or if the table
+      // is unreachable). The outlets are deliberately generic and the quotes
+      // are written, not sourced: attributing invented lines to Reuters, the
+      // WSJ and Bloomberg — which this block did until 2026-08-17, complete
+      // with "AllSides: Center" chips implying a rating had been applied —
+      // fabricated the one thing the product promises it never fabricates.
+      // noteLine now says outright that this is a mockup.
       frames: [
         {
-          outlet: "Reuters",
-          lean: "AllSides: Center",
+          outlet: "A wire service",
           quote: "Powell signals patience as inflation stays sticky; Fed leaves rates unchanged.",
         },
         {
-          outlet: "Wall Street Journal",
-          lean: "AllSides: Center",
+          outlet: "A financial daily",
           quote: "Markets read between the lines: rate cuts unlikely before the fall.",
         },
         {
-          outlet: "Bloomberg",
-          lean: "AllSides: Center",
+          outlet: "A markets desk",
           quote: "Wall Street recalibrates as rate-cut bets fade and bond yields climb.",
         },
       ],
       noteLine:
-        "Same event, three emphases. Sift puts them side by side and lets you draw the line.",
+        "An illustration of the format — the outlets are generic and the lines are written, not quoted. Sift replaces this with a real comparison once today's is generated.",
       // Live-example variants — used when the daily compare example exists
       // (sift-api writes one real comparison per UTC day, migration 021).
-      // The static Fed frames above stay as the fallback before the first
-      // generation ever runs, still labeled honestly by noteLine.
+      // The generic frames above stay as the fallback before the first
+      // generation ever runs; noteLine labels them as an illustration.
       liveTitleIt: "side by side.",
       liveTopicLabel: "Today's comparison",
       liveDisputedVs: " vs ",

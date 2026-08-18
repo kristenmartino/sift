@@ -8,10 +8,11 @@ const C = COPY.landingReskin.compare;
  *
  * With a daily example (sift-api generates one real comparison per UTC day),
  * this renders live output from the actual compare tool, dated. Without one
- * (first deploy, or the table hasn't been seeded), it falls back to the
- * original static Fed illustration, which noteLine keeps honest. This
- * resolves the old TODO(live-compare): real data replaced the fixture the
- * moment it could do so without fabricating anything.
+ * (first deploy, or the table unreachable), it falls back to a generic
+ * illustration of the format — no named outlets, no lean chips — which
+ * noteLine labels as written rather than quoted. This resolves the old
+ * TODO(live-compare): real data replaced the fixture the moment it could do
+ * so without fabricating anything.
  */
 export default function ComparisonDemo({
   example,
@@ -69,14 +70,13 @@ export default function ComparisonDemo({
                   <q>{claim.claim}</q>
                 </div>
               ))
-            : C.frames.map((f) => (
+            : // The fallback carries no lean chip: the frames are generic
+              // placeholders, and a rating badge beside one would imply a real
+              // outlet had been rated. noteLine labels the whole block instead.
+              C.frames.map((f) => (
                 <div className="sl-frame" key={f.outlet}>
                   <div className="sl-out">
                     <span className="sl-nm">{f.outlet}</span>
-                    <span className="sl-ln">
-                      <span className="sl-dot" aria-hidden />
-                      {f.lean}
-                    </span>
                   </div>
                   <q>{f.quote}</q>
                 </div>
