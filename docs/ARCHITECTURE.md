@@ -336,8 +336,12 @@ today's news instead of a screenshot.
 
 **Cost here does not scale with users.** Model spend scales with *articles
 ingested* — one reader or ten thousand costs the same — so the row that matters
-is not in this table. Per 1,000 articles, all in, spend went **$5.38 → $2.69**
-across August via incremental threading and linker roster narrowing. Re-derive
+is not in this table. Per 1,000 articles, all in, spend went **$5.38 → ~$2.29**
+across August via incremental threading and linker roster narrowing — a 57%
+reduction, measured over eight settled days (range $2.01–$2.54) rather than
+projected. The ranking inverted on the way: the entity linker was 46.2% of
+spend and the largest line, and now measures ~$0.21/1k; the summarizer is the
+largest at ~$0.71. Re-derive
 from `sift-api/scripts/verify_cost_baseline.py`; do not quote a monthly figure
 from this file, which has been wrong by an order of magnitude before.
 

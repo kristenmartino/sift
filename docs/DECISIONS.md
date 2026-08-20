@@ -546,7 +546,7 @@ We considered three approaches:
 
 **Attribution landed 2026-08-05, and the cost work it gated landed after it.** Five clean days of `ai_usage_daily` put spend at **$8.99/day**: `entity_linker_llm.link_text` 46.2% ($4.15), `story_synthesizer.synthesize` 26.3%, `story_clusterer.cluster` 17.1%, `summarizer.batch` 10.3%, Voyage 0.02%. Threading (clusterer + synthesizer) was **43.4%** — this entry's own code comment guessed 39%, which was close by luck rather than by method, since nothing had checked it.
 
-The root cause of the linker line was a volume assumption, not pricing: `services/entity_linker_llm.py` documents its economics as "~100 new articles/day" against an actual ingest of ~2,000. Two changes followed, both verified against the ledger rather than asserted — incremental threading (below) and roster narrowing on the linker. Measured per 1,000 articles, all in: **$3.88 → $2.69, roughly $204/mo → $141/mo**. Always re-baseline from `sift-api/scripts/verify_cost_baseline.py`, and read the per-1k figure rather than the daily one, which moves with the news.
+The root cause of the linker line was a volume assumption, not pricing: `services/entity_linker_llm.py` documents its economics as "~100 new articles/day" against an actual ingest of ~2,000. Two changes followed, both verified against the ledger rather than asserted — incremental threading (below) and roster narrowing on the linker. Measured per 1,000 articles, all in: **$3.88 → $2.69, roughly $204/mo → $141/mo**. *(Re-read against the ledger 2026-08-20: the realized figure settled at **~$2.29/1k**, better than the $2.69 recorded here. The $2.69 stands as what was measurable when this entry was written.)* Always re-baseline from `sift-api/scripts/verify_cost_baseline.py`, and read the per-1k figure rather than the daily one, which moves with the news.
 
 **Why this matters for a portfolio:** Good judgment > raw complexity. A hiring manager who sees a 5-node workflow where one node is a SQL ORDER BY will question your engineering taste. Four nodes where each earns its place shows you know when to reach for an LLM and when not to.
 
@@ -884,9 +884,9 @@ Both share tool handlers, the cost-cap pool, the Anthropic SDK pattern, and SSE;
 
 ---
 
-**Update 2026-08-18 — the economics were measured, and two of the blockers moved.** No expansion has been executed; the outlet set is still 56, ingested through 59 feeds. What changed is that the cost of doing it is no longer a guess: [`sift-api/docs/SOURCE_SCALING.md`](https://github.com/kristenmartino/sift-api/blob/main/docs/SOURCE_SCALING.md) (2026-08-11) prices expansion from measured per-stage tokens rather than from estimates.
+**Update 2026-08-18 — the economics were measured, and two of the blockers moved.** No expansion has been executed; the outlet set is still 56, ingested through 59 feeds. What changed is that the cost of doing it is no longer a guess: [`sift-api/docs/SOURCE_SCALING.md`](https://github.com/kristenmartino/sift-api/blob/main/docs/SOURCE_SCALING.md) (2026-08-11) prices expansion from measured per-stage tokens rather than from estimates. **These figures are now conservative:** realized spend settled at ~$2.29/1k by 2026-08-20, below the $2.69 the table is keyed on, so each column overstates.
 
-| expansion | at $2.69/1k (today) | at $3.88/1k (pre-narrowing) |
+| expansion | at $2.69/1k (as of 2026-08-18) | at $3.88/1k (pre-narrowing) |
 |---|---:|---:|
 | +50 outlets | $173–224/mo | $197/mo |
 | +100 outlets | $212–324/mo | $252–322/mo |
