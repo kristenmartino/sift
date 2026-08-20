@@ -1,1 +1,0 @@
-2026-08-20 [duplicate-of-open-work] Opened #287 to bump next 16.3.0->16.3.1 while dependabot's #281, already open and listed in my own output minutes earlier, contained that exact bump — ref: PR #287 / #281

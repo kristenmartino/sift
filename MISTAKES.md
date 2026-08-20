@@ -119,9 +119,12 @@ prevention, and whether it graduated into a CLAUDE.md rule.
   2. Two days later, PR #287 (`next` 16.3.0→16.3.1) was opened without
      cross-referencing #281, which carried the identical bump inside a
      broader grouped-dependency update and had appeared in the session's own
-     `gh pr list` output minutes earlier. Dependabot itself auto-closed #281
-     once #287 merged: "these dependencies are updatable in another way, so
-     this is no longer needed." (PR #287 / #281)
+     `gh pr list` output minutes earlier. The cost wasn't the redundant PR —
+     landing the bump separately dissolved dependabot's production group, so
+     it auto-closed #281 with "these dependencies are updatable in another
+     way," and the *other* two bumps in that group (`@anthropic-ai/sdk`,
+     `@clerk/nextjs`) went unlanded until dependabot re-proposed them as #288
+     the next day. (PR #287 / #281 / #288)
 - **Root cause:** Not "carelessness with #281" specifically — the shared
   mechanism is that a PR/issue number the session had just seen (or should
   have re-confirmed) got superseded by a stale one at the moment of acting.
@@ -133,9 +136,11 @@ prevention, and whether it graduated into a CLAUDE.md rule.
   output this session has already produced, rather than carrying a number
   over from earlier context.
 - **Status:** graduated → CLAUDE.md § End-of-PR doc-impact check
-  (2026-08-20). Severity was low in both cases — nothing shipped wrong, and
-  incident 2's overlap was self-resolved by dependabot — so this graduated
-  on the Repeat bar (2 occurrences of the same root cause), not Severity.
+  (2026-08-20). Incident 1 was low-severity (nothing shipped wrong).
+  Incident 2's direct overlap was self-resolved by dependabot, but it had a
+  real, if minor, cost — a full group-dissolution side effect delaying two
+  unrelated dependency bumps by a day — so this graduated on both the Repeat
+  bar (2 occurrences of the same root cause) and a mild Severity signal.
 
 **2026-08-20 — Turbopack/postcss Vercel build flake, root-caused and fixed [ci-build-flake]**
 
