@@ -21,10 +21,19 @@
  *
  * WHAT IS NOT CHECKED HERE, and why — see `describe("known gaps")` at the
  * bottom, which pins the measurement rather than leaving it to memory.
+ *
+ * Parses with `@typescript-eslint/typescript-estree`, not the `typescript`
+ * package's own `ts.createSourceFile`/`ts.forEachChild` (see #271). TypeScript
+ * 7's compiler/AST API moved off the package's stable entry point into
+ * subpaths the TS team itself labels unstable — a guard that certifies the
+ * suite should not depend on an API that could shift under a future point
+ * release. typescript-estree wraps whichever `typescript` is installed and
+ * exposes a stable ESTree-shaped AST regardless.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import ts from "typescript";
+import { parse, simpleTraverse, type TSESTree } from "@typescript-eslint/typescript-estree";
+import { getKeys } from "@typescript-eslint/visitor-keys";
 
 const TESTS_DIR = path.join(__dirname);
 
@@ -40,56 +49,86 @@ interface TestFn {
   file: string;
   name: string;
   describePath: string[];
-  body: ts.Node | undefined;
+  body: TSESTree.Node | undefined;
   text: string;
   isEach: boolean;
 }
 
-function sourceFiles(): { file: string; src: ts.SourceFile }[] {
+interface SourceFile {
+  file: string;
+  code: string;
+  ast: TSESTree.Program;
+}
+
+function sourceFiles(): SourceFile[] {
   return readdirSync(TESTS_DIR)
     .filter((f) => /\.tsx?$/.test(f))
     .sort()
-    .map((file) => ({
-      file,
-      src: ts.createSourceFile(
-        file,
-        readFileSync(path.join(TESTS_DIR, file), "utf8"),
-        ts.ScriptTarget.Latest,
-        /* setParentNodes */ true,
-        file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-      ),
-    }));
+    .map((file) => {
+      const code = readFileSync(path.join(TESTS_DIR, file), "utf8");
+      const ast = parse(code, { filePath: file, range: true, loc: true });
+      // Parent pointers, so a pragma check can walk up from any node.
+      simpleTraverse(ast, { enter: () => {} }, /* setParentPointers */ true);
+      return { file, code, ast };
+    });
+}
+
+function getText(code: string, node: TSESTree.Node): string {
+  return code.slice(node.range[0], node.range[1]);
+}
+
+/** Any AST child a node actually carries — arrays flattened, gaps skipped. */
+function forEachChild(node: TSESTree.Node | undefined, cb: (child: TSESTree.Node) => void): void {
+  if (!node) return;
+  for (const key of getKeys(node)) {
+    const value = (node as unknown as Record<string, unknown>)[key];
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        if (child && typeof (child as TSESTree.Node).type === "string") cb(child as TSESTree.Node);
+      }
+    } else if (value && typeof (value as TSESTree.Node).type === "string") {
+      cb(value as TSESTree.Node);
+    }
+  }
+}
+
+function literalText(node: TSESTree.Node | undefined): string | undefined {
+  if (!node) return undefined;
+  if (node.type === "Literal" && typeof node.value === "string") return node.value;
+  if (node.type === "TemplateLiteral" && node.expressions.length === 0) {
+    return node.quasis.map((q) => q.value.cooked).join("");
+  }
+  return undefined;
 }
 
 /** `it`, `it.only`, `it.each(...)` and `test` variants all resolve to the root. */
-function rootCallee(expr: ts.Expression): string {
-  if (ts.isIdentifier(expr)) return expr.text;
-  if (ts.isPropertyAccessExpression(expr)) return rootCallee(expr.expression);
-  if (ts.isCallExpression(expr)) return rootCallee(expr.expression);
+function rootCallee(expr: TSESTree.Node): string {
+  if (expr.type === "Identifier") return expr.name;
+  if (expr.type === "MemberExpression" && !expr.computed) return rootCallee(expr.object);
+  if (expr.type === "CallExpression") return rootCallee(expr.callee);
   return "";
 }
 
-function isEachForm(expr: ts.Expression): boolean {
+function isEachForm(expr: TSESTree.Node): boolean {
   // it.each(table)("name %s", fn) — the name is a template, not a fixed string.
-  if (ts.isCallExpression(expr)) return isEachForm(expr.expression);
-  if (ts.isPropertyAccessExpression(expr)) {
-    return expr.name.text === "each" || isEachForm(expr.expression);
+  if (expr.type === "CallExpression") return isEachForm(expr.callee);
+  if (expr.type === "MemberExpression" && !expr.computed) {
+    return (expr.property.type === "Identifier" && expr.property.name === "each") || isEachForm(expr.object);
   }
   return false;
 }
 
 function collectTests(): TestFn[] {
   const out: TestFn[] = [];
-  for (const { file, src } of sourceFiles()) {
+  for (const { file, code, ast } of sourceFiles()) {
     if (file === "meta.test.ts") continue; // don't audit the auditor's own shape
-    const walk = (node: ts.Node, describePath: string[]) => {
-      if (ts.isCallExpression(node)) {
-        const callee = rootCallee(node.expression);
+    const walk = (node: TSESTree.Node, describePath: string[]) => {
+      if (node.type === "CallExpression") {
+        const callee = rootCallee(node.callee);
         const [nameArg, fnArg] = node.arguments;
-        const name =
-          nameArg && ts.isStringLiteralLike(nameArg) ? nameArg.text : "<dynamic>";
+        const name = literalText(nameArg) ?? "<dynamic>";
         if (callee === "describe") {
-          ts.forEachChild(node, (c) => walk(c, [...describePath, name]));
+          forEachChild(node, (c) => walk(c, [...describePath, name]));
           return;
         }
         if (callee === "it" || callee === "test") {
@@ -98,15 +137,15 @@ function collectTests(): TestFn[] {
             name,
             describePath,
             body: fnArg,
-            text: fnArg ? fnArg.getText(src) : "",
-            isEach: isEachForm(node.expression),
+            text: fnArg ? getText(code, fnArg) : "",
+            isEach: isEachForm(node.callee),
           });
           return;
         }
       }
-      ts.forEachChild(node, (c) => walk(c, describePath));
+      forEachChild(node, (c) => walk(c, describePath));
     };
-    walk(src, []);
+    walk(ast, []);
   }
   return out;
 }
@@ -115,24 +154,25 @@ function collectTests(): TestFn[] {
 function assertionCount(fn: TestFn): number {
   if (!fn.body) return 0;
   let n = 0;
-  const walk = (node: ts.Node) => {
-    if (ts.isCallExpression(node)) {
-      const callee = node.expression;
+  const walk = (node: TSESTree.Node) => {
+    if (node.type === "CallExpression") {
+      const callee = node.callee;
       // expect(...)  /  expect.assertions(n)  /  expect.hasAssertions()
-      if (ts.isIdentifier(callee) && callee.text === "expect") n++;
+      if (callee.type === "Identifier" && callee.name === "expect") n++;
       if (
-        ts.isPropertyAccessExpression(callee) &&
-        ts.isIdentifier(callee.expression) &&
-        callee.expression.text === "expect"
+        callee.type === "MemberExpression" &&
+        !callee.computed &&
+        callee.object.type === "Identifier" &&
+        callee.object.name === "expect"
       ) {
         n++;
       }
       // A bare `fail()` or an explicit throw-assertion helper.
-      if (ts.isIdentifier(callee) && callee.text === "fail") n++;
+      if (callee.type === "Identifier" && callee.name === "fail") n++;
     }
-    ts.forEachChild(node, walk);
+    forEachChild(node, walk);
   };
-  ts.forEachChild(fn.body, walk);
+  forEachChild(fn.body, walk);
   return n;
 }
 
@@ -153,8 +193,8 @@ describe("the meta guard actually sees the suite", () => {
   it("can actually parse every test file it claims to read", () => {
     // A file that fails to parse yields zero tests and would otherwise be
     // silently skipped by every check below.
-    for (const { file, src } of sourceFiles()) {
-      expect(`${file}:${src.statements.length}`).not.toBe(`${file}:0`);
+    for (const { file, ast } of sourceFiles()) {
+      expect(`${file}:${ast.body.length}`).not.toBe(`${file}:0`);
     }
   });
 });
@@ -176,40 +216,44 @@ describe("every test can fail", () => {
     const IDENTITY_MATCHERS = new Set(["toBe", "toEqual", "toStrictEqual"]);
     const offenders: string[] = [];
 
-    for (const { file, src } of sourceFiles()) {
+    for (const { file, code, ast } of sourceFiles()) {
       if (file === "meta.test.ts") continue;
-      const walk = (node: ts.Node) => {
+      const walk = (node: TSESTree.Node) => {
         if (
-          ts.isCallExpression(node) &&
-          ts.isPropertyAccessExpression(node.expression) &&
-          IDENTITY_MATCHERS.has(node.expression.name.text) &&
+          node.type === "CallExpression" &&
+          node.callee.type === "MemberExpression" &&
+          !node.callee.computed &&
+          node.callee.property.type === "Identifier" &&
+          IDENTITY_MATCHERS.has(node.callee.property.name) &&
           node.arguments.length === 1
         ) {
-          const receiver = node.expression.expression;
+          const receiver = node.callee.object;
           if (
-            ts.isCallExpression(receiver) &&
-            ts.isIdentifier(receiver.expression) &&
-            receiver.expression.text === "expect" &&
+            receiver.type === "CallExpression" &&
+            receiver.callee.type === "Identifier" &&
+            receiver.callee.name === "expect" &&
             receiver.arguments.length === 1
           ) {
-            const norm = (n: ts.Node) => n.getText(src).replace(/\s+/g, " ").trim();
+            const norm = (n: TSESTree.Node) => getText(code, n).replace(/\s+/g, " ").trim();
             const left = norm(receiver.arguments[0]);
             const right = norm(node.arguments[0]);
             if (left === right) {
               // Walk up for a pragma on the enclosing test.
-              let scope: ts.Node | undefined = node;
+              let scope: TSESTree.Node | undefined = node;
               let exempt = false;
               while (scope) {
-                if (scope.getText(src).includes(PRAGMA)) { exempt = true; break; }
+                if (getText(code, scope).includes(PRAGMA)) { exempt = true; break; }
                 scope = scope.parent;
               }
-              if (!exempt) offenders.push(`${file} :: expect(${left}).${node.expression.name.text}(${right})`);
+              if (!exempt) {
+                offenders.push(`${file} :: expect(${left}).${node.callee.property.name}(${right})`);
+              }
             }
           }
         }
-        ts.forEachChild(node, walk);
+        forEachChild(node, walk);
       };
-      walk(src);
+      walk(ast);
     }
 
     expect(offenders).toEqual([]);
@@ -256,23 +300,25 @@ describe("known gaps", () => {
       if (!t.body) return false;
       let total = 0;
       let nested = 0;
-      const walk = (node: ts.Node, depth: number) => {
-        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "expect") {
+      const walk = (node: TSESTree.Node, depth: number) => {
+        if (node.type === "CallExpression" && node.callee.type === "Identifier" && node.callee.name === "expect") {
           total++;
           if (depth > 0) nested++;
         }
         const opensScope =
-          ts.isForStatement(node) ||
-          ts.isForOfStatement(node) ||
-          ts.isForInStatement(node) ||
-          ts.isWhileStatement(node) ||
-          ts.isIfStatement(node) ||
-          (ts.isCallExpression(node) &&
-            ts.isPropertyAccessExpression(node.expression) &&
-            ["forEach", "map", "filter"].includes(node.expression.name.text));
-        ts.forEachChild(node, (c) => walk(c, depth + (opensScope ? 1 : 0)));
+          node.type === "ForStatement" ||
+          node.type === "ForOfStatement" ||
+          node.type === "ForInStatement" ||
+          node.type === "WhileStatement" ||
+          node.type === "IfStatement" ||
+          (node.type === "CallExpression" &&
+            node.callee.type === "MemberExpression" &&
+            !node.callee.computed &&
+            node.callee.property.type === "Identifier" &&
+            ["forEach", "map", "filter"].includes(node.callee.property.name));
+        forEachChild(node, (c) => walk(c, depth + (opensScope ? 1 : 0)));
       };
-      ts.forEachChild(t.body, (c) => walk(c, 0));
+      forEachChild(t.body, (c) => walk(c, 0));
       return total > 0 && total === nested;
     });
 
