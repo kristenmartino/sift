@@ -62,6 +62,8 @@ prevention, and whether it graduated into a CLAUDE.md rule.
 |---|---:|---|---|
 | completion-not-propagated | 4 | graduated (partial) | CLAUDE.md → "Republished a hosted artifact? Commit the source too" (artifact case only) + End-of-PR item on satisfied-elsewhere claims |
 | reference-verification | 0 here (borrowed) | guard installed | `.claude/hooks/guard-close-keywords.sh` — evidence is GridPulse's, not sift's |
+| unverified-pr-reference | 2 | graduated | CLAUDE.md → End-of-PR doc-impact check (PR/issue-number reconfirmation bullet) |
+| ci-build-flake | 2 (via #276, #286) | resolved | `next` floor `^16.3.1` (PR #287) — mechanical, no CLAUDE.md line |
 
 ### Entries
 
@@ -106,3 +108,59 @@ prevention, and whether it graduated into a CLAUDE.md rule.
   this entry. Kept open in the tally rather than closed: four occurrences in
   one day is a rate, not a resolved problem, and whether the prose rule
   actually catches the fifth is unmeasured.
+
+**2026-08-20 — Two PR-number references went stale in the same session [unverified-pr-reference]**
+
+- **What happened:** Two incidents in the same audit window, both involving
+  dependabot's PR #281 specifically, but via different mechanisms:
+  1. While working PR #286, CI status was polled using PR #281's number
+     instead of #286's — #281 happened to be open at the same time — and
+     #281's passing checks were reported as belonging to #286. (PR #286)
+  2. Two days later, PR #287 (`next` 16.3.0→16.3.1) was opened without
+     cross-referencing #281, which carried the identical bump inside a
+     broader grouped-dependency update and had appeared in the session's own
+     `gh pr list` output minutes earlier. The cost wasn't the redundant PR —
+     landing the bump separately dissolved dependabot's production group, so
+     it auto-closed #281 with "these dependencies are updatable in another
+     way," and the *other* two bumps in that group (`@anthropic-ai/sdk`,
+     `@clerk/nextjs`) went unlanded until dependabot re-proposed them as #288
+     the next day. (PR #287 / #281 / #288)
+- **Root cause:** Not "carelessness with #281" specifically — the shared
+  mechanism is that a PR/issue number the session had just seen (or should
+  have re-confirmed) got superseded by a stale one at the moment of acting.
+  Neither incident trips `.claude/hooks/guard-close-keywords.sh`: that hook
+  only fires on `Closes #NNN`-style syntax at commit/PR-authoring time, not
+  on a CI poll or a missed-overlap check against already-listed open PRs.
+- **Prevention:** Positive invariant — before citing a PR/issue number in a
+  command (CI poll, `gh` call) or opening new work, re-confirm it against
+  output this session has already produced, rather than carrying a number
+  over from earlier context.
+- **Status:** graduated → CLAUDE.md § End-of-PR doc-impact check
+  (2026-08-20). Incident 1 was low-severity (nothing shipped wrong).
+  Incident 2's direct overlap was self-resolved by dependabot, but it had a
+  real, if minor, cost — a full group-dissolution side effect delaying two
+  unrelated dependency bumps by a day — so this graduated on both the Repeat
+  bar (2 occurrences of the same root cause) and a mild Severity signal.
+
+**2026-08-20 — Turbopack/postcss Vercel build flake, root-caused and fixed [ci-build-flake]**
+
+- **What happened:** The Vercel build failed on two separate branches that
+  touched no build inputs — PR #276 and PR #286 — both times with
+  `TypeError: __turbopack_context__.a is not a function` in
+  `postcss.config.js`, and both times passed cleanly on the very next build
+  attempt; local production builds were clean throughout. (PR #286)
+- **Root cause:** A version skew introduced by PR #233's
+  `development-dependencies` group bump, which moved
+  `@next/bundle-analyzer` and `eslint-config-next` to 16.3.1 while leaving
+  the `next` framework itself at 16.3.0. `next.config.js:152` composes
+  `withBundleAnalyzer` unconditionally (not gated behind `ANALYZE=true`), so
+  every build ran the newer wrapper's Turbopack async-module runtime against
+  the older framework's shared runtime chunk — a mechanistic match to a
+  documented Turbopack changelog fix between 16.3.0 and 16.3.1, and it
+  explains the intermittency (a cold build on a fresh branch hits it; a warm
+  rebuild doesn't).
+- **Prevention:** Mechanical. PR #287 floored `next` to `^16.3.1` so a
+  future dependency resolution can't slide back under the fix.
+- **Status:** resolved — enforced by PR #287 (merged 2026-08-20), `next`
+  floor `^16.3.1`. No CLAUDE.md rule proposed — the fix is a version floor,
+  not a judgment call.
