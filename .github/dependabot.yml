@@ -21,8 +21,25 @@ updates:
     #
     # Lift the ignore when typescript-eslint ships TS 7 support; port the meta
     # guard after that, not before. See STATUS.md 2026-08-17 and #194.
+    #
+    # eslint is held back the same way, for a chain we don't control. eslint
+    # 10 removes an API (`context.getFilename`) that `eslint-plugin-react`
+    # 7.37.5 still calls, so linting any file throws:
+    #
+    #   TypeError: Error while loading rule 'react/display-name':
+    #   contextOrFilename.getFilename is not a function
+    #
+    # eslint-plugin-react is not a direct dependency here -- it arrives
+    # transitively, pinned by `eslint-config-next` 16.3.1, so there is nothing
+    # in this repo to bump. (`@typescript-eslint` is NOT part of this block:
+    # it peers `^8.57.0 || ^9.0.0 || ^10.0.0` and is fine on eslint 10.)
+    #
+    # Lift the ignore when eslint-config-next ships a version that pulls an
+    # eslint-10-compatible eslint-plugin-react. See #284.
     ignore:
       - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
     groups:
       production-dependencies:
