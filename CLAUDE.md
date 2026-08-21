@@ -53,6 +53,8 @@ When you discover something during a session that's worth tracking, use this to 
 
 Commits do **not** cross repos — a "push the branch" request usually means just this one. Confirm before touching siblings.
 
+**Verify shell/git state before trusting it.** A `cd` into a worktree or sibling repo can silently fail if the shell's cwd already reset — confirm with `pwd` before assuming later commands ran where intended. Before any command that can discard uncommitted state (`git reset --hard`, `checkout --`, `clean`), check `git status`/`git diff --stat` first — an uncommitted change is invisible to that command and gone without a trace. See [`MISTAKES.md`](./MISTAKES.md) → unverified-git-shell-state.
+
 **Architecture note (D35):** new AI / search / write work belongs in **sift-api** (it owns the AI + write path). The one current exception — the topic-search AI fallback in `app/api/news/topic/route.ts` — is grandfathered and being migrated to sift-api (Slice 1 = sift-api#79). See [`docs/DECISIONS.md`](./docs/DECISIONS.md) D35.
 
 ## Mistake logging & rule graduation
