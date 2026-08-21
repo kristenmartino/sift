@@ -62,9 +62,9 @@ prevention, and whether it graduated into a CLAUDE.md rule.
 |---|---:|---|---|
 | completion-not-propagated | 4 | graduated (partial) | CLAUDE.md → "Republished a hosted artifact? Commit the source too" (artifact case only) + End-of-PR item on satisfied-elsewhere claims |
 | reference-verification | 0 here (borrowed) | guard installed | `.claude/hooks/guard-close-keywords.sh` — evidence is GridPulse's, not sift's |
-| unverified-pr-reference | 2 | graduated | CLAUDE.md → End-of-PR doc-impact check (PR/issue-number reconfirmation bullet) |
+| unverified-pr-reference | 2 | graduated | CLAUDE.md → Verify before trusting (PR/issue-number reconfirmation bullet) |
 | ci-build-flake | 2 (via #276, #286) | resolved | `next` floor `^16.3.1` (PR #287) — mechanical, no CLAUDE.md line |
-| unverified-git-shell-state | 2 (via #296, #298) | graduated | CLAUDE.md → Sibling repos (verify shell/git state before trusting it) |
+| unverified-git-shell-state | 2 (via #296, #298) | graduated | CLAUDE.md → Verify before trusting (verify shell/git state before trusting it) |
 
 ### Entries
 
@@ -136,8 +136,11 @@ prevention, and whether it graduated into a CLAUDE.md rule.
   command (CI poll, `gh` call) or opening new work, re-confirm it against
   output this session has already produced, rather than carrying a number
   over from earlier context.
-- **Status:** graduated → CLAUDE.md § End-of-PR doc-impact check
-  (2026-08-20). Incident 1 was low-severity (nothing shipped wrong).
+- **Status:** graduated → CLAUDE.md § Verify before trusting
+  (2026-08-20; re-homed from § End-of-PR doc-impact check on 2026-08-21 — a
+  fresh audit pass flagged that section as scoped to pre-PR-open checks,
+  while this rule also covers CI-status checks that happen later). Incident
+  1 was low-severity (nothing shipped wrong).
   Incident 2's direct overlap was self-resolved by dependabot, but it had a
   real, if minor, cost — a full group-dissolution side effect delaying two
   unrelated dependency bumps by a day — so this graduated on both the Repeat
@@ -197,7 +200,10 @@ prevention, and whether it graduated into a CLAUDE.md rule.
   later commands ran where intended; before any command that can discard
   uncommitted state (`git reset --hard`, `checkout --`, `clean`), check
   `git status`/`git diff --stat` first for anything you intend to keep.
-- **Status:** graduated → CLAUDE.md § Sibling repos (2026-08-20). Neither
+- **Status:** graduated → CLAUDE.md § Verify before trusting (2026-08-20;
+  re-homed from § Sibling repos on 2026-08-21 — a fresh audit pass flagged
+  that section as scoped to cross-repo boundaries, and neither incident
+  behind this rule was actually about a sibling repo). Neither
   incident was independently severe enough to graduate alone (an empty push,
   a reverted timestamp — both caught and fixed within the same session or
   the next), so this graduated on the Repeat bar, not Severity.
