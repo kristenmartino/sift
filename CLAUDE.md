@@ -6,9 +6,11 @@ Orientation for Claude Code sessions. Keep this short and current — if it grow
 
 Before doing real work in a session:
 
-1. Read [`STATUS.md`](./STATUS.md) — Active focus, Open question, Next 3, Blocked-on, Recent decisions.
+1. Read the head of [`STATUS.md`](./STATUS.md) (`sed -n '1,120p' STATUS.md`, or rely on the SessionStart
+   hook, which already injects it) — Active focus + open strategic questions. STATUS.md holds no current
+   state of its own: the engineering queue is `gh issue list`, blocked items are `gh issue list --label blocked`.
 2. List open PRs (`mcp__github__list_pull_requests` or `gh pr list` locally) — anything mid-review.
-3. List open issues (`mcp__github__list_issues` or `gh issue list`) — especially ones on the Next 3.
+3. List open issues (`mcp__github__list_issues` or `gh issue list`) — the queue lives there now, not in STATUS.md.
 4. Skim [`docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md) if the work touches roadmap (tier label decisions).
 
 If `STATUS.md` is older than ~3 days during a high-velocity period (10+ PRs / week), flag the staleness to the user before starting.
@@ -17,7 +19,9 @@ If `STATUS.md` is older than ~3 days during a high-velocity period (10+ PRs / we
 
 Before opening the PR:
 
-- Did this change anything in `STATUS.md`'s Next 3, Blocked-on, or Open question? Update it.
+- Did this change `STATUS.md`'s Active focus or Open strategic questions? Update them.
+- Did this close or change the state of a GitHub issue this session was working against? Update the issue's
+  state/labels — `STATUS.md` no longer tracks priority or blocked status, GitHub is the source of truth.
 - Did this make or close a strategic decision? Add a `## Recent decisions` entry in `STATUS.md` and (if substantial) a row in [`docs/DECISIONS.md`](./docs/DECISIONS.md).
 - Did this change a public contract (API shape, page route, env var)? Update the relevant doc in `docs/` ([`TECHNICAL_SPEC.md`](./docs/TECHNICAL_SPEC.md), [`ARCHITECTURE.md`](./docs/ARCHITECTURE.md), `README.md`).
 - Did this change how the app boots / runs locally? Update the Quick Start in `README.md`.
@@ -32,10 +36,10 @@ When you discover something during a session that's worth tracking, use this to 
 | What you found | Where it goes |
 |---|---|
 | **Bug blocking current work** | Fix in active branch. Don't file. |
-| **Concrete feature committing to in next ~2 weeks** | GitHub issue with `tier-v1.5` / `tier-v2` + `effort-*` labels. Add to STATUS.md "Next 3" if it bumps something. |
+| **Concrete feature committing to in next ~2 weeks** | GitHub issue with `tier-v1.5` / `tier-v2` + `effort-*` labels. |
 | **Concrete feature wanted eventually, no commitment** | Note in `STATUS.md` "Recent decisions" if it's a decision; otherwise wait until you're ready to commit, then file an issue. |
-| **Quirk or minor bug, not urgent** | GitHub issue with `bug` label. No need to surface in STATUS.md unless it blocks Next 3. |
-| **Critical bug found but not fixed** | GitHub issue with `bug` label, then mention in STATUS.md "Blocked-on" if it blocks Next 3. |
+| **Quirk or minor bug, not urgent** | GitHub issue with `bug` label. No need to surface in STATUS.md. |
+| **Critical bug found but not fixed** | GitHub issue with `bug` + `blocked` labels — `gh issue list --label blocked` is the queue now, not STATUS.md. |
 | **Strategic question / open architectural decision** | STATUS.md "Open strategic question" — never a GitHub issue. Questions get answered through usage/conversation, not engineering work. |
 | **Architectural decision now made** | STATUS.md "Recent decisions" with a date. If substantial, also add a row in [`docs/DECISIONS.md`](./docs/DECISIONS.md). |
 | **Out-of-scope idea surfaced during work** | If it's tied to a specific file, use the spawned-task chip in your editor. Otherwise note in STATUS.md "Recent decisions" or open an issue if scoped. |
