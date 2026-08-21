@@ -1,1 +1,0 @@
-2026-08-20 [relative-path-after-cwd-reset] Used a relative `cd` into a worktree after the shell cwd had reset; the cd failed, the commit never ran, and the push shipped an empty branch. A relative `rm` no-opped the same way minutes later. — ref: PR #296

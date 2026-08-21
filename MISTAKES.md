@@ -64,6 +64,7 @@ prevention, and whether it graduated into a CLAUDE.md rule.
 | reference-verification | 0 here (borrowed) | guard installed | `.claude/hooks/guard-close-keywords.sh` — evidence is GridPulse's, not sift's |
 | unverified-pr-reference | 2 | graduated | CLAUDE.md → End-of-PR doc-impact check (PR/issue-number reconfirmation bullet) |
 | ci-build-flake | 2 (via #276, #286) | resolved | `next` floor `^16.3.1` (PR #287) — mechanical, no CLAUDE.md line |
+| unverified-git-shell-state | 2 (via #296, #298) | graduated | CLAUDE.md → Sibling repos (verify shell/git state before trusting it) |
 
 ### Entries
 
@@ -164,3 +165,39 @@ prevention, and whether it graduated into a CLAUDE.md rule.
 - **Status:** resolved — enforced by PR #287 (merged 2026-08-20), `next`
   floor `^16.3.1`. No CLAUDE.md rule proposed — the fix is a version floor,
   not a judgment call.
+
+**2026-08-20 — Two silent no-ops from trusting unverified shell/git state [unverified-git-shell-state]**
+
+- **What happened:** Two incidents, different commands, same shape:
+  1. While creating PR #296 (a one-line mistakes-log deposit), a relative
+     `cd` into a worktree was run after the shell's cwd had already reset
+     outside the session's expectation. The `cd` failed, the following
+     `commit` never actually ran, and `push` shipped an empty branch. A
+     relative `rm` no-opped the same way minutes later. (PR #296)
+  2. During PR #298's own commit/PR/merge flow (the prior audit pass),
+     `.mistakes/last-audit` was stamped to disk per Step 7 but never
+     staged — a later `git reset --hard origin/main`, run while moving that
+     commit onto a feature branch for the PR, silently discarded the
+     uncommitted stamp and reverted it to 2026-08-18. Corrected retroactively
+     in PR #299, stamped to #298's actual merge time rather than "now" (the
+     file records when a pass ran, not when a later fix landed). (PR #298 /
+     #299)
+- **Root cause:** Not "cd mistakes" vs. "commit mistakes" — both assumed a
+  piece of state (shell cwd, or a file's staged status) matched expectation
+  and proceeded without confirming it. Neither failure was loud: a failed
+  `cd` let subsequent relative-path commands silently target the wrong place
+  instead of erroring; `git reset --hard` correctly and silently discards
+  uncommitted changes by design — that's not a bug, it's exactly what an
+  unstaged stamp is exposed to. Same gap both times: no verification step
+  confirmed intended state had actually landed before trusting it and
+  running the next command, especially one that discards state
+  (`reset --hard`) or ships to a shared branch (`push`).
+- **Prevention:** Positive invariant — after a `cd` into a different
+  directory (worktree, sibling repo), confirm with `pwd` before assuming
+  later commands ran where intended; before any command that can discard
+  uncommitted state (`git reset --hard`, `checkout --`, `clean`), check
+  `git status`/`git diff --stat` first for anything you intend to keep.
+- **Status:** graduated → CLAUDE.md § Sibling repos (2026-08-20). Neither
+  incident was independently severe enough to graduate alone (an empty push,
+  a reverted timestamp — both caught and fixed within the same session or
+  the next), so this graduated on the Repeat bar, not Severity.
