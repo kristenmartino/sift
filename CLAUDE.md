@@ -24,7 +24,6 @@ Before opening the PR:
 - Touched `docs/IOS_*.md` (plan / assessment / platform analysis)? Update the status banner at the top to reflect current state (Active / Under review / Archived).
 - **Did this satisfy something another document says is pending?** If it closes a "will be updated", "in progress", "not yet measured" or "blocked on" claim in `STATUS.md`, [`docs/DECISIONS.md`](./docs/DECISIONS.md), or a sibling repo's `STATUS.md`, go back and say so. Deferrals survive on their own because an open issue keeps asserting itself; completions do not, and nothing else will notice. Four instances of this in one day are recorded in [`MISTAKES.md`](./MISTAKES.md).
 - **Republished a hosted artifact this session? Commit the source file too.** `sift-system-walkthrough.html` is published to claude.ai and is built by nothing, so no test, lint or deploy fails when the repo copy falls behind the live page. It has already happened once: the 2026-08-10 revision went live uncommitted and the repo copy sat 13 days stale, missing six features that were live on the page. **Before editing it, `WebFetch` its artifact URL and diff against the file** — publishing over a stale base silently reverts whatever the last session shipped. Same rule for any other standalone HTML here that gets published (`sift-product-os.html` is the other candidate).
-- **Opening a PR or checking CI status for one? Re-confirm the PR/issue number against output this session already produced** (e.g. a `gh pr list` a few messages back) — don't reuse a number carried over from earlier context. See [`MISTAKES.md`](./MISTAKES.md) → unverified-pr-reference.
 
 ## Where to file new work (decision tree)
 
@@ -53,9 +52,14 @@ When you discover something during a session that's worth tracking, use this to 
 
 Commits do **not** cross repos — a "push the branch" request usually means just this one. Confirm before touching siblings.
 
-**Verify shell/git state before trusting it.** A `cd` into a worktree or sibling repo can silently fail if the shell's cwd already reset — confirm with `pwd` before assuming later commands ran where intended. Before any command that can discard uncommitted state (`git reset --hard`, `checkout --`, `clean`), check `git status`/`git diff --stat` first — an uncommitted change is invisible to that command and gone without a trace. See [`MISTAKES.md`](./MISTAKES.md) → unverified-git-shell-state.
-
 **Architecture note (D35):** new AI / search / write work belongs in **sift-api** (it owns the AI + write path). The one current exception — the topic-search AI fallback in `app/api/news/topic/route.ts` — is grandfathered and being migrated to sift-api (Slice 1 = sift-api#79). See [`docs/DECISIONS.md`](./docs/DECISIONS.md) D35.
+
+## Verify before trusting
+
+Two habits, evidenced separately in [`MISTAKES.md`](./MISTAKES.md) — grouped here by theme, not because they're the same root cause:
+
+- **Re-confirm a PR/issue number against this session's own output before citing or acting on it** — a CI poll, a `gh` call, opening new work — rather than reusing a number carried over from earlier context. See `MISTAKES.md` → unverified-pr-reference.
+- **Verify shell/git state before trusting it.** A `cd` into a worktree or sibling repo can silently fail if the shell's cwd already reset — confirm with `pwd` before assuming later commands ran where intended. Before any command that can discard uncommitted state (`git reset --hard`, `checkout --`, `clean`), check `git status`/`git diff --stat` first — an uncommitted change is invisible to that command and gone without a trace. See `MISTAKES.md` → unverified-git-shell-state.
 
 ## Mistake logging & rule graduation
 
