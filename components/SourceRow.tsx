@@ -51,6 +51,7 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
           {lead.sourceUrl ? (
             <a
               href={lead.sourceUrl}
+                  data-sift-source-id={lead.id}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -102,6 +103,7 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
                 <a
                   key={a.id}
                   href={a.sourceUrl}
+                  data-sift-source-id={a.id}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}

@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Fraunces, Hanken_Grotesk, DM_Mono } from "next/font/google";
 import "./globals.css";
+import UsageTracking from "@/components/analytics/UsageTracking";
 
 // Self-hosted via next/font: Next downloads the woff2s at build time, serves
 // them from /_next/static/media (same-origin, cacheable, no CSP changes), and
@@ -116,6 +117,7 @@ export default function RootLayout({
           Skip to content
         </a>
         {children}
+        <UsageTracking />
         <SpeedInsights />
         {/* Vercel Analytics: privacy-friendly page-view counts (no cookies,
             no cross-site tracking, GDPR/CCPA-clean by default). Free hobby

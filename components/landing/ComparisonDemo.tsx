@@ -1,3 +1,4 @@
+import UsageView from "@/components/analytics/UsageView";
 import { COPY } from "@/lib/copy";
 import type { DailyCompareExample } from "@/lib/types";
 
@@ -27,7 +28,7 @@ export default function ComparisonDemo({
       })
     : null;
 
-  return (
+  const content = (
     <section className="sl-band sl-compare" id="compare">
       <div className="sl-wrap">
         <div className="sl-sec-head" data-reveal>
@@ -89,4 +90,6 @@ export default function ComparisonDemo({
       </div>
     </section>
   );
+  return live ? <UsageView name="comparison_viewed" viewKey={`landing:${live.generatedAt}`}
+    properties={{ contentId: `daily:${live.generatedAt}`, surface: "daily_compare" }}>{content}</UsageView> : content;
 }

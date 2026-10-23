@@ -10,6 +10,7 @@ import { civicBoost, weightedCivicLinks } from "@/lib/civicWeight";
 import { reportError } from "@/lib/observability";
 import { timeAgo } from "@/lib/utils";
 import { useNewsLoader, useBookmarks, useTheme, useTopicSearch, useCompare, useCustomTopics } from "@/lib/hooks";
+import UsageView from "./analytics/UsageView";
 import ArticleCard from "./ArticleCard";
 import CoachStrip from "./CoachStrip";
 import StoryCard from "./StoryCard";
@@ -122,6 +123,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
   } = useTopicSearch();
 
   const {
+    requestId: compareRequestId,
     topic: compareTopic,
     comparison: compareComparison,
     sourcesChecked: compareSources,
@@ -921,6 +923,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
             {/* Compare results */}
             {compareComparison && !compareLoading && (
               <CompareView
+                analyticsRequestId={compareRequestId ?? undefined}
                 topic={compareTopic!}
                 comparison={compareComparison}
                 sourcesChecked={compareSources}
@@ -1054,6 +1057,8 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
 
             {/* Feed grid — fades on category switch */}
             {hasData && (
+              <UsageView name="feed_viewed" viewKey={`${activeCategory}:${showBookmarks}:${searchMode}:${activeCustomTopic?.id ?? ""}`}
+                properties={{ surface: showBookmarks ? "bookmarks" : searchMode ? "search" : customTopicMode ? "custom_topic" : "feed" }}>
               <div
                 className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4 sm:gap-5"
                 style={{
@@ -1086,6 +1091,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                   )
                 )}
               </div>
+              </UsageView>
             )}
 
             {/* Loading toast for refresh */}
@@ -1196,6 +1202,7 @@ function DailyExampleBlock({
         </Link>
       </div>
       <CompareView
+        analyticsContentId={`daily:${example.generatedAt}`}
         topic={example.topic}
         comparison={example.comparison}
         sourcesChecked={example.sources_checked}
