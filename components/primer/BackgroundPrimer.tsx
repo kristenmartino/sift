@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { captureAnalyticsContext, analyticsHeaders, trackProductEvent } from "@/lib/productAnalyticsClient";
 import { useState } from "react";
 import { COPY } from "@/lib/copy";
 import { entityHref } from "@/lib/entityLinks";
@@ -67,11 +68,13 @@ export default function BackgroundPrimer({
   const handleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
     setExpanded(true);
+    const analytics = captureAnalyticsContext();
+    trackProductEvent("explainer_expanded", { contentId: articleId, surface }, analytics);
     if (articleId) {
       // Body is null-safe — surface omitted is fine (server logs null).
       fetch("/api/primer/expand", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...analyticsHeaders(analytics) },
         body: JSON.stringify({ articleId, ...(surface ? { surface } : {}) }),
         // Keep the request lightweight; no need to wait, no need to retry.
         keepalive: true,

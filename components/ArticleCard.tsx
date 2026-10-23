@@ -152,6 +152,8 @@ export default function ArticleCard({
           {article.sourceUrl ? (
             <a
               href={article.sourceUrl}
+              data-sift-source-id={article.id}
+              data-sift-source-surface="feed"
               target="_blank"
               rel="noopener noreferrer"
               className="text-(--text-primary) no-underline hover:underline"

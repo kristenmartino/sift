@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ShareButton } from "@/components/ShareActions";
 import { COMPARE_SOURCES } from "@/lib/constants";
+import UsageView from "./analytics/UsageView";
 import { COPY } from "@/lib/copy";
 import type { CompareClaim } from "@/lib/types";
 
@@ -10,6 +11,8 @@ const MAX_SOURCES = 5;
 const MIN_SOURCES = 2;
 
 interface CompareViewProps {
+  analyticsRequestId?: string;
+  analyticsContentId?: string;
   topic: string;
   comparison: string;
   sourcesChecked: string[];
@@ -60,6 +63,8 @@ const AGREEMENT_ORDER: Record<string, number> = {
 };
 
 export default function CompareView({
+  analyticsRequestId,
+  analyticsContentId,
   topic,
   comparison,
   sourcesChecked,
@@ -97,6 +102,9 @@ export default function CompareView({
   };
 
   return (
+    <UsageView name="comparison_viewed" viewKey={analyticsRequestId ?? analyticsContentId ?? "unattributed"}
+      properties={{ requestId: analyticsRequestId, contentId: analyticsContentId,
+        surface: analyticsContentId ? "daily_compare" : "live_compare" }}>
     <div className="animate-fade-slide-in">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
@@ -357,5 +365,6 @@ export default function CompareView({
         </div>
       </div>
     </div>
+    </UsageView>
   );
 }

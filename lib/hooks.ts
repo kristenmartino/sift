@@ -5,6 +5,7 @@ import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS, MAX_CUSTOM_TOPICS } fr
 import type { Article, ArticleCache, StoryCache, CategoryId, CustomTopic, NewsApiResponse, CompareResponse, CompareClaim, CompareSourceDone, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
 import { reportError } from "./observability";
 import { readSSE } from "./sse";
+import { analyticsHeaders, captureAnalyticsContext, trackProductEvent } from "./productAnalyticsClient";
 
 // ─── useLocalStorage ────────────────────────────────────
 
@@ -412,6 +413,13 @@ export function useTopicSearch() {
       query,
     });
 
+    const analytics = captureAnalyticsContext();
+    const requestId = analytics ? crypto.randomUUID() : undefined;
+    const startedAt = Date.now();
+    let resultCount = 0;
+    let outcome: "success" | "error" | "cancelled" | "timeout" | "incomplete" = "incomplete";
+    trackProductEvent("search_submitted", { requestId }, analytics);
+
     let slowTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(
       () => setState((s) => ({ ...s, slow: true })),
       SLOW_THRESHOLD_MS
@@ -421,7 +429,7 @@ export function useTopicSearch() {
     try {
       const res = await fetch(
         `/api/news/topic?q=${encodeURIComponent(query)}`,
-        { signal: controller.signal }
+        { signal: controller.signal, headers: analyticsHeaders(analytics) }
       );
 
       if (!res.ok) {
@@ -437,6 +445,7 @@ export function useTopicSearch() {
         switch (event) {
           case "results": {
             const d = data as SSEResultsEvent;
+            resultCount += d.articles.length;
             receivedAny = receivedAny || d.articles.length > 0;
             setState((s) => ({
               ...s,
@@ -456,6 +465,7 @@ export function useTopicSearch() {
             break;
           case "done": {
             const d = data as SSEDoneEvent;
+            outcome = "success";
             setState((s) => ({
               ...s,
               loading: false,
@@ -467,6 +477,7 @@ export function useTopicSearch() {
           }
           case "error": {
             const d = data as SSEErrorEvent;
+            outcome = "error";
             setState((s) => ({
               ...s,
               loading: false,
@@ -493,6 +504,7 @@ export function useTopicSearch() {
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
+        outcome = controllerRef.current === controller ? "timeout" : "cancelled";
         setState((s) => ({
           ...s,
           loading: false,
@@ -501,12 +513,16 @@ export function useTopicSearch() {
         }));
         return;
       }
+      outcome = "error";
       const message = err instanceof Error ? err.message : "Search failed";
       setState((s) => ({ ...s, loading: false, error: message, slow: false }));
     } finally {
+      if (controller.signal.aborted && outcome === "incomplete") outcome = controllerRef.current === controller ? "timeout" : "cancelled";
+      trackProductEvent("search_completed", { requestId, resultCount,
+        latencyMs: Math.min(600000, Date.now() - startedAt), status: outcome }, analytics);
       clearTimeout(slowTimer);
       clearTimeout(timeoutTimer);
-      controllerRef.current = null;
+      if (controllerRef.current === controller) controllerRef.current = null;
     }
   }, []);
 
@@ -641,6 +657,7 @@ const COMPARE_STAGE_CLAIMS_MS = 22_000;
 const COMPARE_STAGE_SUMMARY_MS = 38_000;
 
 interface CompareState {
+  requestId: string | null;
   topic: string | null;
   comparison: string | null;
   sourcesChecked: string[];
@@ -657,6 +674,7 @@ interface CompareState {
 
 export function useCompare() {
   const [state, setState] = useState<CompareState>({
+    requestId: null,
     topic: null,
     comparison: null,
     sourcesChecked: [],
@@ -676,7 +694,13 @@ export function useCompare() {
     const controller = new AbortController();
     controllerRef.current = controller;
 
+    const analytics = captureAnalyticsContext();
+    const requestId = analytics ? crypto.randomUUID() : undefined;
+    const startedAt = Date.now();
+    let outcome: "success" | "error" | "cancelled" | "timeout" | "incomplete" = "incomplete";
+    trackProductEvent("comparison_requested", { requestId }, analytics);
     setState({
+      requestId: requestId ?? null,
       topic,
       comparison: null,
       sourcesChecked: [],
@@ -710,7 +734,9 @@ export function useCompare() {
     const timeoutTimer = setTimeout(() => controller.abort(), COMPARE_TIMEOUT_MS);
 
     const applyResults = (data: CompareResponse) => {
+      outcome = "success";
       setState({
+        requestId: requestId ?? null,
         topic: data.topic,
         comparison: data.comparison,
         sourcesChecked: data.sources_checked,
@@ -730,6 +756,7 @@ export function useCompare() {
         headers: {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
+          ...analyticsHeaders(analytics),
         },
         body: JSON.stringify({ topic, sources }),
         signal: controller.signal,
@@ -775,6 +802,7 @@ export function useCompare() {
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
+        outcome = controllerRef.current !== controller ? "cancelled" : "timeout";
         // clear() nulls the ref and a rerun replaces it, both before this
         // rejection lands; the timeout abort leaves it in place. A user
         // exiting compare mode or starting over is not an error.
@@ -787,9 +815,13 @@ export function useCompare() {
         }));
         return;
       }
+      outcome = "error";
       const message = err instanceof Error ? err.message : "Comparison failed";
       setState((s) => ({ ...s, loading: false, error: message, slow: false }));
     } finally {
+      if (controller.signal.aborted && outcome === "incomplete") outcome = controllerRef.current !== controller ? "cancelled" : "timeout";
+      trackProductEvent("comparison_completed", { requestId,
+        latencyMs: Math.min(600000, Date.now() - startedAt), status: outcome }, analytics);
       clearTimeout(slowTimer);
       clearTimeout(stageClaimsTimer);
       clearTimeout(stageSummaryTimer);
@@ -804,6 +836,7 @@ export function useCompare() {
     controllerRef.current?.abort();
     controllerRef.current = null;
     setState({
+      requestId: null,
       topic: null,
       comparison: null,
       sourcesChecked: [],

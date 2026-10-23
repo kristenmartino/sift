@@ -53,6 +53,8 @@ export default function LeadStory({ article }: { article: Article | null }) {
         {article.sourceUrl ? (
           <a
             href={article.sourceUrl}
+              data-sift-source-id={article.id}
+              data-sift-source-surface="landing"
             target="_blank"
             rel="noopener noreferrer"
             className="sl-lead-link"

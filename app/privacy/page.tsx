@@ -1,3 +1,4 @@
+import UsagePreference from "@/components/analytics/UsagePreference";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -35,8 +36,9 @@ export default function PrivacyPage() {
             <h2 className="font-heading text-lg font-bold text-(--text-primary) mb-2">Cookies and storage</h2>
             <p>
               Sift uses local storage for theme preference, bookmarks, and custom topics.
-              Clerk may use cookies for session management when you sign in. We don&apos;t use
-              analytics or tracking cookies.
+              Clerk may use cookies for session management when you sign in. We don&apos;t use analytics or tracking cookies. When usage measurement is enabled,
+              a random browser identifier is stored locally for up to 90 days, along with a session identifier
+              that changes after 30 minutes of inactivity. These identifiers are not linked to your sign-in account.
             </p>
           </section>
 
@@ -75,6 +77,21 @@ export default function PrivacyPage() {
           </section>
 
           <section>
+            <h2 className="font-heading text-lg font-bold text-(--text-primary) mb-2">Usage measurement</h2>
+            <p>
+              We measure visits, feed views, search and comparison outcomes, deliberate explainer openings,
+              and clicks to original articles so we can improve Sift and understand return visits.
+              These usage events include random browser and session identifiers, coarse device classification,
+              content identifiers, timings and counts. They do not include your name, email, sign-in ID,
+              raw IP address, search text or the article URL. Browser identifiers represent browsers, not people.
+              Events are deleted after 90 days by a daily cleanup job. We honor Do Not Track and Global Privacy Control.
+              You can turn off this measurement below. Turning it off removes the local usage identifiers;
+              previously collected events expire under the same retention schedule.
+            </p>
+            <UsagePreference />
+          </section>
+
+          <section>
             <h2 className="font-heading text-lg font-bold text-(--text-primary) mb-2">Your rights</h2>
             <p>
               You can delete your account and all associated data by contacting us. Local storage
@@ -84,7 +101,7 @@ export default function PrivacyPage() {
         </div>
 
         <p className="text-xs text-(--text-tertiary) mt-10">
-          Last updated: May 2026
+          Last updated: October 2026
         </p>
       </div>
     </main>
