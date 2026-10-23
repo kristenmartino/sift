@@ -122,3 +122,12 @@ it("validates event names, UUIDs, counts and forbids unexpected personal fields"
     expect(productEventSchema.safeParse({...e,...patch}).success).toBe(false);
   }
 });
+
+it("does not break reading when randomUUID is unavailable in an older or insecure browser", () => {
+  const original = window.crypto.randomUUID;
+  Object.defineProperty(window.crypto, "randomUUID", {configurable:true,value:undefined});
+  expect(captureAnalyticsContext()).toBeNull();
+  expect(()=>trackProductEvent("feed_viewed")).not.toThrow();
+  expect(fetchMock).not.toHaveBeenCalled();
+  Object.defineProperty(window.crypto, "randomUUID", {configurable:true,value:original});
+});

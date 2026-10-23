@@ -414,7 +414,7 @@ export function useTopicSearch() {
     });
 
     const analytics = captureAnalyticsContext();
-    const requestId = crypto.randomUUID();
+    const requestId = analytics ? crypto.randomUUID() : undefined;
     const startedAt = Date.now();
     let resultCount = 0;
     let outcome: "success" | "error" | "cancelled" | "timeout" | "incomplete" = "incomplete";
@@ -695,12 +695,12 @@ export function useCompare() {
     controllerRef.current = controller;
 
     const analytics = captureAnalyticsContext();
-    const requestId = crypto.randomUUID();
+    const requestId = analytics ? crypto.randomUUID() : undefined;
     const startedAt = Date.now();
     let outcome: "success" | "error" | "cancelled" | "timeout" | "incomplete" = "incomplete";
     trackProductEvent("comparison_requested", { requestId }, analytics);
     setState({
-      requestId,
+      requestId: requestId ?? null,
       topic,
       comparison: null,
       sourcesChecked: [],
@@ -736,7 +736,7 @@ export function useCompare() {
     const applyResults = (data: CompareResponse) => {
       outcome = "success";
       setState({
-        requestId,
+        requestId: requestId ?? null,
         topic: data.topic,
         comparison: data.comparison,
         sourcesChecked: data.sources_checked,

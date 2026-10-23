@@ -65,7 +65,7 @@ function retry(event: ProductEvent): void {
 }
 
 export function captureAnalyticsContext(): AnalyticsContext | null {
-  if (!allowed()) return null;
+  if (!allowed() || typeof window.crypto?.randomUUID !== "function") return null;
   try {
     const now = Date.now();
     let identity: Identity | null = null;
