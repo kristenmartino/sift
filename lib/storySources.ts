@@ -39,7 +39,7 @@ function byNewest(a: Article, b: Article): number {
  * Build one SourceUnit per outlet for a clustered story.
  *
  * Framed sources come first, in the framings' original (LLM-chosen) order,
- * de-duped by sourceName so a single outlet that published several near-
+ * de-duped by resolved outlet slug so a single outlet that published several near-
  * duplicate articles is never counted as multiple outlets. Sources that only
  * contributed articles (no framing) follow, in first-appearance order, so no
  * article is ever dropped from the card.
@@ -52,26 +52,44 @@ export function buildSourceUnits(
   framings: StoryFraming[],
   articles: Article[],
 ): SourceUnit[] {
-  // Group articles by source, newest-first within each source.
+  // RSS labels such as NPR and NPR World can resolve to the same publisher.
+  // Use that shared identity for both the framing join and the visible count.
+  const profilesByName = new Map<string, NonNullable<Article["outlet"]>>();
+  const normalized = (name: string) => name.trim().toLowerCase();
+  for (const source of [...articles, ...framings]) {
+    if (source.outlet) profilesByName.set(normalized(source.sourceName), source.outlet);
+  }
+  const profileFor = (source: { sourceName: string; outlet?: Article["outlet"] }) =>
+    source.outlet ?? profilesByName.get(normalized(source.sourceName)) ?? null;
+  const keyFor = (source: { sourceName: string; outlet?: Article["outlet"] }) => {
+    const profile = profileFor(source);
+    return profile ? `outlet:${profile.slug}` : `source:${normalized(source.sourceName)}`;
+  };
+
+  // Group articles by publisher, newest-first within each publisher.
   const articlesBySource = new Map<string, Article[]>();
   for (const article of articles) {
-    const list = articlesBySource.get(article.sourceName);
+    const key = keyFor(article);
+    const list = articlesBySource.get(key);
     if (list) list.push(article);
-    else articlesBySource.set(article.sourceName, [article]);
+    else articlesBySource.set(key, [article]);
   }
   for (const list of articlesBySource.values()) list.sort(byNewest);
 
-  const units: SourceUnit[] = [];
-  const sourcesSeen = new Set<string>();
+  const unitsBySource = new Map<string, SourceUnit>();
 
   // 1) Framed sources, de-duped, in framing order.
   for (const framing of framings) {
-    if (sourcesSeen.has(framing.sourceName)) continue;
-    sourcesSeen.add(framing.sourceName);
-    const srcArticles = articlesBySource.get(framing.sourceName) ?? [];
-    units.push({
+    const key = keyFor(framing);
+    const existing = unitsBySource.get(key);
+    if (existing) {
+      if (!existing.framing && framing.framing) existing.framing = framing.framing;
+      continue;
+    }
+    const srcArticles = articlesBySource.get(key) ?? [];
+    unitsBySource.set(key, {
       sourceName: framing.sourceName,
-      outlet: framing.outlet ?? srcArticles[0]?.outlet ?? null,
+      outlet: profileFor(framing),
       framing: framing.framing,
       articles: srcArticles,
     });
@@ -79,17 +97,17 @@ export function buildSourceUnits(
 
   // 2) Sources that only contributed articles (no framing), first-seen order.
   for (const article of articles) {
-    if (sourcesSeen.has(article.sourceName)) continue;
-    sourcesSeen.add(article.sourceName);
-    units.push({
+    const key = keyFor(article);
+    if (unitsBySource.has(key)) continue;
+    unitsBySource.set(key, {
       sourceName: article.sourceName,
-      outlet: article.outlet ?? null,
+      outlet: profileFor(article),
       framing: null,
-      articles: articlesBySource.get(article.sourceName) ?? [],
+      articles: articlesBySource.get(key) ?? [],
     });
   }
 
-  return units;
+  return [...unitsBySource.values()];
 }
 
 /**

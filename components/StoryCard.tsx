@@ -79,23 +79,21 @@ export default function StoryCard({
 
   // One unit per outlet: provenance + how it framed the story + its article(s).
   const sourceUnits = buildSourceUnits(story.framings, story.articles);
-  const framedUnits = sourceUnits.filter((u) => u.framing);
-  const unframedUnits = sourceUnits.filter((u) => !u.framing);
   const uniqueSourceCount = sourceUnits.length;
   // Coverage counts outlets, even when the model found no distinct emphasis.
   const isMultiSource = uniqueSourceCount >= 2;
   // Spread across every outlet on the story (single-source shows one cell).
   const spread = summarizeLeanSpread(sourceUnits);
-  // Framed units sorted L→C→R→unrated so the list reads as a spectrum.
-  const sortedFramed = isMultiSource
-    ? [...framedUnits].sort((a, b) => leanRank(a) - leanRank(b))
-    : framedUnits;
+  // Every outlet participates in the spectrum order, including blank notes.
+  const sortedSources = isMultiSource
+    ? [...sourceUnits].sort((a, b) => leanRank(a) - leanRank(b))
+    : sourceUnits;
   // The spectrum note only renders when the outlets actually span 2+ lean
   // buckets — the sort is unconditional, the claim about it isn't.
   const spansSpectrum =
     isMultiSource &&
     new Set(
-      sortedFramed
+      sortedSources
         .map((u) => bucketize(u.outlet?.allSidesRating))
         .filter(Boolean),
     ).size >= 2;
@@ -239,10 +237,7 @@ export default function StoryCard({
                 </p>
               )}
               <div className="flex flex-col">
-                {sortedFramed.map((u) => (
-                  <SourceRow key={u.sourceName} unit={u} onCompare={onCompare} />
-                ))}
-                {unframedUnits.map((u) => (
+                {sortedSources.map((u) => (
                   <SourceRow key={u.sourceName} unit={u} onCompare={onCompare} />
                 ))}
               </div>
