@@ -1,6 +1,6 @@
 # Sift
 
-**The news, with footnotes.** An AI-powered news aggregator with a civic-literacy layer on top. Sift reads from 70+ vetted outlets across the political spectrum, AI-summarizes the day's stories across 10 categories, lets you search any topic or compare coverage across sources — *and* adds the civic footnotes the news assumes you already have: an adaptive *"what you should know first"* primer, inline glossary tooltips, structured dossiers on every politician / organization / bill / outlet, cross-spectrum framing — all sourced from public records.
+**The news, with footnotes.** A news aggregator with AI-generated summaries, topic search, coverage comparison, and civic context. The curated outlet registry is not a count of outlets actively ingesting at any moment. Articles can link to matched politicians, organizations, bills, and outlets in the dossier registry; coverage varies by article and entity. Dossiers combine available source-linked records with explanatory text. AI summaries, primers, and comparisons are generated interpretations, not verified public-record facts.
 
 **Live:** [siftnews.io](https://siftnews.io)
 
@@ -24,7 +24,7 @@ Railway runs its own 30-min asyncio scheduler --> pipeline --writes--> Neon Post
 ## Foundation (the reader surface)
 
 - **10 categories**: Top, Technology, Business, Science, Energy, World, Health, Politics, Sports, Entertainment.
-- **AI summaries**: every article summarized by Claude Haiku 4.5 in the background pipeline — the browse path never touches Claude (live compare + topic-search fallback do call Claude; see "AI split by SLA" below).
+- **AI summaries**: every article summarized by Claude Haiku 4.5 in the background pipeline — the browse path never touches Claude (live compare + topic-search fallback do call Claude; see "Background and live AI paths" below).
 - **Topic search**: vector similarity (Voyage AI embeddings + pgvector), SSE streaming, Claude web-search fallback for niche queries.
 - **Multi-source comparison**: LangGraph workflow — fan-out search across outlets, extract claims, compare framings. Described, not labeled.
 - **Bookmarks**: localStorage + Clerk server sync.
@@ -34,17 +34,17 @@ Railway runs its own 30-min asyncio scheduler --> pipeline --writes--> Neon Post
 
 ## Civic-literacy layer (what makes Sift Sift)
 
-- **"What you should know first"**: an adaptive primer above each story — key terms and context the article assumes you already have. AI-generated at ingest, expandable for complex policy.
+- **"What you should know first"**: a primer above stories where enrichment is available — key terms and context the article assumes you already have. AI-generated at ingest, expandable for complex policy.
 - **Inline glossary**: civic terms surface contextually inside the article — defined where the reader needs them. Chip tooltips with previews; click-through to the full dossier.
-- **Civic dossiers**: every politician, organization, bill, and outlet links to a structured dossier — committee assignments, top industries by PAC contributions, ownership, funding, FARA registration, voting records, AllSides + MBFC ratings. Sourced from OpenSecrets, GovTrack, ProPublica Nonprofit Explorer, FARA, Vote Smart, and FEC. Citations on every page.
+- **Civic dossiers**: matched entities can link to curated profiles with available committee, contribution, ownership, funding, registration, voting, and outlet-rating data. Sources include OpenSecrets, GovTrack, ProPublica Nonprofit Explorer, FARA, Vote Smart, and FEC. Fields and citations vary; some sections are missing or withheld. A link identifies a source, but does not independently verify every generated statement.
 - **Cross-spectrum framing**: how outlets across left / center / right framed the same story. Sift surfaces AllSides + MBFC ratings verbatim — never computes its own.
 - **Methodology**: source curation policy and symmetric-application rules public at `/methodology`.
 - **Civic dossier index**: searchable, filterable view of curated politicians, organizations, and bills at `/civic`.
 
-## Architecture move — AI split by SLA
+## Background and live AI paths
 
-- **Browse path**: pre-computed in a background pipeline; frontend reads from Postgres in ~50ms. The whole category-browsing experience is a database read.
-- **Live AI path**: multi-source compare and topic search run AI live (fan-out, claim extraction, web search) and accept ~10–15s, streaming as they go. Different work, different SLA.
+- **Browse path**: summaries are precomputed in the background pipeline; category requests read Postgres without a live Claude call. A database query target is not an end-to-end page latency measurement; this README makes no measured latency guarantee.
+- **Live AI path**: comparison and the topic-search fallback call AI providers at request time and stream progress. Response time varies with provider latency, coverage, and workload; no production SLA is established here.
 
 ## Quick start
 

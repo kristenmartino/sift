@@ -22,11 +22,11 @@ I used the product daily. So did the friends I asked to try it. That's when two 
 
 ### The surprise
 
-**Latency.** Live web-search-driven generation cost 15+ seconds per category load. I patched this by moving the AI off the user's critical path: a background pipeline writes to Postgres on a schedule, the frontend serves enriched content from cache. Live browse latency went from 15s to ~50ms. (Multi-source compare and topic search still take ~10–15s — they run AI live and accept the latency because the user is asking for analysis, not browsing. Two paths by SLA.)
+**Latency.** Live web-search-driven generation cost 15+ seconds per category load. I patched this by moving the AI off the user's critical path: a background pipeline writes to Postgres on a schedule, the frontend serves enriched content from cache. Category browsing now reads precomputed content from Postgres instead of waiting for live generation. The earlier ~50ms figure described a database-read target, not a documented end-to-end production benchmark. Comparison and topic-search fallback still call AI live; response times vary.
 
 **The AI-summary layer alone wasn't the differentiator.** Multi-source comparison was supposed to be the headline feature. In production, when the corpus is curated mainstream sources, the "different framings" are usually surface variations of the same coverage. The compare view kept producing outputs that were technically interesting and substantively dull. Asking AI to compare three wire descriptions of the same Senate vote tells the reader they all said roughly the same thing — which a reader could see by skimming the three headlines.
 
-The bottleneck wasn't volume, source diversity, or cross-source disagreement. The bottleneck was that **most readers don't know who the players are.** They can read five outlets on the same vote and still not know who the senator is, what the bill does, what the relevant lobbying body wants, or how the framing has shifted from the last time the question came up. The thing they actually need is not better summaries — it's the political, organizational, and legislative scaffolding around each story.
+The bottleneck wasn't volume, source diversity, or cross-source disagreement. My product hypothesis became that **some readers need more context about the players.** They can read five outlets on the same vote and still not know who the senator is, what the bill does, what the relevant lobbying body wants, or how the framing has shifted from the last time the question came up. I chose to test political, organizational, and legislative context around stories. That choice is not evidence of population-wide reader needs or demand.
 
 ---
 
@@ -34,13 +34,13 @@ The bottleneck wasn't volume, source diversity, or cross-source disagreement. Th
 
 So I kept the aggregator and added a civic-literacy layer on top.
 
-The aggregator continues to do what an aggregator does — 10 categories, ~50 outlets, AI summaries pre-computed in the background pipeline, topic search via vector similarity with SSE streaming, multi-source comparison via LangGraph fan-out. That's the daily-driver experience that builds the habit. The AI work is still there, just split by SLA: the browse path is pre-computed and serves from Postgres in ~50ms; multi-source compare and topic search run live and accept ~10–15s.
+The aggregator has categories, a curated outlet registry, background AI summaries, vector topic search, and multi-source comparison. Registry size does not establish current ingestion coverage. Background processing removes a live model call from browsing; comparison and topic-search fallback still use live AI. Habit formation and reader retention have not been demonstrated by these features.
 
 What got added is the civic-literacy layer:
 
 - **"What you should know first"** — an adaptive primer above each story. Key terms and context the article assumes the reader already has, AI-generated at ingest, expandable when the story sits on top of complex policy.
 - **Inline glossary** — civic terms surface contextually inside the article. Chip pills with tooltip previews; click-through to the full dossier.
-- **Civic dossiers** for politicians (committee assignments, top industries by PAC contributions, interest-group ratings, links to GovTrack / OpenSecrets / Vote Smart), organizations (political lean, finances, major funders, FARA registration, links to ProPublica Nonprofit Explorer / IRS 990 / FARA), bills (status, sponsor, cosponsors, lobbying spend, links to GovTrack / Congress.gov / OpenSecrets), and news outlets (ownership, funding, AllSides political-lean, MBFC factual-reporting). All sourced from public records.
+- **Civic dossiers** for politicians (committee assignments, top industries by PAC contributions, interest-group ratings, links to GovTrack / OpenSecrets / Vote Smart), organizations (political lean, finances, major funders, FARA registration, links to ProPublica Nonprofit Explorer / IRS 990 / FARA), bills (status, sponsor, cosponsors, lobbying spend, links to GovTrack / Congress.gov / OpenSecrets), and news outlets (ownership, funding, AllSides political-lean, MBFC factual-reporting). Available fields link to public records or attributed rating sources. Coverage varies, and generated explanatory text is not independently verified by the presence of a source link.
 - **Cross-spectrum framing** — when multiple outlets cover the same story, what each chose to emphasize. AllSides and MBFC ratings shown verbatim — Sift never computes its own.
 
 The combination is what changed. An aggregator without civic context is a commodity — every news app shows the same Reuters and AP stories. A civic-context tool without the daily news flow is a research database — useful when you need it, not a daily-driver. *Aggregator + civic footnotes* is what makes Sift Sift.
