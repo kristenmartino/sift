@@ -539,8 +539,9 @@ export interface PoliticianProfile {
 
 /**
  * Lite shape used by the civic index page (`/civic`). Just enough to render
- * the grouped-by-state list — full PoliticianProfile isn't worth pulling for
- * 536 rows when only five fields render. The query is `lib/db.ts`'s
+ * the office-scoped directory. International profiles use country codes in
+ * the legacy `state` field; Congress uses U.S. state/territory codes.
+ * The query is `lib/db.ts`'s
  * `listAllPoliticiansLite`.
  */
 export interface PoliticianListItem {
@@ -831,13 +832,21 @@ export interface TopicSearchResponse {
 /** Shape of /api/compare response */
 export interface CompareClaim {
   claim: string;
-  agreement: "unanimous" | "majority" | "disputed" | "unique";
+  agreement: "unanimous" | "majority" | "partial" | "disputed" | "unique";
   sources?: string[];
   sources_for?: string[];
   sources_against?: string[];
 }
 
-export interface CompareResponse {
+export interface CompareProvenance {
+  source_provenance_version: 1;
+  sources_requested: string[];
+  sources_retrieved: string[];
+  sources_analyzed: string[];
+  sources_unavailable: string[];
+}
+
+export interface CompareResponse extends Partial<CompareProvenance> {
   topic: string;
   comparison: string;
   sources_checked: string[];

@@ -5,7 +5,8 @@ import { ShareButton } from "@/components/ShareActions";
 import { COMPARE_SOURCES } from "@/lib/constants";
 import UsageView from "./analytics/UsageView";
 import { COPY } from "@/lib/copy";
-import type { CompareClaim } from "@/lib/types";
+import type { CompareClaim, CompareProvenance } from "@/lib/types";
+import { comparisonProvenance, normalizeCompareClaim, comparisonClaimLabel, comparisonDate } from "@/lib/comparison";
 
 const MAX_SOURCES = 5;
 const MIN_SOURCES = 2;
@@ -16,6 +17,8 @@ interface CompareViewProps {
   topic: string;
   comparison: string;
   sourcesChecked: string[];
+  provenance?: CompareProvenance | null;
+  generatedAt?: string;
   claims: CompareClaim[];
   durationMs: number;
   onCompareAnother: (topic: string, sources: string[]) => void;
@@ -50,6 +53,7 @@ const AGREEMENT_STYLES: Record<string, { label: string; color: string; dot: stri
     color: "var(--text-tertiary)",
     dot: "\u25CB",
   },
+  partial: { label: COPY.compare.agreement.partial, color: "var(--text-tertiary)", dot: "\u25CB" },
 };
 
 // Disputed first \u2014 the cross-spectrum disagreement is the whole point of the
@@ -60,6 +64,7 @@ const AGREEMENT_ORDER: Record<string, number> = {
   majority: 1,
   unanimous: 2,
   unique: 3,
+  partial: 3,
 };
 
 export default function CompareView({
@@ -68,6 +73,8 @@ export default function CompareView({
   topic,
   comparison,
   sourcesChecked,
+  provenance,
+  generatedAt,
   claims,
   durationMs,
   onCompareAnother,
@@ -88,7 +95,12 @@ export default function CompareView({
     .map((key) => COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key)
     .join(", ");
 
-  const sortedClaims = [...claims].sort(
+  const record = comparisonProvenance(provenance ?? {});
+  const visibleClaims = record ? claims.flatMap((claim) => {
+    const normalized = normalizeCompareClaim(claim, record);
+    return normalized ? [normalized] : [];
+  }) : claims;
+  const sortedClaims = [...visibleClaims].sort(
     (a, b) => (AGREEMENT_ORDER[a.agreement] ?? 4) - (AGREEMENT_ORDER[b.agreement] ?? 4)
   );
 
@@ -126,15 +138,16 @@ export default function CompareView({
           <h2 className="font-heading text-[22px] font-bold text-(--text-primary) tracking-tight">
             {topic}
           </h2>
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-(--text-tertiary)">
-            <span>{COPY.compare.metaSources(sourcesChecked.length)}</span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-(--text-tertiary)">
+            <span>{record ? COPY.compare.metaAnalyzedSources(record.sources_analyzed.length)
+              : COPY.compare.metaSources(sourcesChecked.length)}</span>
             <span className="opacity-30">&middot;</span>
             <span>{(durationMs / 1000).toFixed(1)}s</span>
             <span className="opacity-30">&middot;</span>
-            <span>{COPY.compare.metaClaims(claims.length)}</span>
+            <span>{record ? COPY.compare.metaClaims(visibleClaims.length) : COPY.compare.metaSavedClaims(visibleClaims.length)}</span>
           </div>
           <p className="text-[11px] text-(--text-tertiary) mt-1.5 italic">
-            {COPY.compare.liveNote}
+            {generatedAt ? COPY.compare.savedNote(comparisonDate(generatedAt)) : COPY.compare.liveNote}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 mt-1">
@@ -150,7 +163,20 @@ export default function CompareView({
       </div>
 
       {/* Sources */}
-      <div className="flex flex-wrap gap-1.5 mb-5">
+      {record ? (
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 text-xs">
+          {([
+            [COPY.compare.requested, record.sources_requested],
+            [COPY.compare.retrieved, record.sources_retrieved],
+            [COPY.compare.analyzed, record.sources_analyzed],
+            [COPY.compare.unavailable, record.sources_unavailable],
+          ] as const).map(([label, sources]) => (
+            <div key={label}><dt className="font-semibold">{label} ({sources.length})</dt>
+              <dd className="text-(--text-secondary)">{sources.join(", ") || "None"}</dd></div>
+          ))}
+        </dl>
+      ) : <p role="status" className="text-sm mb-5 text-(--text-secondary)">{COPY.compare.legacyNote}</p>}
+      {!record && <div className="flex flex-wrap gap-1.5 mb-5">
         {sourcesChecked.map((source) => (
           <span
             key={source}
@@ -164,10 +190,10 @@ export default function CompareView({
             {source}
           </span>
         ))}
-      </div>
+      </div>}
 
       {/* Summary card */}
-      <div
+      {record && <div
         className="rounded-[14px] p-6 mb-6"
         style={{
           background: "var(--surface-raised)",
@@ -178,9 +204,9 @@ export default function CompareView({
           {COPY.compare.summary}
         </h3>
         <p className="text-[15px] leading-relaxed text-(--text-secondary)">
-          {comparison}
+          {record.sources_analyzed.length ? comparison : COPY.compare.noAnalysis}
         </p>
-      </div>
+      </div>}
 
       {/* Claims */}
       <div className="space-y-3 mb-8">
@@ -188,8 +214,8 @@ export default function CompareView({
           {COPY.compare.keyClaims}
         </h3>
         {sortedClaims.map((claim, i) => {
-          const style = AGREEMENT_STYLES[claim.agreement] || AGREEMENT_STYLES.unique;
-          const isDisputed = claim.agreement === "disputed";
+          const style = record ? AGREEMENT_STYLES[claim.agreement] || AGREEMENT_STYLES.unique : AGREEMENT_STYLES.unique;
+          const isDisputed = !!record && claim.agreement === "disputed";
           const isExpanded = expandedClaim === i;
           const hasDetails = isDisputed && (claim.sources_for?.length || claim.sources_against?.length);
 
@@ -208,9 +234,9 @@ export default function CompareView({
               }}
               onClick={() => hasDetails && setExpandedClaim(isExpanded ? null : i)}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex flex-col sm:flex-row items-start gap-3">
                 <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide shrink-0 mt-0.5"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide max-w-full sm:shrink-0 mt-0.5"
                   style={{
                     fontSize: "10px",
                     background: `color-mix(in srgb, ${style.color} 10%, transparent)`,
@@ -218,9 +244,9 @@ export default function CompareView({
                     border: `1px solid color-mix(in srgb, ${style.color} 22%, transparent)`,
                   }}
                 >
-                  {style.dot} {style.label}
+                  {style.dot} {comparisonClaimLabel(claim, record)}
                 </span>
-                <p className="text-sm text-(--text-primary) leading-relaxed flex-1">
+                <p className="text-sm text-(--text-primary) leading-relaxed min-w-0 sm:flex-1">
                   {claim.claim}
                 </p>
                 {hasDetails && (
@@ -329,7 +355,7 @@ export default function CompareView({
             className="text-xs text-(--text-tertiary) cursor-pointer bg-transparent border-none p-0 transition-colors duration-200"
             style={{ color: sourcesExpanded ? "var(--accent)" : undefined }}
           >
-            Comparing: {selectedLabels} {sourcesExpanded ? "▴" : "▾"}
+            {COPY.compare.comparing(selectedLabels)} {sourcesExpanded ? "▴" : "▾"}
           </button>
           {sourcesExpanded && (
             <div className="flex flex-wrap gap-1.5 mt-2 animate-fade-slide-in">

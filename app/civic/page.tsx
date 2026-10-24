@@ -59,6 +59,7 @@ export default async function CivicPage({ searchParams }: CivicPageProps) {
     "executive",
     "foreign-executive",
     "scotus",
+    "former",
   ];
   const chamberFilter: PoliticianChamber | null =
     CHAMBER_FILTERS.includes(params.chamber as PoliticianChamber)

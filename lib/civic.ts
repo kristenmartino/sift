@@ -45,7 +45,12 @@ export function filterByChamber(
   chamber: PoliticianChamber | null,
 ): PoliticianListItem[] {
   if (!chamber) return politicians;
-  return politicians.filter((p) => p.chamber === chamber);
+  return politicians.filter((p) => chamber === "foreign-executive"
+    ? isInternational(p) : p.chamber === chamber && !isInternational(p));
+}
+
+function isInternational(p: PoliticianListItem): boolean {
+  return p.chamber === "foreign-executive" || p.bioguideId.toUpperCase().startsWith("FOREIGN-");
 }
 
 /**
@@ -67,6 +72,38 @@ export function groupByState(
     else groups.set(key, [p]);
   }
   return Array.from(groups.entries());
+}
+
+export type PoliticalOffice = "congress" | "executive" | "international" | "scotus" | "other";
+
+/** A country code is only interpreted as a country for international profiles. */
+export function countryName(code: string | null | undefined): string {
+  if (!code) return "Unknown country";
+  if (!/^[a-z]{2}$/i.test(code)) return code;
+  return new Intl.DisplayNames(["en"], { type: "region" }).of(code.toUpperCase()) ?? code;
+}
+
+/** Partition by office before grouping geography: AR/CA/DE are ambiguous alone. */
+export function groupByOffice(politicians: PoliticianListItem[]): Array<{
+  office: PoliticalOffice;
+  groups: Array<[string, PoliticianListItem[]]>;
+}> {
+  const offices: PoliticalOffice[] = ["congress", "executive", "international", "scotus", "other"];
+  const members = new Map(offices.map((office) => [office, [] as PoliticianListItem[]]));
+  for (const p of politicians) {
+    const office: PoliticalOffice = isInternational(p)
+      ? "international"
+      : p.chamber === "house" || p.chamber === "senate" ? "congress"
+      : p.chamber === "executive" ? "executive"
+      : p.chamber === "scotus" ? "scotus" : "other";
+    members.get(office)!.push(p);
+  }
+  return offices.flatMap((office) => {
+    const list = members.get(office)!;
+    if (!list.length) return [];
+    return [{ office, groups: office === "congress" || office === "international"
+      ? groupByState(list) : [["", list] as [string, PoliticianListItem[]]] }];
+  });
 }
 
 /** Pretty-printed type label for the org-index section heading. */

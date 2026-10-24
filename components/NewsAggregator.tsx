@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
+import { comparisonDate, comparisonProvenance } from "@/lib/comparison";
 import { civicBoost, weightedCivicLinks } from "@/lib/civicWeight";
 import { reportError } from "@/lib/observability";
 import { timeAgo } from "@/lib/utils";
@@ -127,6 +128,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     topic: compareTopic,
     comparison: compareComparison,
     sourcesChecked: compareSources,
+    provenance: compareProvenance,
     claims: compareClaims,
     durationMs: compareDuration,
     loading: compareLoading,
@@ -927,6 +929,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 topic={compareTopic!}
                 comparison={compareComparison}
                 sourcesChecked={compareSources}
+                provenance={compareProvenance}
                 claims={compareClaims}
                 durationMs={compareDuration!}
                 onCompareAnother={startCompare}
@@ -1169,7 +1172,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
 /**
  * The anonymous daily compare example: a dated banner over the real result.
  * Signed-out visitors see this instead of a wall — the actual product's
- * output from this morning, labeled as exactly that, with sign-in as the
+ * stored output, labeled with its full generation date, with sign-in as the
  * next step rather than the price of entry.
  */
 function DailyExampleBlock({
@@ -1192,7 +1195,7 @@ function DailyExampleBlock({
           {COPY.compare.dailyTitle}
         </span>{" "}
         <span className="text-(--text-secondary)">
-          {COPY.compare.dailyBody(timeAgo(example.generatedAt))}
+          {COPY.compare.dailyBody(`${comparisonDate(example.generatedAt)} (UTC)`)}
         </span>{" "}
         <Link
           href="/sign-in"
@@ -1206,6 +1209,8 @@ function DailyExampleBlock({
         topic={example.topic}
         comparison={example.comparison}
         sourcesChecked={example.sources_checked}
+        provenance={comparisonProvenance(example)}
+        generatedAt={example.generatedAt}
         claims={example.claims}
         durationMs={example.duration_ms}
         onCompareAnother={onCompareAnother}

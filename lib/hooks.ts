@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from "react";
 import { STORAGE_KEYS, SLOW_THRESHOLD_MS, API_TIMEOUT_MS, MAX_CUSTOM_TOPICS } from "./constants";
-import type { Article, ArticleCache, StoryCache, CategoryId, CustomTopic, NewsApiResponse, CompareResponse, CompareClaim, CompareSourceDone, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
+import type { Article, ArticleCache, StoryCache, CategoryId, CustomTopic, NewsApiResponse, CompareResponse, CompareClaim, CompareProvenance, CompareSourceDone, SSEResultsEvent, SSEDoneEvent, SSEErrorEvent } from "./types";
+import { comparisonProvenance } from "./comparison";
 import { reportError } from "./observability";
 import { readSSE } from "./sse";
 import { analyticsHeaders, captureAnalyticsContext, trackProductEvent } from "./productAnalyticsClient";
@@ -661,6 +662,7 @@ interface CompareState {
   topic: string | null;
   comparison: string | null;
   sourcesChecked: string[];
+  provenance: CompareProvenance | null;
   claims: CompareClaim[];
   durationMs: number | null;
   loading: boolean;
@@ -678,6 +680,7 @@ export function useCompare() {
     topic: null,
     comparison: null,
     sourcesChecked: [],
+    provenance: null,
     claims: [],
     durationMs: null,
     loading: false,
@@ -704,6 +707,7 @@ export function useCompare() {
       topic,
       comparison: null,
       sourcesChecked: [],
+      provenance: null,
       claims: [],
       durationMs: null,
       loading: true,
@@ -740,6 +744,7 @@ export function useCompare() {
         topic: data.topic,
         comparison: data.comparison,
         sourcesChecked: data.sources_checked,
+        provenance: comparisonProvenance(data),
         claims: data.claims,
         durationMs: data.duration_ms,
         loading: false,
@@ -840,6 +845,7 @@ export function useCompare() {
       topic: null,
       comparison: null,
       sourcesChecked: [],
+      provenance: null,
       claims: [],
       durationMs: null,
       loading: false,

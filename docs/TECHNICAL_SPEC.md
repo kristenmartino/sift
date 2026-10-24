@@ -173,24 +173,43 @@ User-triggered multi-source comparison via LangGraph.
   "topic": "Federal Reserve interest rate decision",
   "comparison": "All three outlets agree the Fed held rates steady...",
   "sources_checked": ["reuters", "bbc", "associated press"],
+  "source_provenance_version": 1,
+  "sources_requested": ["reuters", "bbc", "associated press"],
+  "sources_retrieved": ["reuters", "bbc", "associated press"],
+  "sources_analyzed": ["reuters", "bbc", "associated press"],
+  "sources_unavailable": [],
   "claims": [
     {
       "claim": "Fed held rates at 5.25-5.50%",
       "agreement": "unanimous",
-      "sources": ["reuters", "bbc", "ap"]
+      "sources": ["reuters", "bbc", "associated press"]
     },
     {
       "claim": "Two rate cuts expected in 2026",
       "agreement": "disputed",
       "sources_for": ["reuters", "bbc"],
-      "sources_against": ["ap"]
+      "sources_against": ["associated press"]
     }
   ],
   "duration_ms": 8500
 }
 ```
 
-**Auth:** Bearer token (Clerk JWT forwarded from Next.js).
+`source_provenance_version: 1` records requested sources, sources with coverage found,
+sources included in completed analysis, and sources without retrieved coverage.
+`sources_checked` is the compatibility alias for `sources_analyzed`; it never falls
+back to the requested list. JSON, SSE `results`, and newly saved daily examples carry
+the same fields. Claim source lists are restricted to analyzed sources, deduplicated,
+and agreement uses that full denominator (`partial` covers multiple sources without
+a majority). Availability describes the search workflow, not independent fact verification.
+
+Older saved rows have no availability record. The UI labels them as saved examples
+with a full UTC generation date, hides the unsupported summary/agreement assessment,
+and does not infer analysis from a source name appearing in generated text. The landing
+page uses its labeled illustration instead of promoting a legacy result as verified agreement.
+
+**Auth:** `X-Pipeline-Key` on the backend. The Next.js proxy requires a Clerk session
+and forwards the pipeline key; it does not forward a Clerk bearer token.
 
 ---
 

@@ -1,6 +1,7 @@
 import UsageView from "@/components/analytics/UsageView";
 import { COPY } from "@/lib/copy";
 import type { DailyCompareExample } from "@/lib/types";
+import { comparisonProvenance, normalizeCompareClaim, comparisonClaimLabel } from "@/lib/comparison";
 
 const C = COPY.landingReskin.compare;
 
@@ -20,7 +21,13 @@ export default function ComparisonDemo({
 }: {
   example?: DailyCompareExample | null;
 }) {
-  const live = example && example.claims.length >= 2 ? example : null;
+  const record = example ? comparisonProvenance(example) : null;
+  const normalizedClaims = record && example ? example.claims.flatMap((claim) => {
+    const normalized = normalizeCompareClaim(claim, record);
+    return normalized ? [normalized] : [];
+  }) : [];
+  const live = example && record && record.sources_analyzed.length >= 2 && normalizedClaims.length >= 2
+    ? { ...example, claims: normalizedClaims } : null;
   const generatedDate = live
     ? new Date(live.generatedAt).toLocaleDateString("en-US", {
         month: "long",
@@ -55,8 +62,7 @@ export default function ComparisonDemo({
                 <div className="sl-frame" key={claim.claim}>
                   <div className="sl-out">
                     <span className="sl-nm">
-                      {COPY.compare.agreement[claim.agreement] ??
-                        COPY.compare.agreement.unique}
+                      {comparisonClaimLabel(claim, record)}
                     </span>
                     <span className="sl-ln">
                       <span className="sl-dot" aria-hidden />

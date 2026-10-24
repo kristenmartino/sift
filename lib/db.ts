@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { comparisonProvenance } from "./comparison";
 import { Pool } from "pg";
 
 import { isMissingColumn, isMissingSchemaObject } from "./dbErrors";
@@ -1952,6 +1953,7 @@ export async function getDailyCompareExample(): Promise<DailyCompareExample | nu
       claims: Array.isArray(payload.claims) ? payload.claims : [],
       duration_ms: Number(payload.duration_ms ?? 0),
       generatedAt: new Date(generated_at).toISOString(),
+      ...(comparisonProvenance(payload) ?? {}),
     };
   } catch (err) {
     if (!isMissingSchemaObject(err, "daily_compare_example")) throw err;
