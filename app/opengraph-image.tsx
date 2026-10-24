@@ -91,7 +91,7 @@ export default async function OGImage() {
             textAlign: "center",
           }}
         >
-          Civic context &middot; Cross-spectrum framing &middot; The money behind each story
+          Background &middot; Coverage comparison &middot; Source profiles
         </span>
       </div>
     ),

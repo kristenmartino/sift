@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const revalidate = 86400;
 
 const STACK = [
-  { name: "Next.js 15", role: "Frontend & App Router on Vercel" },
+  { name: "Next.js 16", role: "Frontend & App Router on Vercel" },
   { name: "FastAPI + LangGraph", role: "Pipeline & comparison workflow on Railway" },
   { name: "Postgres + pgvector", role: "Articles, stories, embeddings, bookmarks" },
   { name: "Claude (Anthropic)", role: "Summarization, story synthesis, comparison" },
@@ -27,15 +27,15 @@ const STACK = [
 ];
 
 const ARCHITECTURE_STATIC = [
-  "Articles load in under 50ms — AI processing happens in the background, not when you read.",
-  "Works without an account — sign in only if you want bookmarks synced across devices.",
-  "Graceful degradation: every feature works independently, so one slow service never blocks the page.",
+  "News summaries are prepared in the background. Browsing reads the stored results; search and comparison can run AI live.",
+  "Browse without an account. Sign in to run comparisons or sync bookmarks across devices.",
+  "When background information or ratings are missing, the page omits those fields.",
 ];
 
 // The ingest principle carries the live curated-outlet count (issue #153);
 // count-free fallback on a DB miss.
 function ingestPrinciple(total: number): string {
-  return `${total > 0 ? `${total} curated outlets` : "Curated outlets"} are ingested, deduplicated, and ranked every 30 minutes before you open the app.`;
+  return `The source index lists ${total > 0 ? `${total} curated outlets` : "curated outlets"}. A separate background pipeline collects and processes articles every 30 minutes.`;
 }
 
 export default async function ColophonPage() {
@@ -56,7 +56,7 @@ export default async function ColophonPage() {
             Colophon
           </h1>
           <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[60ch] leading-relaxed">
-            A note on how Sift is built — the stack, the people, the principles.
+            Who builds Sift, how it runs, and where AI is used.
           </p>
         </header>
 
@@ -138,7 +138,7 @@ export default async function ColophonPage() {
                   ↑
                   +— /api/compare ————→  Railway (FastAPI + LangGraph)
                   ↑
-                  +— cron / 10 min ———→  Railway → writes to Postgres`}
+                  +— scheduler / 30 min → Railway → writes to Postgres`}
           </pre>
         </section>
 

@@ -25,6 +25,8 @@ export default function ComparisonDemo({
     ? new Date(live.generatedAt).toLocaleDateString("en-US", {
         month: "long",
         day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
       })
     : null;
 
