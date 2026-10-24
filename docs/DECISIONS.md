@@ -1,6 +1,6 @@
 # Sift — Architecture Decision Register
 
-**Last updated:** August 18, 2026
+**Last updated:** October 24, 2026
 **Status:** D1–D30 settled (v1 production live); D31–D35 added for v1.5 / v2 direction (May 2026); D36–D45 added June 2026 (editorial theme, content + source quality, native + agentic scope); D46–D61 added Jul–Aug 2026 (evidence-first re-plan, IGO sourcing, infra economics, test validity, generated-prose constraints). **Prose bodies exist only for D1–D47 and D54 — the rest are table rows, and the bodies are not in numeric order.**
 
 ---
@@ -67,7 +67,6 @@
 | D59 | A test that cannot fail is not a test | Test suites are audited on whether a realistic bug turns them red, not on coverage — and every fix is proved by mutation first (break the source, confirm green, rewrite, confirm red). Two standing guards enforce it rather than relying on review: `__tests__/meta.test.ts` here and the hardened `tests/test_meta_suite.py` in `sift-api` reject assertion-free bodies, self-comparisons (`expect(f(x)).toBe(f(x))` — the original form of the `stable_hash` defect, which no lint rule sees) and tests defined where the runner will not collect them; Stryker (`npm run mutate`) and mutmut run by hand over a narrow set of pure, high-consequence modules, never in CI. The motivating case: `/api/compare` mocked its own rate limiter and CSRF gate and asserted on the mocks, so deleting the limiter outright left the suite green | $0 (dev-only; mutation runs are manual, ~80s scoped) | SETTLED (Aug 2026) |
 | D60 | CI that does not gate is documentation | A green check nothing depends on is advisory. Both repos' workflows were built for branch-protection semantics — path-filtered jobs post green when skipped, precisely so they can be required — but no `required_status_checks` rule was ever configured in either, so a red suite blocked no merge and `sift-api` accepted direct pushes to `main`. The rule is that a suite worth writing is worth making load-bearing; the settings change itself is the owner's to make | $0 | **SETTLED (Aug 2026)** — rulesets active on both repos 2026-08-18: `Type Check & Test` required in `sift`, `Lint & Test` in `sift-api`, no bypass actors. `sift` also gained the `Lint` step it never had |
 | D61 | The living-persons rule binds generated prose, not just dossiers | `OPERATING_CONTEXT.md` §5 said "no **dossier** claim about a living person without a citation to the primary record" — the pre-reversal framing. `LAUNCH_DECISION_MEMO.md` §2.2(b) inverted that ranking 2026-07-27 (hand-seeded dossier tables vs a summarizer emitting unreviewed prose about named people across 59 feeds every 30 min), and its B2 put the constraint into all three generators the same week — so the rule was enforced in code on a surface its own text did not cover. §5 now names summaries, primers, context and synthesis explicitly. Measured, half-clean: **0 of 38** legal-matter summaries escalate a charge into guilt (judge calibrated 12/12), while the reverse failure — dropping the source's "alleged" — is **unmeasured**, the judge scoring 0/5 on it. Evidence: sift-api#243/#264 | $0 | SETTLED (Aug 2026); the measurement half OPEN |
-
 | D63 | Empty copy beats unsupported explanation | One versioned generation standard; source-passage outlet notes with a focused redundancy check; automatic significance notes withheld without evidence beyond the summary | Note review metered through the existing judge ledger and cost guard | SETTLED (Oct 2026) |
 
 **Total estimated monthly cost: ~$30-50/mo**
@@ -1069,7 +1068,8 @@ Source notes must copy a contiguous supplied passage of at most 25 words. A
 focused Sonnet check removes semantic repetition; unavailable or budget-blocked
 review leaves notes blank while retaining the source links. This adds a paid
 note review, logged through the existing judge operation and cost guard; it is
-not a general factuality certification.
+not a general factuality certification. Optional primer backgrounds receive a
+similar novelty check, retaining useful definitions when a paragraph is blanked.
 
 Automatic significance notes stay blank because their generator has only the
 headline and summary, with no additional source evidence. Importance, tone and
