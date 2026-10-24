@@ -203,7 +203,7 @@ User-triggered multi-source comparison via LangGraph.
   "version": "1.0.0",
   "db_connected": true,
   "last_pipeline_run": "2026-03-28T14:30:00Z",
-  "copy_rules_version": "2026-10-24.1"
+  "copy_rules_version": "2026-10-24.2"
 }
 ```
 
