@@ -27,3 +27,22 @@ it('keeps both outlets visible when no distinct framing was found', () => {
     expect(link.closest('[style*="grid-template-rows: 0fr"]')).toBeNull();
   }
 });
+
+it('orders blank-note outlets by their rating alongside framed outlets', () => {
+  const profiles = [
+    { slug: 'left', name: 'Left outlet', allSidesRating: 'left' },
+    { slug: 'right', name: 'Right outlet', allSidesRating: 'right' },
+  ].map((p) => ({ ...p, allSidesUrl: null, mbfcFactual: null, mbfcUrl: null }) as NonNullable<Story['articles'][number]['outlet']>);
+  const story: Story = {
+    id: 'spectrum-order', headline: 'A vote was held.', summary: 'The measure passed.', category: 'politics',
+    framings: [
+      { sourceName: 'Right outlet', framing: 'Cites the vote count.', tone: 'neutral', outlet: profiles[1] },
+      { sourceName: 'Left outlet', framing: '', tone: 'neutral', outlet: profiles[0] },
+    ],
+    entities: [], articleCount: 2, outletCount: 2, imageUrl: null, publishedDate: null,
+    articles: profiles.map((outlet) => ({ id: outlet.slug, title: `Report ${outlet.slug}`, summary: 'A vote was held.', sourceName: outlet.name, sourceUrl: `https://example.com/${outlet.slug}`, category: 'politics', imageUrl: null, readTime: 1, publishedDate: null, outlet })),
+  };
+  render(<StoryCard story={story} featured={false} index={0} onCompare={jest.fn()} onBookmark={jest.fn()} bookmarks={new Set()} />);
+  const sources = screen.getAllByRole('link', { name: /Outlet dossier for/ });
+  expect(sources.map((s) => s.getAttribute('aria-label'))).toEqual(['Outlet dossier for Left outlet', 'Outlet dossier for Right outlet']);
+});

@@ -147,3 +147,25 @@ describe("summarizeLeanSpread — coverage cue", () => {
     expect(spread.bucketsCovered).toBe(2); // center + right
   });
 });
+
+it('counts RSS aliases as one publisher while keeping all articles and a useful note', () => {
+  const npr = outlet('npr', 'center');
+  const units = buildSourceUnits(
+    [framing('NPR World', '', npr), framing('NPR', 'Includes an attributed response.', npr)],
+    [article('world', 'NPR World', '2026-06-01T09:00:00Z', npr), article('main', 'NPR', '2026-06-01T10:00:00Z', npr)],
+  );
+  expect(units).toHaveLength(1);
+  expect(units[0].articles.map((a) => a.id)).toEqual(['main', 'world']);
+  expect(units[0].framing).toBe('Includes an attributed response.');
+  expect(summarizeLeanSpread(units)).toMatchObject({ total: 1, center: 1 });
+});
+
+it('joins an unresolved alias to its known profile without merging unrelated unprofiled sources', () => {
+  const units = buildSourceUnits(
+    [framing('NPR World', 'A detail.', null)],
+    [article('a', 'NPR World', null, outlet('npr', 'center')), article('b', 'NPR', null, outlet('npr', 'center')), article('c', 'Other Wire', null)],
+  );
+  expect(units).toHaveLength(2);
+  expect(units[0].articles).toHaveLength(2);
+  expect(units[1].sourceName).toBe('Other Wire');
+});
