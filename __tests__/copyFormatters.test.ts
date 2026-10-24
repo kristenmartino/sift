@@ -60,7 +60,7 @@ describe("compare — progress and result meta", () => {
 
   it("dates the anonymous daily example rather than presenting it as live", () => {
     expect(COPY.compare.dailyBody("this morning")).toBe(
-      "A real comparison from the tool, generated this morning.",
+      "Generated this morning by Sift's compare tool.",
     );
   });
 });
@@ -242,9 +242,9 @@ describe("civicIndex — counts and filter state", () => {
 });
 
 describe("landingReskin — live-example and outlet-count lines", () => {
-  it("dates the live compare example and calls it one a day", () => {
+  it("dates the stored compare example without promising daily generation", () => {
     expect(COPY.landingReskin.compare.liveNote("August 12")).toContain(
-      "Generated August 12 by the compare tool",
+      "Generated August 12 by Sift's compare tool",
     );
   });
 

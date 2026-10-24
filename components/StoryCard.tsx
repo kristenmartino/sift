@@ -81,8 +81,8 @@ export default function StoryCard({
   const sourceUnits = buildSourceUnits(story.framings, story.articles);
   const framedUnits = sourceUnits.filter((u) => u.framing);
   const unframedUnits = sourceUnits.filter((u) => !u.framing);
-  const uniqueSourceCount = framedUnits.length;
-  // Multi-source affordances only when 2+ distinct outlets framed the story.
+  const uniqueSourceCount = sourceUnits.length;
+  // Coverage counts outlets, even when the model found no distinct emphasis.
   const isMultiSource = uniqueSourceCount >= 2;
   // Spread across every outlet on the story (single-source shows one cell).
   const spread = summarizeLeanSpread(sourceUnits);

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LandingPage from "@/components/LandingPage";
+import { SITE_DESCRIPTION } from "@/lib/copy";
 import {
   getAllOutletProfiles,
   getDailyCompareExample,
@@ -15,8 +16,7 @@ export const metadata: Metadata = {
   title: {
     absolute: "Sift — The news, with footnotes.",
   },
-  description:
-    "Sift curates outlets across the political spectrum and adds the civic context, cross-spectrum framing, and money trail the news assumes you already know. Every claim links to a public record.",
+  description: SITE_DESCRIPTION,
 };
 
 // 600 -> 1800 on 2026-08-14, and this is the page that carries the reason for

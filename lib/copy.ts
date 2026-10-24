@@ -8,6 +8,9 @@
 
 import type { BudgetSourceKind, StoryFraming } from "./types";
 
+export const SITE_DESCRIPTION =
+  "News summaries, background explanations, and source profiles, with links to original reporting and cited records.";
+
 // ── Outlet-count phrasing (issue #153) ──────────────────
 // One source of truth for how the LIVE curated-outlet count reads, so it can't
 // drift the way the old hardcoded "~50" did (28 copies, while the real set had
@@ -25,8 +28,8 @@ const curatedOutlets = (n: number): string =>
 // rather than add a DB read there).
 const siftBlurb = (n = 0): string =>
   `Sift curates ${n > 0 ? `${n} ` : ""}outlets across the political spectrum, ` +
-  `surfaces the civic context the news assumes you already know, and shows you ` +
-  `who's behind every story. Every link goes to the original.`;
+  `with news summaries, background explanations, and source profiles. ` +
+  `Read the original reporting through the links on each story.`;
 
 /**
  * Monitored address for corrections. EMPTY UNTIL THE MAILBOX EXISTS.
@@ -54,7 +57,7 @@ export const COPY = {
     // issue number — those were computed from new Date() and froze stale into
     // the ISR-prerendered HTML (see LandingMasthead). Real freshness belongs
     // with the feed, not the marketing masthead.
-    dateline: "Curated civic context for the day's news",
+    dateline: "News, background, and sources",
   },
   footer: {
     // Shared with landingReskin.footer.blurb via siftBlurb. The /news footer
@@ -84,24 +87,24 @@ export const COPY = {
   // don't discover on their own (the footnotes on story cards, compare in
   // the header). No tour, no spotlight — the reader is smart; one pointer.
   coach: {
-    body: "New here? Every story carries its civic footnotes — and Compare reads the same story across outlets, side by side.",
+    body: "Open a story's footnotes for background and key terms. Use Compare to read coverage from different outlets side by side.",
     dismiss: "Got it",
     dismissAria: "Dismiss this note",
   },
   error: {
-    title: "We hit a snag pulling today's stories",
-    body: "Our AI is having a slow morning. Give it another shot \u2014 it usually sorts itself out.",
+    title: "We couldn't load the stories",
+    body: "Try again in a moment.",
     button: "Try again",
   },
   loading: {
-    slow: "Still reading through sources\u2026 good stories take a moment",
-    slowTopic: "Searching articles\u2026 good matches take a moment",
+    slow: "Still loading stories\u2026",
+    slowTopic: "Still searching articles\u2026",
     refresh: "Checking for new stories\u2026",
   },
   bookmarks: {
     title: "Saved Articles",
     emptyTitle: "Nothing saved yet",
-    emptyBody: "Star any article to keep it here. Your reading list, your pace.",
+    emptyBody: "Star an article to save it here.",
   },
   // ── Share & cite ─────────────────────────────────────
   // Two verbs for the same instinct: "Share" hands a page to a person,
@@ -169,8 +172,8 @@ export const COPY = {
     // The anonymous door: one real comparison per day, always dated, never
     // presented as live output. Replaces hitting a wall with seeing the
     // actual product — the honest version of a demo.
-    dailyTitle: "Today's example",
-    dailyBody: (when: string) => `A real comparison from the tool, generated ${when}.`,
+    dailyTitle: "Example comparison",
+    dailyBody: (when: string) => `Generated ${when} by Sift's compare tool.`,
     dailySignIn: "Sign in to run your own",
   },
   search: {
@@ -186,7 +189,7 @@ export const COPY = {
     updated: "Updated just now",
     searchTopics: "Search Topics",
     emptyTitle: "No stories yet for this topic",
-    emptyBody: "Check back in a bit \u2014 the AI is still looking.",
+    emptyBody: "Try another topic or check back later.",
   },
   stories: {
     sourcesBadge: (count: number) => `${count} source${count !== 1 ? "s" : ""}`,
@@ -194,10 +197,8 @@ export const COPY = {
     collapse: "Hide sources",
     framing: (count: number) =>
       count === 1
-        ? "How one outlet framed it"
-        : count <= 3
-          ? `How ${count} outlets framed it`
-          : `How ${count} outlets covered this`,
+        ? "How one outlet covered this"
+        : `How ${count} outlets covered this`,
     // Eyebrow shown above the cross-spectrum L/C/R columns, in place of
     // the standard "How N outlets framed it" header when the story
     // qualifies for cross-spectrum (≥3 bucketed framings, ≥2 buckets).
@@ -211,7 +212,7 @@ export const COPY = {
     // lean buckets — the rows are always sorted L→C→R, but the note should
     // only claim a spectrum when one is present. This ordering is the
     // product's best ambient feature; one line makes it legible.
-    spectrumNote: "Sorted left to center to right — read down and watch the framing shift.",
+    spectrumNote: "Outlets are ordered by their AllSides rating, from left to right.",
     compareRow: "Compare coverage",
     moreFromOutlet: (count: number, outlet: string) =>
       `+${count} more from ${outlet}`,
@@ -227,8 +228,8 @@ export const COPY = {
     } as Record<StoryFraming["tone"], string>,
   },
   notFound: {
-    title: "This page wandered off",
-    body: "We looked everywhere \u2014 even had the AI search for it. Let\u2019s get you back to the stories.",
+    title: "Page not found",
+    body: "The link may be out of date. Browse the news to continue.",
     button: "Back to Sift",
   },
   // Global error boundary (`app/error.tsx`). Triggers on any uncaught throw
@@ -245,7 +246,7 @@ export const COPY = {
     modalPlaceholder: "e.g. Florida utilities, AI in healthcare, Series A funding",
     generate: "Generate preview",
     generating: "Interpreting your topic\u2026",
-    previewTitle: "Here\u2019s what I\u2019ll track",
+    previewTitle: "Topic preview",
     previewQueries: "Search queries",
     confirm: "Add topic",
     cancel: "Cancel",
@@ -254,7 +255,7 @@ export const COPY = {
   },
   searchEmpty: {
     title: "Nothing matched that search",
-    body: "Try different words \u2014 or let the AI surprise you.",
+    body: "Try different words or browse recent stories.",
     button: "Browse today\u2019s stories",
   },
   glossary: {
@@ -290,12 +291,12 @@ export const COPY = {
     eyebrow: "Methodology",
     title: "How Sift sources the news",
     lede:
-      "Sift reads from a hand-curated set of news outlets, surfaces ownership and funding for each, and links every bias and factual-reporting rating to its public source. The methodology is the product as much as the feature — here's exactly how it works.",
+      "Sift combines news summaries with background explanations and source profiles. Here's how outlets are selected, where ratings come from, and how to check them.",
     sections: {
       includes: {
         kicker: "What Sift reads",
         body: (n: number): string =>
-          `${n > 0 ? `${n} curated outlets` : "Curated outlets"}, hand-picked to balance the political spectrum (AllSides Left → Center → Right), span sector specialties (finance, tech, science, climate, health), and clear a factual-reporting bar. Each outlet has a dossier with ownership, funding model, and external rating links — click any name below.`,
+          `${n > 0 ? `${n} curated outlets` : "Curated outlets"} across the political spectrum, including specialists in finance, technology, science, climate, and health. Open an outlet's profile for ownership, funding, and available ratings.`,
         bucketLabels: {
           left: "Left",
           center: "Center",
@@ -303,17 +304,17 @@ export const COPY = {
           unrated: "Unrated or specialty",
         },
         unratedNote:
-          "Outlets without an AllSides rating are typically peer-reviewed scientific journals (Nature, Science) or sector specialists (Carbon Brief, STAT News) where political-lean isn't the relevant axis. MBFC factual-reporting ratings still apply.",
+          "Some outlets have no AllSides rating recorded in Sift. They appear here as unrated or specialty outlets; an MBFC factual-reporting rating may still be available on their profile.",
       },
       excludes: {
-        kicker: "What Sift excludes",
-        body: "Some categories of source never enter the pipeline:",
+        kicker: "Criteria for new outlets",
+        body: "These criteria guide additions to the collection. The existing collection includes outlets rated Low by MBFC; their recorded ratings remain visible on story cards and profiles.",
         items: [
-          "Aggregators (Google News, Yahoo News, MSN) — no original reporting.",
-          "AI-content farms — synthetic articles without identifiable bylines.",
-          "Outlets MBFC rates Low Factual or Very Low Factual — regardless of political lean.",
-          "Sites without identifiable bylines, mastheads, or corrections policies.",
-          "Crypto / health-supplement sites that brand themselves as news.",
+          "Original reporting, rather than republishing from aggregators.",
+          "Identifiable authors, rather than anonymous AI-generated articles.",
+          "An MBFC factual-reporting rating above Low or Very Low, regardless of political lean.",
+          "An identifiable masthead and a corrections policy.",
+          "News reporting, rather than promotion for cryptocurrency or supplements.",
         ],
       },
       bias: {
@@ -333,17 +334,17 @@ export const COPY = {
       symmetric: {
         kicker: "Symmetric application",
         body:
-          "Every outlet gets the same treatment regardless of which side of the spectrum it sits on. Fox News and MSNBC are both shown with their AllSides ratings and MBFC factual-reporting tiers. National Review and The Nation get identical dossier shapes. Sift does not editorialize about which side is more or less reliable — that's the reader's call, with the data in front of them.",
+          "Profiles use the same fields for every outlet: ownership, funding, and available AllSides and MBFC ratings. Ratings are attributed to their publishers and link to the source assessment.",
       },
       cadence: {
         kicker: "Refresh cadence",
         body:
-          "AllSides + MBFC ratings drift over time as outlets shift editorial direction, get acquired, or change sourcing standards. Sift hand-reviews every rating quarterly and stores a last-verified date alongside each one — it's the small mono caption under each rating on the dossier page. Outlet additions happen on demand when readers flag gaps; the inclusion criteria above are the only filter.",
+          "Each recorded rating has a last-verified date on the outlet's profile. It shows when Sift checked the rating, not when the publisher last changed it. Follow the rating's source link to check the publisher's current assessment.",
       },
       suggest: {
         kicker: "Suggest an addition or correction",
         body:
-          "If an outlet is missing, a rating looks stale, or anything in this methodology reads wrong, open an issue on GitHub or send a note. Sift is a portfolio project — corrections land fast.",
+          "Report a missing outlet, an outdated rating, or an error through GitHub. Include the page and a source for the correction when possible.",
         github: "kristenmartino/sift on GitHub",
         githubUrl: "https://github.com/kristenmartino/sift/issues/new",
       },
@@ -751,9 +752,9 @@ export const COPY = {
     // `landing` block (the "what is this" explainer, the Fed compare demo, and
     // the colophon strings) was superseded by `landingReskin` and removed in the
     // #150 copy pass \u2014 all were 0-use.
-    leadFallbackTitle: "Today\u2019s stories are still being filed",
+    leadFallbackTitle: "No featured story available",
     leadFallbackBody:
-      "The morning ingest is in progress. Open the feed for what\u2019s already in.",
+      "Open the feed to browse available stories.",
     feedCta: "Open the full feed",
   },
   // ─── Homepage reskin ("The news, with footnotes") ──────
@@ -771,17 +772,17 @@ export const COPY = {
       menuClosed: "Menu",
     },
     hero: {
-      eyebrow: "Curated civic context for the news",
+      eyebrow: "News, background, and sources",
       headingLead: "The news, with ",
       headingAccent: "footnotes",
       lede: (n: number): string =>
-        `Sift curates ${n > 0 ? `${n} ` : ""}outlets across the political spectrum and adds the context the news assumes you already know — the background, the people and organizations involved, and how to read each source. Every link goes to the original.`,
+        `Read news from ${n > 0 ? `${n} curated outlets` : "curated outlets"} across the political spectrum, with background explanations, key terms, and source profiles. Follow each story to the original reporting.`,
       ctaPrimary: "Open Sift",
       ctaSecondary: "See what Sift adds",
       foot: (n: number): string => `${curatedOutlets(n)} · Left → Center → Right`,
     },
     card: {
-      barLabel: "Today · Top story",
+      barLabel: "Featured story",
       badge: "civic context on",
       primerLabel: "What you should know first",
     },
@@ -789,13 +790,13 @@ export const COPY = {
       curatedOutlets(n),
       "Left → Center → Right",
       "Ratings cited, never computed",
-      "Every link goes to the original",
+      "Links to original reporting",
     ],
     manifesto: {
       eyebrow: "Why Sift",
       headingLead: "The news is written for people who ",
       headingEm: "already have the context.",
-      body: "Most reporting assumes you know the players, the precedent, and where the source is coming from. Sift adds it back — so you can read across the spectrum and judge for yourself, with the footnotes in front of you.",
+      body: "A story may mention cloture, a committee vote, or an agency's authority without explaining it. Sift adds background and definitions alongside links to the reporting.",
       spectrum: (s: {
         left: number;
         center: number;
@@ -808,34 +809,34 @@ export const COPY = {
         { label: "Specialty", count: s.specialty },
       ],
       spectrumCaption:
-        "Hand-picked to balance the spectrum and clear a factual-reporting bar. Outlets without a political-lean rating are peer-reviewed journals or sector specialists.",
+        "Grouped by the AllSides ratings recorded in Sift. Specialty includes outlets without a recorded political-lean rating.",
     },
     adds: {
       eyebrow: "What Sift adds",
-      titleLead: "A footnote on ",
-      titleIt: "every story.",
+      titleLead: "Footnotes for ",
+      titleIt: "the news.",
       subtitle:
-        "Not a summary that replaces the article — context that lets you actually read it. The methodology is the product as much as the feature.",
+        "Background, definitions, and source information alongside the news, where available.",
       cards: [
         {
           icon: "i",
           title: "What you should know first",
-          body: "A short primer on the background the story takes for granted — the precedent, the stakes, why it matters now.",
+          body: "A short explanation of a procedure, institution, or earlier event that helps explain the story.",
         },
         {
           icon: "A·z",
           title: "Terms you may not know",
-          body: "The jargon, acronyms, and procedure defined inline, so the paragraph actually makes sense the first time through.",
+          body: "Definitions of legal, economic, and civic terms used in the reporting.",
         },
         {
           icon: "◈",
           title: "Who's involved",
-          body: "Dossiers on the senators, agencies, and organizations named — who they are and where they sit, without leaving the story.",
+          body: "Profiles of people and organizations mentioned in the story, with links to the cited records.",
         },
         {
           icon: "⇄",
-          title: "The source & the spread",
-          body: "Each outlet's AllSides lean and MBFC factual tier — cited and linked, never our own rating — plus how other outlets framed the same story.",
+          title: "Sources & coverage",
+          body: "Available AllSides and MBFC ratings, plus a comparison of what different outlets reported.",
         },
       ],
     },
@@ -844,7 +845,7 @@ export const COPY = {
       titleLead: "One story, ",
       titleIt: "three angles.",
       subtitle:
-        "Sift shows what each outlet chose to emphasize — described, not labeled “biased” or “objective.” You read; the product does the legwork.",
+        "Compare what outlets report, which claims they share, and where their accounts differ.",
       topicLabel: "Topic",
       topic: "The Federal Reserve's May rate decision",
       // Shown only before the first daily comparison exists (or if the table
@@ -869,16 +870,16 @@ export const COPY = {
         },
       ],
       noteLine:
-        "An illustration of the format — the outlets are generic and the lines are written, not quoted. Sift replaces this with a real comparison once today's is generated.",
+        "Illustrative example. These outlet names and sample lines are invented to show the format.",
       // Live-example variants — used when the daily compare example exists
       // (sift-api writes one real comparison per UTC day, migration 021).
       // The generic frames above stay as the fallback before the first
       // generation ever runs; noteLine labels them as an illustration.
       liveTitleIt: "side by side.",
-      liveTopicLabel: "Today's comparison",
+      liveTopicLabel: "Example comparison",
       liveDisputedVs: " vs ",
       liveNote: (date: string) =>
-        `Generated ${date} by the compare tool — one real comparison a day, straight from the product.`,
+        `Generated ${date} by Sift's compare tool.`,
     },
     sources: {
       eyebrow: "Curated & cited",
@@ -886,15 +887,15 @@ export const COPY = {
       titleIt: (n: number): string =>
         n > 0 ? `${n} curated outlets.` : "Curated outlets.",
       titleRest: " Every rating sourced.",
-      body: "Hand-picked across Left, Center, and Right, each with a dossier: ownership, funding model, AllSides lean, and MBFC factual tier — cited verbatim with a link, reviewed quarterly, and applied symmetrically to every outlet.",
+      body: "Browse outlet profiles for ownership, funding, and available AllSides and MBFC ratings. Each recorded rating links to its source and shows when Sift last checked it.",
       methodologyCta: "Read the methodology",
-      exclusionsLabel: "What never enters the pipeline",
+      exclusionsLabel: "What the source profiles show",
       exclusions: [
-        { term: "Aggregators", desc: "no original reporting." },
-        { term: "AI-content farms", desc: "synthetic articles without bylines." },
-        { term: "Low-factual outlets", desc: "regardless of political lean." },
-        { term: "Sites without", desc: "mastheads, bylines, or corrections policies." },
-        { term: "Crypto & supplement sites", desc: "dressed up as news." },
+        { term: "Ownership", desc: "the recorded parent company or owner." },
+        { term: "Funding", desc: "the outlet's recorded funding model." },
+        { term: "Political lean", desc: "AllSides' published rating, when available." },
+        { term: "Factual reporting", desc: "MBFC's published rating, including lower-rated outlets." },
+        { term: "Verification dates", desc: "when Sift last checked each rating." },
       ],
       outletsLabel: "Curated outlets",
     },
@@ -902,7 +903,7 @@ export const COPY = {
       titleLead: "Read today's news — ",
       titleEm: "with the footnotes.",
       body: (n: number): string =>
-        `${n > 0 ? `${n} curated outlets` : "Curated outlets across the spectrum"}, the civic context the news assumes you already know, and a link to the original on every story.`,
+        `Browse ${n > 0 ? `${n} curated outlets` : "curated outlets"}, compare coverage, and open the original reporting.`,
       ctaPrimary: "Open Sift",
       ctaSecondary: "How it works",
     },

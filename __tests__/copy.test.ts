@@ -29,12 +29,12 @@ describe("COPY strings", () => {
 
   describe("stories.framing", () => {
     it("returns singular phrasing for 1 outlet", () => {
-      expect(COPY.stories.framing(1)).toBe("How one outlet framed it");
+      expect(COPY.stories.framing(1)).toBe("How one outlet covered this");
     });
 
-    it("uses 'framed it' phrasing for small groups (≤3)", () => {
-      expect(COPY.stories.framing(2)).toBe("How 2 outlets framed it");
-      expect(COPY.stories.framing(3)).toBe("How 3 outlets framed it");
+    it("names coverage for small groups (≤3)", () => {
+      expect(COPY.stories.framing(2)).toBe("How 2 outlets covered this");
+      expect(COPY.stories.framing(3)).toBe("How 3 outlets covered this");
     });
 
     it("uses 'covered this' phrasing for larger groups (>3)", () => {
@@ -78,23 +78,23 @@ describe("COPY strings", () => {
       expect(COPY.footer.main()).toContain(
         "Sift curates outlets across the political spectrum",
       );
-      expect(COPY.footer.main()).toContain("Every link goes to the original.");
+      expect(COPY.footer.main()).toContain("Read the original reporting through the links on each story.");
     });
 
     it("has error strings", () => {
-      expect(COPY.error.title).toBe("We hit a snag pulling today's stories");
+      expect(COPY.error.title).toBe("We couldn't load the stories");
       expect(COPY.error.body).toBe(
-        "Our AI is having a slow morning. Give it another shot — it usually sorts itself out.",
+        "Try again in a moment.",
       );
       expect(COPY.error.button).toBe("Try again");
     });
 
     it("has loading strings", () => {
       expect(COPY.loading.slow).toBe(
-        "Still reading through sources… good stories take a moment",
+        "Still loading stories…",
       );
       expect(COPY.loading.slowTopic).toBe(
-        "Searching articles… good matches take a moment",
+        "Still searching articles…",
       );
       expect(COPY.loading.refresh).toBe("Checking for new stories…");
     });
@@ -105,7 +105,7 @@ describe("COPY strings", () => {
         "e.g. Florida utilities, AI in healthcare, Series A funding",
       );
       expect(COPY.topics.generating).toBe("Interpreting your topic…");
-      expect(COPY.topics.previewTitle).toBe("Here\u2019s what I\u2019ll track");
+      expect(COPY.topics.previewTitle).toBe("Topic preview");
       expect(COPY.topics.maxReached).toBe(
         "You\u2019ve hit the 5-topic limit. Remove one to add another.",
       );
@@ -139,7 +139,7 @@ describe("COPY strings", () => {
       expect(R.strip(77)[0]).toBe("77 curated outlets");
       expect(R.sources.titleIt(77)).toBe("77 curated outlets.");
       expect(R.cta.body(77)).toContain("77 curated outlets");
-      expect(R.hero.lede(77)).toContain("77 outlets");
+      expect(R.hero.lede(77)).toContain("77 curated outlets");
       expect(COPY.methodology.sections.includes.body(77)).toContain(
         "77 curated outlets",
       );

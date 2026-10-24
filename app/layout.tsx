@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { SITE_DESCRIPTION } from "@/lib/copy";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Fraunces, Hanken_Grotesk, DM_Mono } from "next/font/google";
@@ -43,16 +44,14 @@ export const metadata: Metadata = {
     default: "Sift — The news, with footnotes.",
     template: "%s | Sift",
   },
-  description:
-    "Sift curates outlets across the political spectrum and adds the footnotes — the civic context the news assumes, the framing across the spectrum, and the financial and political ties behind every story. Every claim links to a public record.",
+  description: SITE_DESCRIPTION,
   // siftnews.io as of 2026-07-28. Drives canonical URLs and OG/Twitter card
   // resolution, so it has to be the domain people are actually sent to —
   // /agencies and /think-tanks go out in the week-one test on this host.
   metadataBase: new URL("https://siftnews.io"),
   openGraph: {
     title: "Sift — The news, with footnotes.",
-    description:
-      "The civic context the news assumes. The framing across the political spectrum. The money behind every story. Linked to public records.",
+    description: SITE_DESCRIPTION,
     siteName: "Sift",
     type: "website",
     locale: "en_US",
@@ -60,8 +59,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Sift — The news, with footnotes.",
-    description:
-      "The civic context the news assumes. The framing across the political spectrum. The money behind every story.",
+    description: SITE_DESCRIPTION,
   },
   // max-image-preview:large is a robots *meta* directive, not a robots.txt
   // one — Google reads it from the meta tag or the X-Robots-Tag header and
