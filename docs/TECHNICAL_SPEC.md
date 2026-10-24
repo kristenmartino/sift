@@ -199,12 +199,16 @@ User-triggered multi-source comparison via LangGraph.
 **Response (200):**
 ```json
 {
-  "status": "ok",
+  "status": "healthy",
   "version": "1.0.0",
   "db_connected": true,
-  "last_pipeline_run": "2026-03-28T14:30:00Z"
+  "last_pipeline_run": "2026-03-28T14:30:00Z",
+  "copy_rules_version": "2026-10-24.1"
 }
 ```
+
+`copy_rules_version` identifies the shared article and story generation standard
+active on the backend. See [backend feed copy rules](https://github.com/kristenmartino/sift-api/blob/main/docs/COPY_RULES.md).
 
 ---
 
