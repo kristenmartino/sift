@@ -3,7 +3,8 @@ import Link from "next/link";
 import LandingMasthead from "@/components/landing/LandingMasthead";
 import { COPY } from "@/lib/copy";
 import {
-  groupByState,
+  groupByOffice,
+  countryName,
   groupByType,
   filterByChamber,
   orgTypeLabel,
@@ -32,13 +33,12 @@ interface CivicIndexProps {
  * Fraunces display, max-w-800).
  *
  * Three sections:
- *   1. Politicians — grouped by state, chamber-filterable via URL.
+ *   1. Political profiles — office-scoped, then by state or country.
  *   2. Organizations — grouped by type. No lean: D37 / migration 012.
  *   3. Bills — flat list with congress + status.
  *
- * No search, no sortable tables, no pagination — the political surface is
- * naturally finite (536 sitting members, ~10 orgs, a handful of bills),
- * and a flat alphabetical list reads better than a search-only page.
+ * Office filters are URL-addressable. International country codes share
+ * the legacy state field, so office scope must be resolved before geography.
  */
 export default function CivicIndex({
   politicians,
@@ -49,7 +49,7 @@ export default function CivicIndex({
   const c = COPY.civicIndex;
 
   const filteredPoliticians = filterByChamber(politicians, chamberFilter);
-  const stateGroups = groupByState(filteredPoliticians);
+  const officeGroups = groupByOffice(filteredPoliticians);
   const orgTypeGroups = groupByType(orgs);
 
   return (
@@ -93,10 +93,10 @@ export default function CivicIndex({
             </h2>
           </header>
 
-          {/* Chamber filter — a 3-link nav. Active state in --accent ink. */}
+          {/* Office filters match the profile categories served by /civic. */}
           <nav
             aria-label="Filter politicians by chamber"
-            className="mb-7 flex items-center gap-x-5 font-body text-outlet uppercase tracking-wider"
+            className="mb-7 flex flex-wrap items-center gap-x-5 gap-y-3 font-body text-outlet uppercase tracking-wider"
           >
             <ChamberFilterLink
               label={c.filterAll}
@@ -113,6 +113,10 @@ export default function CivicIndex({
               href="/civic?chamber=house"
               active={chamberFilter === "house"}
             />
+            {(["executive", "foreign-executive", "scotus", "former"] as const).map((chamber) => (
+              <ChamberFilterLink key={chamber} label={c.officeFilters[chamber]}
+                href={`/civic?chamber=${chamber}`} active={chamberFilter === chamber} />
+            ))}
             <span className="font-body text-[13px] tracking-normal text-(--text-tertiary) ml-auto normal-case">
               {filteredPoliticians.length === politicians.length
                 ? c.showingAll(filteredPoliticians.length)
@@ -121,17 +125,23 @@ export default function CivicIndex({
           </nav>
 
           {/* State-grouped list */}
-          {stateGroups.length === 0 ? (
+          {officeGroups.length === 0 ? (
             <p className="font-body text-[14px] text-(--text-tertiary) italic max-w-[60ch] leading-relaxed">
               {c.emptyPoliticians}
             </p>
           ) : (
-            <ul className="space-y-6">
-              {stateGroups.map(([code, members]) => (
+            <div className="space-y-9">
+              {officeGroups.map(({ office, groups }) => (
+                <section key={office} aria-label={c.officeHeadings[office]}>
+                  <h3 className="font-heading text-[21px] font-semibold mb-4">{c.officeHeadings[office]}</h3>
+                  <ul className="space-y-6">
+              {groups.map(([code, members]) => (
                 <li key={code}>
+                  {(office === "congress" || office === "international") && (
                   <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-(--text-tertiary) mb-1.5">
-                    {stateName(code)}
+                    {office === "international" ? countryName(code === "—" ? null : code) : stateName(code)}
                   </p>
+                  )}
                   <ul className="font-body text-[15px] text-(--text-secondary) leading-relaxed">
                     {members.map((p, idx) => (
                       <li key={p.bioguideId} className="inline">
@@ -163,7 +173,10 @@ export default function CivicIndex({
                   </ul>
                 </li>
               ))}
-            </ul>
+                  </ul>
+                </section>
+              ))}
+            </div>
           )}
         </section>
 

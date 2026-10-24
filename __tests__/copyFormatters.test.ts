@@ -47,13 +47,13 @@ describe("compare — progress and result meta", () => {
 
   it("lists the outlets being compared", () => {
     expect(COPY.compare.comparing("Reuters, Fox News")).toBe(
-      "Comparing: Reuters, Fox News",
+      "Sources to search: Reuters, Fox News",
     );
   });
 
   it("pluralizes the result-meta counts independently", () => {
-    expect(COPY.compare.metaSources(1)).toBe("1 source checked");
-    expect(COPY.compare.metaSources(4)).toBe("4 sources checked");
+    expect(COPY.compare.metaSources(1)).toBe("1 source name listed");
+    expect(COPY.compare.metaSources(4)).toBe("4 source names listed");
     expect(COPY.compare.metaClaims(1)).toBe("1 claim analyzed");
     expect(COPY.compare.metaClaims(7)).toBe("7 claims analyzed");
   });

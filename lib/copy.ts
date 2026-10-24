@@ -146,7 +146,7 @@ export const COPY = {
     another: "Compare Another Topic",
     anotherPlaceholder: "Enter a topic to compare across sources\u2026",
     button: "Compare coverage",
-    comparing: (labels: string) => `Comparing: ${labels}`,
+    comparing: (labels: string) => `Sources to search: ${labels}`,
     summary: "Summary",
     keyClaims: "Key Claims",
     // Agreement labels for claim chips. Rendered with status tokens
@@ -156,13 +156,24 @@ export const COPY = {
     agreement: {
       unanimous: "All agree",
       majority: "Mostly agree",
+      partial: "Partial coverage",
       disputed: "Disputed",
       unique: "Unique angle",
     },
     for: "For:",
     against: "Against:",
-    metaSources: (n: number) => `${n} source${n !== 1 ? "s" : ""} checked`,
+    metaSources: (n: number) => `${n} source name${n !== 1 ? "s" : ""} listed`,
+    sourceStatus: (n: number, status: string) => `${n} ${status}`,
+    requested: "Requested", retrieved: "Coverage found", analyzed: "Analyzed", unavailable: "Unavailable",
+    legacyNote: "Source availability was not recorded for this result. Its summary and agreement assessments are hidden.",
+    agreementUnrecorded: "Agreement unverified",
+    noAnalysis: "No sources completed analysis. No comparison summary is available.",
+    savedNote: (date: string) => `Saved example generated ${date} (UTC). This is stored output, not a new comparison.`,
+    claimCoverage: (count: number, total: number, disputed: boolean) =>
+      `${disputed ? "Conflicting reports from" : "Reported by"} ${count} of ${total} analyzed source${total === 1 ? "" : "s"}`,
     metaClaims: (n: number) => `${n} claim${n !== 1 ? "s" : ""} analyzed`,
+    metaSavedClaims: (n: number) => `${n} saved claim${n !== 1 ? "s" : ""}`,
+    metaAnalyzedSources: (n: number) => `${n} source${n !== 1 ? "s" : ""} analyzed`,
     // Honesty caption for shared links \u2014 a ?compare= URL reruns the
     // comparison live rather than replaying a stored result.
     liveNote: "Generated live \u2014 opening a shared link runs the comparison fresh, so results can differ slightly.",
@@ -1029,7 +1040,16 @@ export const COPY = {
     headline: "Civic dossiers",
     lede: "Curated context on the people, organizations, and bills that shape U.S. policy. Every dossier is sourced from public records \u2014 GovTrack, OpenSecrets, ProPublica's Nonprofit Explorer \u2014 with citations on every page.",
     politiciansEyebrow: (count: number) => `Politicians \u00b7 ${count}`,
-    politiciansHeading: "Sitting members of Congress",
+    politiciansHeading: "Political figures and public officials",
+    officeHeadings: {
+      congress: "U.S. Congress", executive: "U.S. executive officials",
+      international: "International political figures", scotus: "U.S. Supreme Court",
+      other: "Other and former officials",
+    },
+    officeFilters: {
+      executive: "U.S. executive", "foreign-executive": "International",
+      scotus: "Supreme Court", former: "Former",
+    },
     orgsEyebrow: (count: number) => `Organizations \u00b7 ${count}`,
     // Was "Think tanks, advocacy groups, and PACs" \u2014 wrong twice over: there
     // are no PACs in the set, and it silently omitted the federal agencies,
@@ -1055,7 +1075,7 @@ export const COPY = {
     showingFiltered: (shown: number, total: number) =>
       `${shown.toLocaleString("en-US")} of ${total.toLocaleString("en-US")}`,
     emptyPoliticians:
-      "No politicians match this filter. Try Senate, House, or All.",
+      "No political profiles match this filter. Choose another office or All.",
     emptyOrgs: "No organizations curated yet.",
     // Cross-link into /agencies. States the payoff rather than the
     // destination — "see the agencies page" gives a reader no reason to
