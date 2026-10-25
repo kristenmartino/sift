@@ -1,6 +1,6 @@
 # Sift — STATUS
 
-**Updated:** 2026-08-25
+**Updated:** 2026-10-25
 **Tier:** v1.5 (civic-literacy pivot) — **feature work active** (un-paused 2026-08-05)
 **Velocity:** **27 PRs merged 2026-08-05** (24 `sift-api`, 3 `sift`) — the largest single day in the project's history, against a six-week gap that ended 2026-07-30. By month: Mar 44 · Apr 39 · May 51 · Jun 13 · Jul 3. This line has twice been wrong in the *optimistic* direction (it read "High (10+ PRs / week)" through eight weeks of near-zero — see [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) §2.5); treat a single day as a day, not a baseline.
 
@@ -270,3 +270,11 @@ held 37 entries going back to 2026-05-20.
 Generation recovery and copy-rule provenance are documented in D64. Backend
 health now distinguishes pending summary retries from successful RSS ingestion;
 the frontend design and ranking implementation are unchanged.
+
+
+## Copy review update — October 25, 2026
+
+Rules 2026-10-25.3 add source-fidelity checks for article and cluster summaries,
+with failed checks withheld for retry. This update concerns copy publication;
+the earlier strategic roadmap entries remain historical. See decision D65 and
+sift-api#304. The design and daily cap are unchanged.
