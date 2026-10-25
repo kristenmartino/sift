@@ -222,12 +222,21 @@ and forwards the pipeline key; it does not forward a Clerk bearer token.
   "version": "1.0.0",
   "db_connected": true,
   "last_pipeline_run": "2026-03-28T14:30:00Z",
-  "copy_rules_version": "2026-10-24.2"
+  "copy_rules_version": "2026-10-25.1",
+  "generation": {
+    "pending": 0,
+    "unavailable": 0,
+    "last_completed": "2026-10-25T18:00:00Z"
+  }
 }
 ```
 
 `copy_rules_version` identifies the shared article and story generation standard
-active on the backend. See [backend feed copy rules](https://github.com/kristenmartino/sift-api/blob/main/docs/COPY_RULES.md).
+active on the backend. `generation` is a cached 30-day summary-generation snapshot:
+`pending` counts retries, `unavailable` counts records without a usable source body,
+and `last_completed` is the latest successful summary write. Pending generation
+makes status `degraded` even when ingestion and the database work. `?deep=1`
+refreshes the snapshot; normal health requests do not query the database. See [backend feed copy rules](https://github.com/kristenmartino/sift-api/blob/main/docs/COPY_RULES.md).
 
 ---
 
