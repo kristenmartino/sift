@@ -242,6 +242,10 @@ refreshes the snapshot; normal health requests do not query the database. See [b
 
 ## 4. API Contract — sift-web (Next.js / Vercel)
 
+### Article publication dates
+
+`Article.publishedDate` is nullable. The topic-search web fallback does not obtain a verified publisher date and returns/stores null instead of request time. Search and bookmark reads select `articles.from_search`; the shared mapper withholds publication dates for those rows, including legacy rows stamped at search time. Ordinary ingested publisher dates remain available. The UI labels missing/invalid dates as `Date unavailable` and future dates as `Future date`. This change does not backfill publisher dates or verify generated summaries.
+
 ### GET /api/news?category={category}
 
 Returns articles for a fixed category. Pure database read.

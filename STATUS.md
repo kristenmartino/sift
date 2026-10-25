@@ -267,6 +267,8 @@ held 37 entries going back to 2026-05-20.
 
 ## Recent decisions — October 25, 2026
 
+- **Search date provenance:** web-search fallback results no longer assign retrieval time to publication time. Search/bookmark reads withhold legacy fallback dates via `from_search`; missing and invalid dates are labeled unavailable, and future dates are identified explicitly. No production data is rewritten and no publication dates are backfilled.
+
 Generation recovery and copy-rule provenance are documented in D64. Backend
 health now distinguishes pending summary retries from successful RSS ingestion;
 the frontend design and ranking implementation are unchanged.

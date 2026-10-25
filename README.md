@@ -46,6 +46,8 @@ Railway runs its own 30-min asyncio scheduler --> pipeline --writes--> Neon Post
 - **Browse path**: summaries are precomputed in the background pipeline; category requests read Postgres without a live Claude call. A database query target is not an end-to-end page latency measurement; this README makes no measured latency guarantee.
 - **Live AI path**: comparison and the topic-search fallback call AI providers at request time and stream progress. Response time varies with provider latency, coverage, and workload; no production SLA is established here.
 
+Search retrieves stored articles as well as optional web-search results; it is not limited to today’s reporting. The web-search fallback does not establish publisher dates, so new fallback results use a null publication date. Cached fallback records also withhold the timestamps older versions assigned at search time. Missing or invalid dates display **Date unavailable**; future dates display **Future date**. Search time and publication time are separate.
+
 ## Quick start
 
 ```bash

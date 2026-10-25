@@ -89,7 +89,10 @@ export function mapArticleRow(
     // would execute on click. Components render an empty sourceUrl unlinked.
     sourceUrl: sanitizeLinkUrl(row.source_url),
     sourceName: row.source_name,
-    publishedDate: row.published_date ? row.published_date.toISOString() : null,
+    // Earlier web-search fallback rows stored retrieval time in this column.
+    // Suppress it on reads too, so cached searches/bookmarks cannot revive a
+    // fabricated publication date. The feed excludes from_search rows.
+    publishedDate: !row.from_search && row.published_date ? row.published_date.toISOString() : null,
     imageUrl: clean ? cleanImageUrl(row.image_url, image) : row.image_url,
     category: row.category as CategoryId,
     readTime: row.read_time || 1,

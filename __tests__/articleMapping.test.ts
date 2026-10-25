@@ -165,3 +165,14 @@ describe("mapArticleRows", () => {
     expect(article).not.toHaveProperty("entityLinks");
   });
 });
+
+
+describe("publication date provenance", () => {
+  it("withholds legacy fallback retrieval timestamps on cached reads", () => {
+    expect(mapArticleRow(row({ from_search: true })).publishedDate).toBeNull();
+  });
+  it("preserves publisher dates from the normal ingestion path", () => {
+    expect(mapArticleRow(row({ from_search: false })).publishedDate).toBe("2026-01-02T03:04:05.000Z");
+    expect(mapArticleRow(row({ published_date: null })).publishedDate).toBeNull();
+  });
+});

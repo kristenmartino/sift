@@ -519,7 +519,9 @@ If you truly cannot find any articles, respond with an empty array: []`,
       summary: safeSummary,
       sourceUrl: safeSourceUrl,
       sourceName: safeSourceName,
-      publishedDate: new Date().toISOString(),
+      // Search time is not the publisher's publication time. The fallback
+      // response does not provide a verified publication date.
+      publishedDate: null,
       imageUrl: null,
       category,
       readTime: estimateReadTime(safeSummary),
@@ -535,7 +537,7 @@ If you truly cannot find any articles, respond with an empty array: []`,
         source_name: safeSourceName,
         category,
         embedding: embeddings[i],
-        published_date: new Date(),
+        published_date: null,
         read_time: estimateReadTime(safeSummary),
       }).catch((err) =>
         reportError("api.news.topic.storeFallbackArticle", err, {
