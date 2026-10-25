@@ -1077,3 +1077,24 @@ genre remain independent. Existing reviewed notes are not bulk-cleared. Feed
 styles, ranking and source links stay intact. `/health.copy_rules_version`
 identifies the deployed standard. See the
 [backend copy rules](https://github.com/kristenmartino/sift-api/blob/main/docs/COPY_RULES.md).
+
+
+### D64. Failed generation must remain retryable and visible
+
+**Date:** October 25, 2026.
+
+The October 24 cleanup exhausted the shared $15 daily cap. RSS ingestion stayed
+fresh while summaries were stored as truncated fallback text and URL dedup kept
+those records from ever being summarized again. Preserve source evidence and a
+durable retry status, consume up to 50 on the existing ingestion cadence, keep
+fallbacks outside ranked categories and skip their paid enrichment. Source-free
+records are explicitly unavailable. Keep the configured cap; do not add an idle
+DB polling loop. Health distinguishes pending generation from RSS freshness.
+
+The live copy audit also found an obvious stock-low definition and paragraphs
+that paraphrased glossary entries. Review term usefulness before publication,
+and provide retained definitions to the paragraph reviewer. Record copy versions
+on article/story writes; current timestamps cannot certify old text. Reuse only
+current-version stories and include recent legacy text in the bounded sweep.
+These focused checks do not certify all factual claims. Interface design stays
+unchanged. Backend implementation: sift-api#296.

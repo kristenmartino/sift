@@ -264,3 +264,9 @@ held 37 entries going back to 2026-05-20.
 ---
 
 *See also: [`docs/STATUS_ARCHIVE.md`](./docs/STATUS_ARCHIVE.md) (archived decision-log history), [`docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md), [`docs/DECISIONS.md`](./docs/DECISIONS.md), [`docs/PRODUCT_STORY.md`](./docs/PRODUCT_STORY.md), [`docs/ANDROID_APP_v1.md`](./docs/ANDROID_APP_v1.md), [`CLAUDE.md`](./CLAUDE.md). Sibling repos: `sift-api` (backend), `sift-mcp` (MCP server — merging into sift-api per #62).*
+
+## Recent decisions — October 25, 2026
+
+Generation recovery and copy-rule provenance are documented in D64. Backend
+health now distinguishes pending summary retries from successful RSS ingestion;
+the frontend design and ranking implementation are unchanged.
