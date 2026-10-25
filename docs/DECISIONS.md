@@ -1097,4 +1097,7 @@ and provide retained definitions to the paragraph reviewer. Record copy versions
 on article/story writes; current timestamps cannot certify old text. Reuse only
 current-version stories and include recent legacy text in the bounded sweep.
 These focused checks do not certify all factual claims. Interface design stays
-unchanged. Backend implementation: sift-api#296.
+unchanged. Backend implementation: sift-api#296, #297 and #298. Rules
+2026-10-25.2 also withhold pure viewing-guide/prediction previews, reject guessed
+article-specific policy conditions in backgrounds, and accept equivalent numeric
+formats while still blocking changed figures.
