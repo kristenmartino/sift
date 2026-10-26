@@ -6,7 +6,7 @@ import {
   getOutletProfilesMap,
   resolveOutletForSourceName,
   getArticleEntityLinks,
-  getTodayAiSpendUsd,
+  reserveAiBudget,
   recordAiUsage,
 } from "@/lib/db";
 import { mapArticleRows } from "@/lib/articleMapping";
@@ -39,13 +39,6 @@ export const maxDuration = 60; // seconds — Vercel Hobby maximum
 const SIMILARITY_THRESHOLD = 0.35;
 const MIN_STRONG_RESULTS = 3;
 const MAX_RESULTS = 10;
-
-// Interim cost guard for the paid web-search fallback (sift-api#79). Mirrors
-// sift-api's env contract: inert unless AI_COST_GUARD_ENABLED=true, so enabling
-// it is an explicit opt-in and never silently changes live behavior. Reads/writes
-// the SAME ai_usage_daily ledger the backend guard uses → the ceiling is global.
-const AI_COST_GUARD_ENABLED = process.env.AI_COST_GUARD_ENABLED === "true";
-const DAILY_AI_COST_LIMIT_USD = Number(process.env.DAILY_AI_COST_LIMIT_USD ?? "10");
 
 // ─── Category classification for fallback articles ──────
 
@@ -232,9 +225,7 @@ export async function GET(request: NextRequest) {
         // 5. If < 3 results, run Claude web_search fallback — unless the daily
         // AI budget is exhausted (interim cost guard, sift-api#79). The vector
         // results above still stream regardless of the budget decision.
-        const fallbackBudgetOk =
-          !AI_COST_GUARD_ENABLED || (await isUnderDailyAiBudget());
-        if (articles.length < MIN_STRONG_RESULTS && fallbackBudgetOk) {
+        if (articles.length < MIN_STRONG_RESULTS) {
           fallbackUsed = true;
           controller.enqueue(sseEvent("fallback-start", {}));
 
@@ -327,47 +318,14 @@ async function embedQuery(text: string): Promise<number[]> {
   return embedding;
 }
 
-// ─── Interim daily-budget check ─────────────────────────
-
-// Is the shared daily AI ledger still under the ceiling?
-//
-// Fails CLOSED. This returned true on a read error, reasoning that "a ledger
-// hiccup never breaks search" — but this function is only reached when
-// AI_COST_GUARD_ENABLED is true (see the call site), i.e. only when someone
-// has deliberately asked for a ceiling. Failing open there removes the
-// ceiling during precisely the failure mode it exists for: spend that cannot
-// be measured is spend that cannot be capped.
-//
-// It also does not break search. A false here skips only the paid web-search
-// fallback; the vector results are already computed and still returned. The
-// user gets a thinner answer, not an error — which is the trade the ceiling
-// was asking for in the first place.
-//
-// Matches services/cost_guard.check_budget in sift-api, whose docstring makes
-// the same argument: "an enabled ceiling would permit unlimited spend during
-// the exact failure mode where spend can't be measured."
-async function isUnderDailyAiBudget(): Promise<boolean> {
-  try {
-    const spent = await getTodayAiSpendUsd();
-    if (spent >= DAILY_AI_COST_LIMIT_USD) {
-      console.warn(
-        `Topic-search fallback skipped: daily AI spend $${spent.toFixed(2)} >= limit $${DAILY_AI_COST_LIMIT_USD}`
-      );
-      return false;
-    }
-    return true;
-  } catch (err) {
-    reportError("api.news.topic.aiBudget", err, {
-      extra: { note: "budget unreadable; paid fallback skipped (fail-closed)" },
-    });
-    return false;
-  }
-}
-
 // ─── Claude Web Search Fallback ─────────────────────────
 
 async function webSearchFallback(query: string): Promise<Article[]> {
-  const anthropic = new Anthropic();
+  // Same authoritative policy and atomic holds as the backend. Three possible
+  // model passes (two tool uses), 200k input context each + max output.
+  const holdId = await reserveAiBudget(0.85);
+  if (!holdId) return [];
+  const anthropic = new Anthropic({ maxRetries: 0 });
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5",
@@ -400,19 +358,17 @@ If you truly cannot find any articles, respond with an empty array: []`,
       },
     ],
   });
+  if (!response.usage) throw new Error("Provider usage missing; budget remains reserved");
   const usage = logUsage("news.topic.webSearchFallback", response, "claude-haiku-4-5");
   if (usage) {
-    // Interim: meter the fallback's Claude spend into the shared daily ledger
-    // (sift-api#79 moves this server-side). Voyage micro-costs are dwarfed by the
-    // $0.01/web_search and are deferred to #79. Fire-and-forget; never blocks.
-    recordAiUsage({
-      provider: "anthropic",
-      model: "claude-haiku-4-5",
-      operation: "news.topic.webSearchFallback",
-      costUsd: usage.cost_usd,
-    }).catch((err) =>
-      reportError("api.news.topic.recordAiUsage", err, { level: "warning" })
-    );
+    await recordAiUsage({
+      provider: "anthropic", model: "claude-haiku-4-5",
+      operation: "news.topic.webSearchFallback", costUsd: usage.cost_usd,
+      inputTokens: usage.input_tokens, outputTokens: usage.output_tokens,
+      webSearches: usage.web_searches, cacheReadTokens: usage.cache_read_input_tokens, cacheWriteTokens: usage.cache_creation_input_tokens, holdId,
+    });
+  } else {
+    throw new Error("Paid fallback usage unavailable; budget remains reserved");
   }
 
   // Extract JSON from response — Claude may return multiple text blocks

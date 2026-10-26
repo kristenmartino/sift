@@ -6,6 +6,9 @@
  * error posture are worth pinning.
  */
 
+jest.mock("@/lib/db", () => ({ reserveAiBudget: jest.fn(async () => "hold-test"), recordAiUsage: jest.fn(async () => undefined) }));
+
+import { reserveAiBudget, recordAiUsage } from "@/lib/db";
 import { embedTexts, VOYAGE_MODEL } from "@/lib/voyage";
 
 const originalKey = process.env.VOYAGE_API_KEY;
@@ -14,6 +17,8 @@ const fetchMock = jest.fn();
 beforeEach(() => {
   process.env.VOYAGE_API_KEY = "vk-test";
   fetchMock.mockReset();
+  jest.mocked(reserveAiBudget).mockResolvedValue("hold-test");
+  jest.mocked(recordAiUsage).mockClear();
   global.fetch = fetchMock as unknown as typeof fetch;
 });
 
@@ -25,7 +30,7 @@ describe("embedTexts", () => {
   it("sends the model, input type, and key, and returns vectors in order", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: [{ embedding: [1, 2] }, { embedding: [3, 4] }] }),
+      json: async () => ({ usage: { total_tokens: 4 }, data: [{ embedding: [1, 2] }, { embedding: [3, 4] }] }),
     });
 
     const embeddings = await embedTexts(["a", "b"], "document");
@@ -63,4 +68,17 @@ describe("embedTexts", () => {
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
+});
+
+
+it("makes no paid call when background admission is refused", async () => {
+  jest.mocked(reserveAiBudget).mockResolvedValue(null);
+  await expect(embedTexts(["a"], "query")).rejects.toThrow("shared AI budget");
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("settles reported usage against the hold before returning", async () => {
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({ data: [{ embedding: [1] }], usage: { total_tokens: 100 } }) });
+  await embedTexts(["a"], "query");
+  expect(recordAiUsage).toHaveBeenCalledWith(expect.objectContaining({ holdId: "hold-test", costUsd: 0.000002, provider: "voyage" }));
 });

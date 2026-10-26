@@ -93,7 +93,7 @@ export default function OutletChip({
     {compact ? <details className="relative z-2 text-xs" onClick={(e) => e.stopPropagation()}>
       <summary className="cursor-pointer text-(--text-secondary) hover:text-(--text-primary)">Outlet ratings</summary>
       <span className="flex flex-col gap-1.5 py-2">{ratings}</span>
-      <span className="block max-w-[38ch] text-xs text-(--text-secondary) leading-relaxed">Political lean is cited from AllSides; factual reporting from Media Bias/Fact Check. These assess the outlet, not this article.</span>
+      <a href="/methodology#outlet-ratings" className="text-xs text-(--text-secondary) hover:underline">About these ratings →</a>
     </details> : ratings}
   </Container>;
 }

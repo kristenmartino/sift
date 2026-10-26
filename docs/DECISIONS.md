@@ -1126,3 +1126,14 @@ unsupported primer specifics. Publisher identity is passed to source review so
 attributed editorial copy is judged against the correct outlet. No UI, design
 or ranking changes accompany these safeguards. Review checks supplied-input
 fidelity, not independent truth of publisher claims.
+
+### 2026-10-26 — Protect interactive Compare within the existing cap
+
+Keep coverage comparison a core feature and retain the visual style. Protect 20%
+of the configured daily AI cap for reader-requested comparisons; background work,
+including quality review, daily examples, topic generation, fallback search and
+embeddings, uses a shared 80% admission ceiling. PostgreSQL reservations prevent
+concurrent and delayed work from reusing capacity. Uncertain provider costs stay
+held for reconciliation. The production cap remains $15; this does not erase or
+reclassify earlier spend. Replace repeated outlet-rating prose with a methodology
+link while keeping source citations and the shared publisher-level caveat.

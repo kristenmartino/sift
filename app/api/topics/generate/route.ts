@@ -6,6 +6,7 @@ import type { TopicGenerateResponse } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkCsrf } from "@/lib/security";
 import { reportError } from "@/lib/observability";
+import { reserveAiBudget, recordAiUsage } from "@/lib/db";
 import { logUsage } from "@/lib/usage-tracker";
 import {
   internalError,
@@ -42,7 +43,10 @@ export async function POST(request: NextRequest) {
   const existingTopics = body.existingTopics;
 
   try {
-    const anthropic = new Anthropic();
+    // Input is schema-bounded at 4,200 characters; reserve ample byte/framing headroom.
+    const holdId = await reserveAiBudget(0.04);
+    if (!holdId) return NextResponse.json({ error: "Topic generation is temporarily unavailable. Try again later." }, { status: 503 });
+    const anthropic = new Anthropic({ maxRetries: 0 });
 
     const existingClause =
       existingTopics.length > 0
@@ -71,7 +75,12 @@ Respond with ONLY valid JSON, no explanation:
         },
       ],
     });
-    logUsage("topics.generate", aiResponse, "claude-haiku-4-5");
+    if (!aiResponse.usage) throw new Error("Provider usage missing; budget remains reserved");
+    const usage = logUsage("topics.generate", aiResponse, "claude-haiku-4-5");
+    if (!usage) throw new Error("Topic usage unavailable; budget remains reserved");
+    await recordAiUsage({ provider: "anthropic", model: "claude-haiku-4-5", operation: "topics.generate",
+      costUsd: usage.cost_usd, inputTokens: usage.input_tokens, outputTokens: usage.output_tokens,
+      cacheReadTokens: usage.cache_read_input_tokens, cacheWriteTokens: usage.cache_creation_input_tokens, holdId });
 
     const textBlock = aiResponse.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {

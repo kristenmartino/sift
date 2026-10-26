@@ -731,40 +731,66 @@ export async function insertArticle(article: {
   );
 }
 
-// ─── AI cost ledger (interim cost-guard for topic search, sift-api#79) ──
-// The topic-search route runs paid Claude/Voyage calls on the user path but,
-// unlike sift-api, those calls were never recorded in ai_usage_daily or checked
-// against the daily ceiling (init.sql flags this as a temporary D35 gap). Until
-// the fallback moves into sift-api (#79), the route meters its spend into the
-// SAME shared ledger the backend guard reads, so the daily ceiling stays global.
+// Shared AI policy, durable reservations and measured usage.
+// Admission is authoritative in PostgreSQL, including the protected Compare share.
 
 /** Today's combined estimated AI spend (USD) across backend + frontend. */
 export async function getTodayAiSpendUsd(): Promise<number> {
   const result = await pool.query<{ total: number | null }>(
     `SELECT COALESCE(SUM(estimated_cost_usd), 0) AS total
        FROM ai_usage_daily
-      WHERE usage_date = CURRENT_DATE`
+      WHERE usage_date = (NOW() AT TIME ZONE 'UTC')::date`
   );
   return Number(result.rows[0]?.total ?? 0);
 }
 
 /** Add one paid call's estimated cost to today's ledger (idempotent upsert). */
+export async function reserveAiBudget(amountUsd: number): Promise<string | null> {
+  const holdId = crypto.randomUUID();
+  const result = await pool.query<{ allowed: boolean }>(
+    "SELECT sift_reserve_ai_budget($1, $2, 'background') AS allowed", [holdId, amountUsd],
+  );
+  return result.rows[0]?.allowed ? holdId : null;
+}
+
+/** Atomically replace a durable hold with measured usage; safe to retry. */
 export async function recordAiUsage(entry: {
-  provider: string;
-  model: string;
-  operation: string;
-  costUsd: number;
+  provider: string; model: string; operation: string; costUsd: number;
+  holdId?: string; inputTokens?: number; outputTokens?: number; webSearches?: number; cacheReadTokens?: number; cacheWriteTokens?: number;
 }): Promise<void> {
-  await pool.query(
-    `INSERT INTO ai_usage_daily
-        (usage_date, provider, model, operation, estimated_cost_usd, call_count)
-     VALUES (CURRENT_DATE, $1, $2, $3, $4, 1)
-     ON CONFLICT (usage_date, provider, model, operation) DO UPDATE SET
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(73482691)");
+    if (entry.holdId) {
+      const hold = await client.query<{ settled_at: string | null }>(
+        "SELECT settled_at FROM ai_budget_holds WHERE id = $1 FOR UPDATE", [entry.holdId],
+      );
+      if (!hold.rows[0]) throw new Error("AI budget hold is missing");
+      if (hold.rows[0].settled_at !== null) { await client.query("COMMIT"); return; }
+    }
+    await client.query(
+      `INSERT INTO ai_usage_daily
+        (usage_date, provider, model, operation, estimated_cost_usd, call_count, input_tokens, output_tokens, web_search_calls, cache_read_tokens, cache_write_tokens)
+       VALUES ((NOW() AT TIME ZONE 'UTC')::date, $1, $2, $3, $4, 1, $5, $6, $7, $8, $9)
+       ON CONFLICT (usage_date, provider, model, operation) DO UPDATE SET
         estimated_cost_usd = ai_usage_daily.estimated_cost_usd + EXCLUDED.estimated_cost_usd,
         call_count = ai_usage_daily.call_count + 1,
-        updated_at = NOW()`,
-    [entry.provider, entry.model, entry.operation, entry.costUsd]
-  );
+        input_tokens = ai_usage_daily.input_tokens + EXCLUDED.input_tokens,
+        output_tokens = ai_usage_daily.output_tokens + EXCLUDED.output_tokens,
+        web_search_calls = ai_usage_daily.web_search_calls + EXCLUDED.web_search_calls,
+        cache_read_tokens = ai_usage_daily.cache_read_tokens + EXCLUDED.cache_read_tokens,
+        cache_write_tokens = ai_usage_daily.cache_write_tokens + EXCLUDED.cache_write_tokens, updated_at = NOW()`,
+      [entry.provider, entry.model, entry.operation, entry.costUsd, entry.inputTokens ?? 0, entry.outputTokens ?? 0, entry.webSearches ?? 0, entry.cacheReadTokens ?? 0, entry.cacheWriteTokens ?? 0],
+    );
+    if (entry.holdId) await client.query(
+      "UPDATE ai_budget_holds SET remaining_usd = 0, settled_at = NOW() WHERE id = $1", [entry.holdId],
+    );
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally { client.release(); }
 }
 
 // ─── Custom Topics ────────────────────────────────────
