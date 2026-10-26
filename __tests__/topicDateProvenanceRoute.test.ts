@@ -16,14 +16,14 @@ jest.mock("@/lib/db", () => ({
   getOutletProfilesMap: async () => new Map(),
   resolveOutletForSourceName: () => null,
   getArticleEntityLinks: async () => new Map(),
-  getTodayAiSpendUsd: async () => 0,
+  reserveAiBudget: async () => "test-hold",
   recordAiUsage: async () => undefined,
 }));
 jest.mock("@/lib/voyage", () => ({ embedTexts: (...args: unknown[]) => mockEmbed(...args) }));
 jest.mock("@/lib/civicContext", () => ({ enrichArticleEntityLinks: async () => undefined }));
 jest.mock("@/lib/searchAnalyticsLog", () => ({ logSearchQuery: async () => null }));
 jest.mock("@/lib/observability", () => ({ reportError: jest.fn() }));
-jest.mock("@/lib/usage-tracker", () => ({ logUsage: () => null }));
+jest.mock("@/lib/usage-tracker", () => ({ logUsage: () => ({ cost_usd: 0.01, input_tokens: 1, output_tokens: 1, web_searches: 1 }) }));
 
 import { GET } from "@/app/api/news/topic/route";
 
@@ -32,7 +32,7 @@ beforeEach(() => {
   mockSearch.mockResolvedValue([]);
   mockInsert.mockResolvedValue(undefined);
   mockEmbed.mockImplementation(async (texts: string[]) => texts.map(() => [1, 0]));
-  mockCreate.mockResolvedValue({ content: [{ type: "text", text: JSON.stringify([{
+  mockCreate.mockResolvedValue({ usage: { input_tokens: 10, output_tokens: 10 }, content: [{ type: "text", text: JSON.stringify([{
     title: "Fictional search fixture", summary: "A synthetic test result.",
     source_url: "https://example.com/fixture", source_name: "QA source",
     published_date: "2001-01-01T00:00:00Z",

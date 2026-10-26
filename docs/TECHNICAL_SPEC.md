@@ -156,7 +156,15 @@ Triggered by Vercel Cron. Fetches RSS feeds, summarizes with Claude, embeds with
 
 ### POST /analyze/compare
 
-User-triggered multi-source comparison via LangGraph.
+User-triggered multi-source comparison via LangGraph. Interactive JSON and SSE
+requests can use the protected 20% of the existing AI daily cap plus unused
+background capacity. All paid boundaries reserve against the shared PostgreSQL
+policy and outstanding work; background topic generation, search fallback and
+embeddings use the 80% admission ceiling. The cap is not increased. The protected
+backend `GET /analyze/budget` exposes allocation and hold totals with a pipeline key.
+Guarded Compare uses one targeted search per selected outlet and retains the
+existing provenance and claim-comparison response. See sift-api README for
+settlement, uncertain holds and billing-model limits.
 
 **Request:**
 ```json

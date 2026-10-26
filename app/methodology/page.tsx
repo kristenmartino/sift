@@ -149,7 +149,7 @@ export default async function MethodologyPage() {
         </section>
 
         {/* Bias ratings explainer */}
-        <section className="mb-12">
+        <section id="outlet-ratings" className="mb-12 scroll-mt-24">
           <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-4">
             {m.sections.bias.kicker}
           </p>

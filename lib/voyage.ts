@@ -1,3 +1,5 @@
+import { reserveAiBudget, recordAiUsage } from "./db";
+
 /**
  * Voyage AI embeddings client — the one place the HTTP call lives.
  *
@@ -25,10 +27,13 @@ export async function embedTexts(
   texts: string[],
   inputType: "query" | "document",
 ): Promise<number[][]> {
+  const key = apiKey();
+  const holdId = await reserveAiBudget((texts.reduce((sum, text) => sum + new TextEncoder().encode(text).length, 0) + 4096) * 0.02 / 1_000_000);
+  if (!holdId) throw new Error("Embedding skipped: shared AI budget unavailable");
   const res = await fetch(VOYAGE_EMBEDDINGS_URL, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey()}`,
+      Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -42,6 +47,9 @@ export async function embedTexts(
     throw new Error(`Voyage API error ${res.status}: ${await res.text()}`);
   }
 
-  const data = (await res.json()) as { data: { embedding: number[] }[] };
+  const data = (await res.json()) as { data: { embedding: number[] }[]; usage?: { total_tokens?: number } };
+  const tokens = data.usage?.total_tokens;
+  if (typeof tokens !== "number") throw new Error("Embedding usage missing; budget remains reserved");
+  await recordAiUsage({ provider: "voyage", model: VOYAGE_MODEL, operation: "news.topic.embedding", costUsd: tokens * 0.02 / 1_000_000, inputTokens: tokens, holdId });
   return data.data.map((d) => d.embedding);
 }
