@@ -3,12 +3,12 @@
 import { COPY } from "@/lib/copy";
 import type { ErrorStateProps } from "@/lib/types";
 
-export default function ErrorState({ message, onRetry }: ErrorStateProps) {
+export default function ErrorState({ message, title = COPY.error.title, onRetry }: ErrorStateProps) {
   return (
     <div className="text-center py-16 px-5 text-(--text-tertiary)">
       <div className="text-5xl mb-4 opacity-30">⚠</div>
       <p className="text-base font-semibold text-(--text-secondary) mb-2">
-        {COPY.error.title}
+        {title}
       </p>
       <p className="text-sm max-w-[400px] mx-auto mb-5 leading-relaxed">
         {message || COPY.error.body}

@@ -37,6 +37,7 @@ jest.mock("@/lib/siftApi", () => ({
 }));
 
 import { POST } from "../app/api/compare/route";
+import { COPY } from "@/lib/copy";
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
@@ -162,6 +163,34 @@ describe("POST /api/compare contract", () => {
     expect(res.status).toBe(502);
     expect(JSON.stringify(body)).not.toContain("secret");
     expect(body.error).toBe("Comparison service unavailable");
+  });
+
+  it.each([
+    ["AI_BUDGET_EXCEEDED", COPY.compare.budgetExceeded],
+    ["COST_GUARD_UNAVAILABLE", COPY.compare.budgetUnavailable],
+  ])("reports %s safely before either JSON or streamed analysis starts", async (code, error) => {
+    mockFetch.mockImplementation(async () => new Response(JSON.stringify({
+      detail: { code, detail: "secret connection information" },
+    }), { status: 503 }));
+    for (const accept of ["application/json", "text/event-stream"]) {
+      const res = await POST(makeRequest({ topic: "Federal Reserve", sources: ["axios", "the hill"] }, { accept }));
+      expect(res.status).toBe(503);
+      const body = await res.json();
+      expect(body).toEqual({ error, code });
+      expect(JSON.stringify(body)).not.toContain("secret");
+    }
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { detail: { code: "UNKNOWN", detail: "secret connection information" } },
+    { detail: "secret connection information" },
+    null,
+  ])("keeps unknown upstream 503 errors private", async (payload) => {
+    mockFetch.mockImplementation(async () => new Response(JSON.stringify(payload), { status: 503 }));
+    const res = await POST(makeRequest({ topic: "Federal Reserve" }));
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ error: "Comparison service unavailable" });
   });
 });
 
