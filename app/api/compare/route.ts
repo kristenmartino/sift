@@ -5,6 +5,7 @@ import { reportError } from "@/lib/observability";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkCsrf } from "@/lib/security";
 import { SIFT_API_KEY, SIFT_API_URL } from "@/lib/siftApi";
+import { COPY } from "@/lib/copy";
 import {
   parseJsonBody,
   tooManyRequests,
@@ -90,10 +91,20 @@ export async function POST(request: NextRequest) {
         // The upstream `detail` can embed connection strings, so it stays in
         // the server log and out of the Sentry event (and the response body —
         // see __tests__/compare.test.ts).
-        console.error("Compare service detail:", errorBody.detail);
+        console.error("Compare service detail:", errorBody?.detail);
         reportError("api.compare.upstream", new Error(`compare service ${res.status}`), {
           extra: { status: res.status },
         });
+        // Forward only recognized guard codes with fixed public copy. Arbitrary
+        // upstream detail can contain credentials and must remain private.
+        const detail = errorBody?.detail;
+        const code = detail && typeof detail === "object" ? detail.code : null;
+        if (res.status === 503 && (code === "AI_BUDGET_EXCEEDED" || code === "COST_GUARD_UNAVAILABLE")) {
+          return NextResponse.json(
+            { error: code === "AI_BUDGET_EXCEEDED" ? COPY.compare.budgetExceeded : COPY.compare.budgetUnavailable, code },
+            { status: 503 },
+          );
+        }
         const status = res.status >= 400 && res.status < 500 ? 400 : 502;
         return NextResponse.json(
           { error: "Comparison service unavailable" },

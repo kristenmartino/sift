@@ -20,4 +20,11 @@ describe("ErrorState", () => {
     fireEvent.click(screen.getByText(COPY.error.button));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
+
+  it("describes comparison failures without claiming the feed failed", () => {
+    render(<ErrorState title={COPY.compare.errorTitle} message={COPY.compare.budgetExceeded} onRetry={() => {}} />);
+    expect(screen.getByText("Comparison unavailable")).toBeInTheDocument();
+    expect(screen.getByText(COPY.compare.budgetExceeded)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.error.title)).not.toBeInTheDocument();
+  });
 });

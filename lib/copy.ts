@@ -127,6 +127,9 @@ export const COPY = {
     // Visible label on the /news header pill \u2014 the \u21cc glyph alone made the
     // flagship feature the hardest one to find.
     entry: "Compare",
+    errorTitle: "Comparison unavailable",
+    budgetExceeded: "Sift's daily AI budget has been reached. Try again after it resets. Existing story coverage is still available in the feed.",
+    budgetUnavailable: "Sift couldn't verify the AI budget, so this comparison hasn't started. Please try again shortly.",
     loading: "Comparing coverage across sources\u2026",
     slow: "Searching multiple outlets \u2014 this takes 10\u201320 seconds",
     // Stage lines mirror the real pipeline (search each outlet \u2192 extract

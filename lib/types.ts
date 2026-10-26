@@ -968,6 +968,7 @@ export interface SkeletonCardProps {
 
 export interface ErrorStateProps {
   message: string;
+  title?: string;
   onRetry: () => void;
 }
 

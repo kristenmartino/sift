@@ -935,8 +935,9 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 ) : <CoveragePreview stories={stories[activeCategory] || []} draft={compareDraft} />
               ) : (
                 <ErrorState
+                  title={COPY.compare.errorTitle}
                   message={compareError}
-                  onRetry={() => compareTopic && runCompare(compareTopic)}
+                  onRetry={() => compareTopic && runCompare(compareTopic, selectedSources)}
                 />
               )
             )}
