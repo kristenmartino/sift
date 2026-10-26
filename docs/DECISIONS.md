@@ -1117,3 +1117,12 @@ retry state and keep failed clusters unpublished. Explicit source-only guides
 remain unavailable until changed usable evidence arrives. Use a cited definition
 for Section 338. This checks fidelity to supplied reporting, not its independent
 truth. Keep design, ranking, schedule and the $15 cap unchanged. Backend: sift-api#304.
+
+### 2026-10-26: post-release copy checks
+
+Backend rules 2026-10-26.1 reject ambiguous first-name guesses, causal and
+attribution reversals, generic closing clauses, undated stale arrest notes and
+unsupported primer specifics. Publisher identity is passed to source review so
+attributed editorial copy is judged against the correct outlet. No UI, design
+or ranking changes accompany these safeguards. Review checks supplied-input
+fidelity, not independent truth of publisher claims.
