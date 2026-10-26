@@ -4,6 +4,7 @@ import CorrectionPath from "@/components/CorrectionPath";
 import LandingMasthead from "@/components/landing/LandingMasthead";
 import ShareActions from "@/components/ShareActions";
 import { COPY } from "@/lib/copy";
+import { agencyPurpose, organizationLinkLabel } from "@/lib/agencyPurpose";
 import {
   formatBudgetUsd,
   formatOrgTypeLabel,
@@ -94,6 +95,7 @@ export default function OrgDossier({
     funding.heldForReview + funding.heldEinAbsent + funding.heldOther;
   const typeLabel = formatOrgTypeLabel(org.type);
   const budgetLabel = formatBudgetUsd(org.annualBudgetUsd);
+  const purpose = org.type === "agency" ? agencyPurpose(org.slug) : null;
 
   // Lede bits: "{type} · Founded {year} · Annual budget ~{budget}"
   // Political lean is its own section heading below; not in the lede.
@@ -128,7 +130,7 @@ export default function OrgDossier({
       externalLinkEntries.push({
         key,
         url,
-        label: c.externalLinkLabels[key] ?? key,
+        label: c.externalLinkLabels[key] ?? organizationLinkLabel(key),
       });
     }
   }
@@ -178,11 +180,31 @@ export default function OrgDossier({
               org.externalLinks.propublica ? "ProPublica Nonprofit Explorer" : null,
               org.externalLinks.irs_990 ? "IRS Form 990" : null,
               org.externalLinks.fara ? "FARA" : null,
+              org.governanceSource ? "Statute / agency record" : null,
+              purpose?.label ?? null,
             ].filter((s): s is string => s !== null)}
           />
         </header>
 
         <hr className="border-0 border-t border-(--border) my-10" />
+
+        {purpose && (
+          <section className="mb-10" aria-labelledby="agency-purpose-heading">
+            <h2 id="agency-purpose-heading" className="font-heading text-[24px] font-semibold mb-3">What it does</h2>
+            <p className="font-body text-[16px] text-(--text-secondary) leading-relaxed max-w-[60ch]">{purpose.summary}</p>
+            <a href={purpose.source} target="_blank" rel="noopener noreferrer"
+              className="inline-block font-body text-[13px] text-(--accent) mt-3 underline underline-offset-4">
+              {purpose.label} · checked {purpose.checked} <span aria-hidden>↗</span>
+            </a>
+            <p className="font-body text-[13px] text-(--text-secondary) mt-2">Sift’s summary of the agency’s published responsibilities.</p>
+          </section>
+        )}
+
+        {org.type === "agency" && !purpose && (
+          <p className="font-body text-[14px] text-(--text-secondary) leading-relaxed mb-8 max-w-[60ch]">
+            This reference page contains the agency records cited below. A plain-language overview of its responsibilities has not yet been added.
+          </p>
+        )}
 
         {/* In its own words — replaces the Sift-assigned political_lean
             (migration 012). The quote is the organization's, not Sift's, and
@@ -499,17 +521,18 @@ export default function OrgDossier({
 
         {/* Footer: methodology link + back to Sift */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <Link
-            href="/"
-            className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline inline-flex items-center gap-1.5"
-          >
-            <span aria-hidden>←</span> Back to Sift
-          </Link>
+          <nav aria-label="Continue reading" className="flex flex-wrap gap-x-5 gap-y-3 font-body text-[14px]">
+            <Link href="/civic" className="text-(--accent) no-underline hover:underline">← Civic context</Link>
+            {org.type === "agency" && <Link href="/agencies" className="text-(--accent) no-underline hover:underline">Agency guide</Link>}
+            <Link href="/news" className="text-(--accent) no-underline hover:underline">Read news</Link>
+          </nav>
           <Link
             href="/methodology"
             className="font-body text-meta text-(--text-tertiary) italic no-underline hover:text-(--accent) hover:not-italic transition-colors"
           >
-            {c.methodologyHint}
+            {org.type === "agency" ? "Agency information comes from the cited statutes and agency records. Read the methodology."
+              : org.type === "igo" ? "Organization information comes from the cited public records. Read the methodology."
+                : c.methodologyHint}
           </Link>
         </div>
         <CorrectionPath />

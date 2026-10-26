@@ -47,3 +47,12 @@ it("handles missing and unrecognized country codes without mapping them to state
   expect(countryName("not-a-code")).toBe("not-a-code");
   expect(groupByOffice([])).toEqual([]);
 });
+
+it("keeps long browse lists collapsed while revealing a selected office", () => {
+  const { container, rerender } = render(<CivicIndex politicians={roster} orgs={[]} bills={[]} chamberFilter={null} />);
+  expect(container.querySelector("#people details")).not.toHaveAttribute("open");
+  expect(screen.getByRole("searchbox")).toBeVisible();
+  rerender(<CivicIndex politicians={roster} orgs={[]} bills={[]} chamberFilter="senate" />);
+  expect(container.querySelector("#people details")).toHaveAttribute("open");
+  expect(screen.getByText("California senator")).toBeVisible();
+});

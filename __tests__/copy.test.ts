@@ -139,7 +139,8 @@ describe("COPY strings", () => {
       expect(R.strip(77)[0]).toBe("77 curated outlets");
       expect(R.sources.titleIt(77)).toBe("77 curated outlets.");
       expect(R.cta.body(77)).toContain("77 curated outlets");
-      expect(R.hero.lede(77)).toContain("77 curated outlets");
+      expect(R.hero.lede).toContain("Understand what happened");
+      expect(R.hero.lede).not.toContain("77 curated outlets");
       expect(COPY.methodology.sections.includes.body(77)).toContain(
         "77 curated outlets",
       );
@@ -151,7 +152,6 @@ describe("COPY strings", () => {
         R.strip(0)[0],
         R.sources.titleIt(0),
         R.cta.body(0),
-        R.hero.lede(0),
         R.footer.blurb(0),
         COPY.footer.main(),
         COPY.methodology.sections.includes.body(0),
@@ -164,7 +164,7 @@ describe("COPY strings", () => {
 
     it("no surface hardcodes the stale '~50 outlets' or 'reads from'", () => {
       const all = [
-        R.hero.lede(77),
+        R.hero.lede,
         R.hero.foot(77),
         R.strip(77).join(" "),
         R.sources.titleIt(77),

@@ -1,103 +1,50 @@
+import CoveragePreview from "@/components/CoveragePreview";
 import UsageView from "@/components/analytics/UsageView";
 import { COPY } from "@/lib/copy";
-import type { DailyCompareExample } from "@/lib/types";
-import { comparisonProvenance, normalizeCompareClaim, comparisonClaimLabel } from "@/lib/comparison";
+import type { DailyCompareExample, Story } from "@/lib/types";
+import { comparisonProvenance, eligibleComparisonExample, comparisonClaimLabel } from "@/lib/comparison";
 
 const C = COPY.landingReskin.compare;
 
-/**
- * "How outlets framed it" — the landing's comparison section.
- *
- * With a daily example (sift-api generates one real comparison per UTC day),
- * this renders live output from the actual compare tool, dated. Without one
- * (first deploy, or the table unreachable), it falls back to a generic
- * illustration of the format — no named outlets, no lean chips — which
- * noteLine labels as written rather than quoted. This resolves the old
- * TODO(live-compare): real data replaced the fixture the moment it could do
- * so without fabricating anything.
- */
-export default function ComparisonDemo({
-  example,
-}: {
+/** A recent, source-accounted saved result, or an honest original-headline preview. */
+export default function ComparisonDemo({ example, coverageStories = [] }: {
   example?: DailyCompareExample | null;
+  coverageStories?: Story[];
 }) {
-  const record = example ? comparisonProvenance(example) : null;
-  const normalizedClaims = record && example ? example.claims.flatMap((claim) => {
-    const normalized = normalizeCompareClaim(claim, record);
-    return normalized ? [normalized] : [];
-  }) : [];
-  const live = example && record && record.sources_analyzed.length >= 2 && normalizedClaims.length >= 2
-    ? { ...example, claims: normalizedClaims } : null;
-  const generatedDate = live
-    ? new Date(live.generatedAt).toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-        timeZone: "UTC",
-      })
-    : null;
+  const live = eligibleComparisonExample(example);
+  if (!live) return <section className="sl-band sl-compare" id="compare">
+    <div className="sl-wrap"><CoveragePreview stories={coverageStories} /></div>
+  </section>;
+  const record = comparisonProvenance(live);
+  const generatedDate = new Date(live.generatedAt).toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
+  });
 
-  const content = (
+  return <UsageView name="comparison_viewed" viewKey={`landing:${live.generatedAt}`}
+    properties={{ contentId: `daily:${live.generatedAt}`, surface: "daily_compare" }}>
     <section className="sl-band sl-compare" id="compare">
       <div className="sl-wrap">
         <div className="sl-sec-head" data-reveal>
           <span className="sl-eyebrow">{C.eyebrow}</span>
-          <h2>
-            {C.titleLead}
-            <span className="sl-it">{live ? C.liveTitleIt : C.titleIt}</span>
-          </h2>
+          <h2>{C.titleLead}<span className="sl-it">{C.liveTitleIt}</span></h2>
           <p>{C.subtitle}</p>
         </div>
-
         <div className="sl-frames" data-reveal>
-          <div className="sl-topic">
-            {live ? C.liveTopicLabel : C.topicLabel} —{" "}
-            <b>{live ? live.topic : C.topic}</b>
-          </div>
-          {live
-            ? // Claims arrive disputed-first from the workflow; the top three
-              // are the spread worth showing. Agreement chips reuse the
-              // compare view's labels; sources stay neutral ink.
-              live.claims.slice(0, 3).map((claim) => (
-                <div className="sl-frame" key={claim.claim}>
-                  <div className="sl-out">
-                    <span className="sl-nm">
-                      {comparisonClaimLabel(claim, record)}
-                    </span>
-                    <span className="sl-ln">
-                      <span className="sl-dot" aria-hidden />
-                      {claim.agreement === "disputed"
-                        ? [
-                            (claim.sources_for ?? []).join(", "),
-                            (claim.sources_against ?? []).join(", "),
-                          ]
-                            .filter(Boolean)
-                            .join(C.liveDisputedVs)
-                        : (claim.sources ?? []).join(", ")}
-                    </span>
-                  </div>
-                  <q>{claim.claim}</q>
-                </div>
-              ))
-            : // The fallback carries no lean chip: the frames are generic
-              // placeholders, and a rating badge beside one would imply a real
-              // outlet had been rated. noteLine labels the whole block instead.
-              C.frames.map((f) => (
-                <div className="sl-frame" key={f.outlet}>
-                  <div className="sl-out">
-                    <span className="sl-nm">{f.outlet}</span>
-                  </div>
-                  <q>{f.quote}</q>
-                </div>
-              ))}
+          <div className="sl-topic">{C.liveTopicLabel} — <b>{live.topic}</b></div>
+          {live.claims.slice(0, 3).map((claim) => <div className="sl-frame" key={claim.claim}>
+            <div className="sl-out">
+              <span className="sl-nm">{comparisonClaimLabel(claim, record)}</span>
+              <span className="sl-ln"><span className="sl-dot" aria-hidden />
+                {claim.agreement === "disputed" ? [
+                  (claim.sources_for ?? []).join(", "), (claim.sources_against ?? []).join(", "),
+                ].filter(Boolean).join(C.liveDisputedVs) : (claim.sources ?? []).join(", ")}
+              </span>
+            </div>
+            <p className="font-heading italic text-[18px] leading-[1.4] text-(--text-primary)">{claim.claim}</p>
+          </div>)}
         </div>
-
-        <p className="sl-note-line" data-reveal>
-          {live && generatedDate ? C.liveNote(generatedDate) : C.noteLine}
-        </p>
+        <p className="sl-note-line" data-reveal>{C.liveNote(generatedDate)}</p>
       </div>
     </section>
-  );
-  return live ? <UsageView name="comparison_viewed" viewKey={`landing:${live.generatedAt}`}
-    properties={{ contentId: `daily:${live.generatedAt}`, surface: "daily_compare" }}>{content}</UsageView> : content;
+  </UsageView>;
 }

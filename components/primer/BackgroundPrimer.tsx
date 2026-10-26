@@ -59,6 +59,7 @@ export default function BackgroundPrimer({
   if (!primer) return null;
 
   const { background, terms } = primer;
+  const label = background?.trim() ? COPY.primer.eyebrow : "Terms explained";
   if (!background && terms.length === 0) return null;
 
   // Fire-and-forget analytics POST when the user-initiated click flips
@@ -94,7 +95,7 @@ export default function BackgroundPrimer({
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-[0.04em] uppercase border border-(--border) bg-transparent text-(--text-secondary) hover:text-(--text-primary) hover:border-(--text-tertiary) transition-colors duration-200 cursor-pointer"
         >
           <span aria-hidden>◆</span>
-          <span>{COPY.primer.eyebrow}</span>
+          <span>{label}</span>
           <span aria-hidden className="text-(--text-tertiary)">▾</span>
         </button>
       )}
@@ -113,7 +114,7 @@ export default function BackgroundPrimer({
           <div className="flex items-center justify-between gap-3 mb-2.5">
             <p className="text-kicker font-bold uppercase text-(--text-tertiary)">
               <span aria-hidden className="mr-1.5">◆</span>
-              {COPY.primer.eyebrow}
+              {label}
             </p>
             <button
               type="button"

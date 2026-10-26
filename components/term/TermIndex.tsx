@@ -1,210 +1,40 @@
 import Link from "next/link";
-
 import CorrectionPath from "@/components/CorrectionPath";
 import LandingMasthead from "@/components/landing/LandingMasthead";
+import TermLookup from "./TermLookup";
 import { COPY } from "@/lib/copy";
 import type { TermListItem } from "@/lib/types";
 
-interface TermIndexProps {
-  terms: TermListItem[];
-  /** Terms defined but below the floor — for the honest gap note. */
-  heldCount: number;
-}
-
-/** Section headings for `term_profiles.category`. */
-const CATEGORY_LABELS: Record<string, string> = {
-  congress: "Congress",
-  courts: "Courts",
-  executive: "The executive",
-  elections: "Elections",
-  constitution: "Constitution",
-  immigration: "Immigration",
-  "first-amendment": "Speech and the press",
-  business: "Business and markets",
-};
-
-/** Stable order — the branches first, then the areas they act on. */
-const CATEGORY_ORDER = [
-  "constitution",
-  "congress",
-  "executive",
-  "courts",
-  "elections",
-  "first-amendment",
-  "immigration",
-  "business",
-];
-
-function categoryRank(c: string | null): number {
-  const i = CATEGORY_ORDER.indexOf(c ?? "");
-  // Unknown or uncategorised sorts last rather than disappearing — a term
-  // added with a new category still shows up, under its own raw label.
-  return i === -1 ? CATEGORY_ORDER.length : i;
-}
-
-/**
- * `/glossary` — the index over `/term/<slug>`.
- *
- * Lives in components/term/ beside TermDossier rather than in
- * components/glossary/, which belongs to the inline entity-chip layer.
- *
- * Named `/glossary` rather than `/terms` for two reasons: `/terms` is the
- * Terms of Service, and `/agencies` and `/think-tanks` already establish that
- * a collection page takes a plain-English name rather than the route segment
- * its children live under.
- *
- * The page leads with a finding rather than the list, following `/agencies`:
- * a reader who stops after the first screen should still leave with the one
- * fact that makes it worth sending on. Here that fact is that roughly one
- * story in five turns on a term the coverage never names — which is precisely
- * why a reader cannot look the term up, and so precisely why these pages
- * exist. Every number in it is computed from the live corpus.
- */
-export default function TermIndex({ terms, heldCount }: TermIndexProps) {
+/** Definitions and lookup lead; periodic corpus measurements remain optional. */
+export default function TermIndex({ terms, heldCount }: { terms: TermListItem[]; heldCount: number }) {
   const c = COPY.termIndex;
-
-  const totalArticles = terms.reduce((n, t) => n + t.articleCount, 0);
-  const totalUnnamed = terms.reduce((n, t) => n + t.unnamedCount, 0);
-  // The starkest example, for the finding sentence. Ties broken by volume so
-  // the named term is one a reader plausibly recognises.
-  const worst = [...terms].sort(
-    (a, b) =>
-      b.unnamedCount / b.articleCount - a.unnamedCount / a.articleCount ||
-      b.articleCount - a.articleCount,
-  )[0];
-
-  const groups = [...new Set(terms.map((t) => t.category))]
-    .sort((a, b) => categoryRank(a) - categoryRank(b))
-    .map((cat) => ({
-      key: cat ?? "other",
-      label: cat ? (CATEGORY_LABELS[cat] ?? cat) : "Other",
-      items: terms.filter((t) => t.category === cat),
-    }))
-    .filter((g) => g.items.length > 0);
-
+  const totalMatches = terms.reduce((count, term) => count + term.articleCount, 0);
+  const totalUnnamed = terms.reduce((count, term) => count + term.unnamedCount, 0);
+  const example = [...terms].sort((a, b) => b.unnamedCount - a.unnamedCount)[0];
+  const measuredAt = terms.map((term) => term.computedAt).filter((date): date is string => date !== null).sort()[0] ?? null;
   const gapNote = c.gapNote(terms.length, terms.length + heldCount);
 
-  // The oldest stamp across the set, not the newest — the page is only as
-  // fresh as its stalest row, and quoting the newest would overstate it.
-  const measuredAt = terms
-    .map((t) => t.computedAt)
-    .filter((d): d is string => d !== null)
-    .sort()[0] ?? null;
-
-  return (
-    <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
-      <LandingMasthead />
-
-      <main id="main-content" className="max-w-[800px] mx-auto px-6 pt-12 pb-24">
-        <header className="mb-9">
-          <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3 flex items-center">
-            <span aria-hidden className="inline-block w-7 h-px bg-(--border) mr-3" />
-            {c.eyebrow}
-          </p>
-          <h1 className="font-heading text-[36px] md:text-[44px] font-bold leading-[1.05] tracking-tight text-(--text-primary)">
-            {c.headline}
-          </h1>
-          <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[62ch] leading-relaxed">
-            {c.dek}
-          </p>
-          <p className="font-body text-[15px] text-(--text-tertiary) mt-4 max-w-[62ch] leading-relaxed">
-            {c.contextNote}
-          </p>
-        </header>
-
-        <hr className="border-0 border-t border-(--border) mb-10" />
-
-        {terms.length === 0 ? (
-          <p className="font-body text-[15px] text-(--text-tertiary) italic leading-relaxed">
-            {c.empty}
-          </p>
-        ) : (
-          <>
-            {/* The finding, before the list. Only rendered when there is one
-                to state — a corpus where every term is named in its own
-                coverage would make this paragraph a lie. */}
-            {totalUnnamed > 0 && worst && (
-              <section className="mb-12 border-l-2 border-(--accent) pl-5">
-                <p className="font-body text-kicker uppercase text-(--text-tertiary) mb-3">
-                  {c.findingHeading}
-                </p>
-                <p className="font-body text-[16px] text-(--text-secondary) leading-relaxed max-w-[62ch]">
-                  {c.finding(totalUnnamed, totalArticles, worst.term)}
-                </p>
-              </section>
-            )}
-
-            <p className="font-body text-[14px] text-(--text-tertiary) mb-1.5 leading-relaxed">
-              {c.countLabel(terms.length)}
-            </p>
-            {/* When, not "now". The numbers above come from a periodic
-                measurement, and a reader who clicks into a term page may see
-                a slightly higher figure — better to explain that than to let
-                them find it. */}
-            {measuredAt && (
-              <p className="font-body text-[13px] text-(--text-tertiary) mb-1.5 leading-relaxed">
-                {c.asOf(measuredAt)}
-              </p>
-            )}
-            {gapNote && (
-              <p className="font-body text-[14px] text-(--text-tertiary) mb-8 max-w-[62ch] leading-relaxed">
-                {gapNote}
-              </p>
-            )}
-
-            <div className={gapNote ? "" : "mt-8"}>
-              {groups.map((g) => (
-                <section key={g.key} className="mb-10">
-                  <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-(--text-tertiary) mb-3">
-                    {g.label}
-                  </p>
-                  <ul className="space-y-0">
-                    {g.items.map((t) => {
-                      const unnamed = c.rowUnnamed(t.unnamedCount, t.articleCount);
-                      return (
-                        <li
-                          key={t.slug}
-                          className="border-b border-(--border-subtle) last:border-b-0 py-3"
-                        >
-                          <Link
-                            href={`/term/${t.slug}`}
-                            className="group no-underline flex flex-wrap items-baseline gap-x-3 gap-y-1"
-                          >
-                            <span className="font-heading text-[17px] text-(--text-primary) group-hover:text-(--accent) transition-colors flex-1 min-w-[160px]">
-                              {t.term}
-                            </span>
-                            <span className="font-body text-[13px] text-(--text-tertiary) tabular-nums">
-                              {c.rowCoverage(t.articleCount, t.outletCount)}
-                            </span>
-                            {unnamed && (
-                              <span className="font-body text-[12px] text-(--text-secondary) tabular-nums">
-                                {unnamed}
-                              </span>
-                            )}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          </>
-        )}
-
-        <hr className="border-0 border-t border-(--border) my-10" />
-
-        <CorrectionPath />
-
-        <p className="font-body text-[14px] mt-8">
-          <Link
-            href="/"
-            className="text-(--text-tertiary) no-underline hover:underline hover:text-(--accent)"
-          >
-            {c.backLink}
-          </Link>
-        </p>
-      </main>
-    </div>
-  );
+  return <div className="min-h-screen bg-(--surface-base) text-(--text-primary)">
+    <LandingMasthead />
+    <main id="main-content" className="max-w-[800px] mx-auto px-6 pt-8 md:pt-12 pb-24">
+      <header className="mb-7">
+        <p className="font-body text-kicker uppercase text-(--text-secondary) mb-3">{c.eyebrow}</p>
+        <h1 className="font-heading text-[32px] md:text-[44px] font-bold leading-[1.05] tracking-tight">{c.headline}</h1>
+        <p className="font-body text-[16px] text-(--text-secondary) mt-3 max-w-[62ch] leading-relaxed">{c.dek}</p>
+      </header>
+      {terms.length === 0 ? <p className="font-body text-[15px] text-(--text-secondary) italic">{c.empty}</p> : <TermLookup terms={terms} />}
+      <details className="mt-10 border-y border-(--border) py-4">
+        <summary className="font-body text-[14px] text-(--text-secondary) cursor-pointer focus-visible:outline-2 focus-visible:outline-(--accent)">Sources and historical coverage measurements</summary>
+        <div className="font-body text-[14px] text-(--text-secondary) leading-relaxed mt-4 space-y-3">
+          <p>{c.contextNote}</p>
+          {measuredAt && <p>{c.asOf(measuredAt)}</p>}
+          {totalUnnamed > 0 && example && <p>{c.finding(totalUnnamed, totalMatches, example.term)}</p>}
+          {gapNote && <p>{gapNote}</p>}
+          <ul>{terms.map((term) => <li key={term.slug} className="py-1"><Link href={`/term/${term.slug}`} className="text-(--accent) hover:underline">{term.term}</Link> — {c.rowCoverage(term.articleCount, term.outletCount)}{term.unnamedCount > 0 ? `; ${term.unnamedCount.toLocaleString()} matched through a primer only` : ""}</li>)}</ul>
+        </div>
+      </details>
+      <div className="mt-10"><CorrectionPath /></div>
+      <p className="font-body text-[14px] mt-8"><Link href="/news" className="text-(--accent) hover:underline">{c.backLink} →</Link></p>
+    </main>
+  </div>;
 }

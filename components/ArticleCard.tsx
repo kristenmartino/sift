@@ -3,7 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
-import { timeAgo, truncateToSentence } from "@/lib/utils";
+import { timeAgo } from "@/lib/utils";
+import { articleContentLabel, isEarlierPublication } from "@/lib/articlePresentation";
+import ReadingSummary from "./ReadingSummary";
 import CardImage from "./CardImage";
 import BackgroundPrimer from "./primer/BackgroundPrimer";
 import { OutletChip, LeanSpread } from "./primitives";
@@ -35,6 +37,7 @@ export default function ArticleCard({
   const cat = CATEGORIES.find((c) => c.id === article.category) || CATEGORIES[0];
   const color = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.top;
   const hasImage = !!article.imageUrl;
+  const contentLabel = articleContentLabel(article);
   // Spread cue above the headline — one outlet, so one cell fills (kept for
   // consistency with the multi-source story cards).
   const leanSpread = leanSpreadFromRatings([article.outlet?.allSidesRating]);
@@ -60,7 +63,7 @@ export default function ArticleCard({
       className={`
         bg-(--surface-raised) rounded-[14px] overflow-hidden
         border border-(--border) ${index === 0 ? "animate-fade-slide-in" : ""}
-        ${featured && hasImage ? "col-span-full grid grid-cols-1 md:grid-cols-2" : ""}
+        ${featured && hasImage ? "feed-featured-card col-span-full grid grid-cols-1 lg:grid-cols-2" : ""}
       `}
       style={{
         position: "relative",
@@ -97,13 +100,13 @@ export default function ArticleCard({
 
       <div
         className={`flex flex-col gap-3 ${
-          featured ? "p-7 md:p-8" : "p-5"
+          featured ? "p-5 md:p-6" : "p-5"
         }`}
         style={{ minHeight: featured ? undefined : 160 }}
       >
         {/* Category badge + bookmark */}
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
               style={{
@@ -114,6 +117,7 @@ export default function ArticleCard({
             >
               {cat.icon} {cat.label}
             </span>
+            {contentLabel && <span className="text-[11px] font-semibold text-(--text-secondary) border-l border-(--border) pl-2">{contentLabel}</span>}
             {leanSpread.bucketsCovered > 0 && <LeanSpread spread={leanSpread} />}
           </div>
           <button
@@ -147,7 +151,7 @@ export default function ArticleCard({
         {/* Title — serves as the card's primary link */}
         <h3
           className="font-heading font-bold leading-snug tracking-tight"
-          style={{ fontSize: featured ? 24 : 17 }}
+          style={{ fontSize: featured ? 23 : 19 }}
         >
           {article.sourceUrl ? (
             <a
@@ -163,12 +167,6 @@ export default function ArticleCard({
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Pseudo-element stretches to cover the card */}
-              <span
-                className="absolute inset-0 z-1"
-                aria-hidden="true"
-                style={{ position: "absolute" }}
-              />
               {article.title}
             </a>
           ) : (
@@ -176,21 +174,7 @@ export default function ArticleCard({
           )}
         </h3>
 
-        {/* Summary — clamp to fixed line count so card heights converge across
-            the auto-fill grid (StoryCard.tsx already does the same). */}
-        <p
-          className="text-(--text-secondary) leading-relaxed"
-          style={{
-            fontSize: featured ? 15 : 13.5,
-            flex: 1,
-            display: "-webkit-box",
-            WebkitLineClamp: featured ? 6 : 5,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {truncateToSentence(article.summary, featured ? 300 : 175)}
-        </p>
+        <ReadingSummary summary={article.summary} previewChars={featured ? 240 : 180} featured={featured} />
 
         {/* Why it matters */}
         {article.whyItMatters && (
@@ -204,12 +188,12 @@ export default function ArticleCard({
 
         {/* Background primer ("What you should know first") — civic-literacy
             MVP Phase 1C. Renders nothing when contextPrimer is absent.
-            Featured cards default expanded so the primer is visible without a
-            click; standard cards default collapsed to keep feed scannable. */}
+            Context opens on request so the summary and original-reporting
+            actions stay easy to scan on every card. */}
         {article.contextPrimer && (
           <BackgroundPrimer
             primer={article.contextPrimer}
-            defaultExpanded={!!featured}
+            defaultExpanded={false}
             articleId={article.id}
             surface="feed"
           />
@@ -223,11 +207,13 @@ export default function ArticleCard({
 
         {/* Meta */}
         <div className="flex flex-col gap-1.5 mt-auto pt-2">
-          <OutletChip outlet={article.outlet} fallback={article.sourceName} />
+          <OutletChip outlet={article.outlet} fallback={article.sourceName} compact />
           <div className="flex items-center gap-3 text-xs text-(--text-tertiary) font-medium flex-wrap">
-            <span>{timeAgo(article.publishedDate)}</span>
+            {isEarlierPublication(article.publishedDate) && <span className="text-(--text-secondary) border-l-2 border-(--border) pl-2">Earlier publication</span>}
+            <span title={article.publishedDate ? new Date(article.publishedDate).toUTCString() : undefined}>Published {timeAgo(article.publishedDate)}</span>
             <span className="opacity-30">&middot;</span>
-            <span>{article.readTime} min read</span>
+            <span>Summary</span>
+            {article.sourceUrl && <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" data-sift-source-id={article.id} className="relative z-2 text-(--accent) hover:underline">Read original ↗</a>}
             {onCompare && (
               <>
                 <span className="opacity-30">&middot;</span>

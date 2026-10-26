@@ -20,6 +20,8 @@ interface OutletChipProps {
   /** Show the last-verified date captions (dossier context). Default: false. */
   showVerified?: boolean;
   className?: string;
+  /** Compact reader treatment: ratings remain one explicit step away. */
+  compact?: boolean;
 }
 
 export default function OutletChip({
@@ -27,6 +29,7 @@ export default function OutletChip({
   fallback,
   showVerified = false,
   className = "",
+  compact = false,
 }: OutletChipProps) {
   if (!outlet) {
     return (
@@ -38,18 +41,7 @@ export default function OutletChip({
 
   const allSides = formatAllSidesLabel(outlet.allSidesRating);
 
-  return (
-    <span className={`inline-flex flex-col items-start gap-1 ${className}`}>
-      {/* Line 1 — outlet name (the identity). */}
-      <a
-        href={`/outlet/${outlet.slug}`}
-        onClick={(e) => e.stopPropagation()}
-        aria-label={`Outlet dossier for ${outlet.name}`}
-        className="text-[13px] font-bold text-[var(--text-secondary)] no-underline hover:text-[var(--text-primary)] hover:underline relative z-[2]"
-      >
-        {outlet.name}
-      </a>
-
+  const ratings = (<>
       {/* Line 2 — bias rating, on its own line so placement is deterministic
           regardless of column width / label length. Source (AllSides) named in
           the tooltip + as the link target; the visible label stays plain. */}
@@ -61,7 +53,7 @@ export default function OutletChip({
           onClick={(e) => e.stopPropagation()}
           title={`AllSides political-bias rating: ${allSides}`}
           aria-label={`AllSides bias rating: ${allSides}${outlet.allSidesLastChecked ? `, verified ${outlet.allSidesLastChecked}` : ""}${outlet.allSidesUrl ? " (opens AllSides in a new tab)" : ""}`}
-          className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] no-underline hover:text-[var(--text-secondary)] relative z-[2] whitespace-nowrap"
+          className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-wide text-[var(--text-secondary)] no-underline hover:text-[var(--text-secondary)] relative z-[2] whitespace-nowrap"
         >
           Bias rating: {allSides}
           <LeanGlyph rating={outlet.allSidesRating} />
@@ -85,6 +77,23 @@ export default function OutletChip({
               : ""}
         </span>
       )}
-    </span>
-  );
+  </>);
+  const Container = compact ? "div" : "span";
+  return <Container className={`inline-flex flex-col items-start gap-1 ${className}`}>
+      {/* Line 1 — outlet name (the identity). */}
+      <a
+        href={`/outlet/${outlet.slug}`}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={`Outlet dossier for ${outlet.name}`}
+        className="text-[13px] font-bold text-[var(--text-secondary)] no-underline hover:text-[var(--text-primary)] hover:underline relative z-[2]"
+      >
+        {outlet.name}
+      </a>
+
+    {compact ? <details className="relative z-2 text-xs" onClick={(e) => e.stopPropagation()}>
+      <summary className="cursor-pointer text-(--text-secondary) hover:text-(--text-primary)">Outlet ratings</summary>
+      <span className="flex flex-col gap-1.5 py-2">{ratings}</span>
+      <span className="block max-w-[38ch] text-xs text-(--text-secondary) leading-relaxed">Political lean is cited from AllSides; factual reporting from Media Bias/Fact Check. These assess the outlet, not this article.</span>
+    </details> : ratings}
+  </Container>;
 }

@@ -24,10 +24,9 @@ export default function CardImage({ src, alt, featured, category }: CardImagePro
 
   return (
     <div
-      className="relative overflow-hidden"
+      className={`relative overflow-hidden ${featured ? "feed-lead-image" : ""}`}
       style={{
-        height: featured ? "100%" : 170,
-        minHeight: featured ? 280 : undefined,
+        height: featured ? undefined : 150,
       }}
     >
       <Image

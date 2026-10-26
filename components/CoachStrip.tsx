@@ -56,21 +56,15 @@ export default function CoachStrip() {
   if (seenIntro || dismissed) return null;
 
   return (
-    <div className="animate-fade-slide-in mb-5 flex items-center justify-between gap-3 rounded-[12px] border border-(--border) bg-(--surface-raised) px-4 py-3">
-      <p className="text-sm text-(--text-secondary) leading-relaxed">
-        <span className="text-(--accent) mr-2" aria-hidden>
-          ◆
-        </span>
-        {COPY.coach.body}
-      </p>
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label={COPY.coach.dismissAria}
-        className="shrink-0 px-3 py-1 rounded-full border border-(--border) bg-transparent font-body text-[12px] text-(--text-secondary) cursor-pointer transition-colors duration-200 hover:border-(--accent) hover:text-(--accent)"
-      >
-        {COPY.coach.dismiss}
-      </button>
-    </div>
+    <details className="mb-3 text-xs text-(--text-secondary)">
+      <summary className="cursor-pointer py-1 font-medium text-(--accent)">How to read with Sift</summary>
+      <div className="mt-2 flex items-start justify-between gap-3 rounded-[10px] border border-(--border) bg-(--surface-raised) px-3 py-3">
+        <p className="text-sm text-(--text-secondary) leading-relaxed">{COPY.coach.body}</p>
+        <button type="button" onClick={dismiss} aria-label={COPY.coach.dismissAria}
+          className="shrink-0 px-3 py-1 rounded-full border border-(--border) bg-transparent text-xs text-(--text-secondary) cursor-pointer hover:text-(--accent)">
+          {COPY.coach.dismiss}
+        </button>
+      </div>
+    </details>
   );
 }

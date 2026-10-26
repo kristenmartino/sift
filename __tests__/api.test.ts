@@ -395,6 +395,25 @@ describe("GET /api/news", () => {
       expect(body.stories[0]).not.toHaveProperty("maxImportance");
     });
 
+    it("preserves a minority opinion member’s explicit labels without changing story ranking classification", async () => {
+      mockGetStoriesWithArticles.mockResolvedValue({
+        stories: [{ id: "mixed", headline: "A reported event", summary: "A synthesized summary.",
+          category: "technology", framings: [], entities: [], article_count: 3, outlet_count: 3,
+          grim_share: "0", opinion_share: "0.3333", avg_importance: "3", max_importance: 3,
+          representative_image_url: null, published_date: new Date("2026-03-28T10:00:00Z"), synthesis_status: "complete" }],
+        storyArticles: { mixed: [
+          { ...MOCK_DB_ROWS[0], id: "opinion", story_id: "mixed", source_url: "https://example.com/news/plain-path", is_opinion: true, genre: "feature" },
+          { ...MOCK_DB_ROWS[1], story_id: "mixed", is_roundup: true },
+          { ...MOCK_DB_ROWS[0], id: "third", story_id: "mixed" },
+        ] }, standaloneArticles: [],
+      });
+      const body = await (await GET(makeRequest("technology"))).json();
+      expect(body.stories[0].isOpinion).toBeUndefined();
+      expect(body.stories[0].articles[0]).toMatchObject({ isOpinion: true, genre: "feature" });
+      expect(body.stories[0].articles[1].isRoundup).toBe(true);
+      expect(body.stories[0].articles[2].isOpinion).toBeUndefined();
+    });
+
     it("passes article tone through and derives story tone from grim_share", async () => {
       mockGetStoriesWithArticles.mockResolvedValue({
         stories: [{

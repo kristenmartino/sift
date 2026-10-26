@@ -19,21 +19,27 @@ const example: DailyCompareExample = {
   generatedAt: '2025-08-11T00:30:00.000Z',
 };
 
-it('labels an old saved comparison as an example and preserves its full UTC date', () => {
+it('does not promote an old saved comparison as the current demonstration', () => {
+  render(<ComparisonDemo example={example} />);
+  expect(screen.getByText(/No recent, source-accounted saved comparison is available/)).toBeInTheDocument();
+  expect(screen.queryByText(/Generated August 11, 2025/)).not.toBeInTheDocument();
+});
+it('labels a recent source-accounted comparison with its full date', () => {
+  jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2025-08-12T00:30:00Z'));
   render(<ComparisonDemo example={example} />);
   expect(screen.getByText(/Example comparison/)).toBeInTheDocument();
   expect(screen.getByText(/Generated August 11, 2025/)).toBeInTheDocument();
-  expect(screen.queryByText(/Today|one real comparison a day/)).not.toBeInTheDocument();
+  jest.restoreAllMocks();
 });
 
-it('labels the fallback as invented sample content', () => {
+it('explains the process when there is no eligible saved comparison', () => {
   render(<ComparisonDemo example={null} />);
-  expect(screen.getByText(/These outlet names and sample lines are invented/)).toBeInTheDocument();
+  expect(screen.getByText(/No recent, source-accounted saved comparison is available/)).toBeInTheDocument();
   expect(screen.queryByText(/Generated/)).not.toBeInTheDocument();
 });
 
 it('does not present a legacy example as verified agreement', () => {
   render(<ComparisonDemo example={{ ...example, source_provenance_version: undefined }} />);
-  expect(screen.getByText(/These outlet names and sample lines are invented/)).toBeInTheDocument();
+  expect(screen.getByText(/No recent, source-accounted saved comparison is available/)).toBeInTheDocument();
   expect(screen.queryByText(/Reported by/)).not.toBeInTheDocument();
 });

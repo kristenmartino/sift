@@ -6,11 +6,14 @@ import {
   getDailyCompareExample,
   getOutletProfilesMap,
   getTopStoryForLanding,
+  getStoriesWithArticles,
   resolveOutletForSourceName,
 } from "@/lib/db";
-import { mapArticleRow } from "@/lib/articleMapping";
+import { isRecentLandingPublication } from "@/lib/landingStory";
+import { eligibleComparisonExample } from "@/lib/comparison";
+import { mapArticleRow, mapArticleRows } from "@/lib/articleMapping";
 import { reportError } from "@/lib/observability";
-import type { Article, OutletProfile } from "@/lib/types";
+import type { Article, OutletProfile, Story } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: {
@@ -61,7 +64,7 @@ export default async function Home() {
       return new Map();
     }),
     // Daily compare example for the comparison section. Null (not yet
-    // generated / DB miss) falls back to the static labeled illustration.
+    // generated / DB miss) falls back to an honest original-coverage preview.
     getDailyCompareExample().catch((err) => {
       reportError("page.home.dailyCompareExample", err, { level: "warning" });
       return null;
@@ -80,14 +83,32 @@ export default async function Home() {
     ? resolveOutletForSourceName(outletMap, lead.source_name)
     : null;
   const leadStory: Article | null = lead
-    ? mapArticleRow(lead, { outlet: leadOutlet, clean: false })
+    ? mapArticleRow(lead, { outlet: leadOutlet, includeLabels: true, clean: false })
     : null;
+
+  // Reuse the public feed's complete-cluster and member gates. This read only
+  // runs when no eligible saved claim comparison can demonstrate the feature.
+  let coverageStories: Story[] = [];
+  if (!eligibleComparisonExample(dailyCompare)) {
+    try {
+      const coverage = await getStoriesWithArticles("top");
+      coverageStories = coverage.stories.filter((story) => isRecentLandingPublication(story.published_date)).slice(0, 5).map((story) => ({
+        id: story.id, headline: story.headline, summary: story.summary, category: "top",
+        framings: [], entities: [], articleCount: story.article_count, outletCount: story.outlet_count,
+        imageUrl: null, publishedDate: story.published_date!.toISOString(),
+        articles: mapArticleRows(coverage.storyArticles[story.id] ?? [], { outletMap, includeLabels: true }),
+      }));
+    } catch (error) {
+      reportError("page.home.coveragePreview", error, { level: "warning" });
+    }
+  }
 
   return (
     <LandingPage
       leadStory={leadStory}
       outlets={outlets}
       dailyCompare={dailyCompare}
+      coverageStories={coverageStories}
     />
   );
 }

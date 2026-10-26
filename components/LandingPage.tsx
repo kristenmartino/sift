@@ -15,7 +15,7 @@ import SourceColophon, {
 } from "./landing/SourceColophon";
 import CtaBand from "./landing/CtaBand";
 import LandingFooter from "./landing/LandingFooter";
-import type { Article, DailyCompareExample } from "@/lib/types";
+import type { Article, DailyCompareExample, Story } from "@/lib/types";
 
 interface LandingPageProps {
   /** Server-fetched lead story (ISR @ 600s in app/page.tsx). Null = DB miss. */
@@ -24,11 +24,12 @@ interface LandingPageProps {
   outlets: SourceColophonOutlet[];
   /** The daily compare example (ISR @ 600s). Null = not generated yet / DB miss. */
   dailyCompare: DailyCompareExample | null;
+  coverageStories?: Story[];
 }
 
 const HERO = COPY.landingReskin.hero;
 
-export default function LandingPage({ leadStory, outlets, dailyCompare }: LandingPageProps) {
+export default function LandingPage({ leadStory, outlets, dailyCompare, coverageStories = [] }: LandingPageProps) {
   // Live spectrum stats from the server-fetched outlet list — drives every
   // outlet-count surface on the landing (issue #153). Pure + already-fetched,
   // so no extra round-trip; an empty list (DB miss) degrades to count-free copy.
@@ -103,7 +104,7 @@ export default function LandingPage({ leadStory, outlets, dailyCompare }: Landin
                 </span>
                 .
               </h1>
-              <p className="sl-lede">{HERO.lede(stats.total)}</p>
+              <p className="sl-lede">{HERO.lede}</p>
               <div className="sl-hero-actions">
                 <Link href="/news" className="sl-btn sl-btn-solid">
                   {HERO.ctaPrimary}{" "}
@@ -128,7 +129,7 @@ export default function LandingPage({ leadStory, outlets, dailyCompare }: Landin
         <PrincipleStrip count={stats.total} />
         <Manifesto stats={stats} />
         <WhatSiftAdds />
-        <ComparisonDemo example={dailyCompare} />
+        <ComparisonDemo example={dailyCompare} coverageStories={coverageStories} />
         <SourceColophon outlets={outlets} />
         <CtaBand count={stats.total} />
       </main>
