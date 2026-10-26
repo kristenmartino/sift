@@ -222,7 +222,7 @@ and forwards the pipeline key; it does not forward a Clerk bearer token.
   "version": "1.0.0",
   "db_connected": true,
   "last_pipeline_run": "2026-03-28T14:30:00Z",
-  "copy_rules_version": "2026-10-25.3",
+  "copy_rules_version": "2026-10-26.1",
   "generation": {
     "pending": 0,
     "unavailable": 0,
