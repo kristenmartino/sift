@@ -12,9 +12,10 @@ export function estimateReadTime(text: string | undefined | null): number {
  * Format a date string as relative time (e.g., "5m ago", "2h ago").
  */
 export function timeAgo(dateStr: string | null): string {
-  if (!dateStr) return "Recently";
+  if (!dateStr) return "Date unavailable";
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (isNaN(diff) || diff < 0) return "Recently";
+  if (isNaN(diff)) return "Date unavailable";
+  if (diff < 0) return "Future date";
   if (diff < 60) return "Just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;

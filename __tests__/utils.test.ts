@@ -74,12 +74,12 @@ describe("estimateReadTime", () => {
 // ─── timeAgo ────────────────────────────────────────────
 
 describe("timeAgo", () => {
-  it('returns "Recently" for null', () => {
-    expect(timeAgo(null)).toBe("Recently");
+  it('returns "Date unavailable" for null', () => {
+    expect(timeAgo(null)).toBe("Date unavailable");
   });
 
-  it('returns "Recently" for invalid date', () => {
-    expect(timeAgo("not-a-date")).toBe("Recently");
+  it('returns "Date unavailable" for invalid date', () => {
+    expect(timeAgo("not-a-date")).toBe("Date unavailable");
   });
 
   it('returns "Just now" for current time', () => {
@@ -101,9 +101,9 @@ describe("timeAgo", () => {
     expect(timeAgo(twoDaysAgo)).toBe("2d ago");
   });
 
-  it('returns "Recently" for future dates', () => {
+  it('labels future dates explicitly', () => {
     const future = new Date(Date.now() + 100000).toISOString();
-    expect(timeAgo(future)).toBe("Recently");
+    expect(timeAgo(future)).toBe("Future date");
   });
 });
 

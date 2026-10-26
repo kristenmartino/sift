@@ -316,6 +316,8 @@ export interface DbArticle {
   image_url: string | null;
   category: string;
   published_date: Date | null;
+  // Selected by search and bookmarks, which can return fallback records.
+  from_search?: boolean;
   read_time: number;
   why_it_matters: string | null;
   importance_score: number | null;
@@ -648,7 +650,7 @@ export async function removeBookmark(userId: string, articleId: string): Promise
 export async function getBookmarkedArticles(userId: string): Promise<DbArticle[]> {
   const result = await pool.query<DbArticle>(
     `SELECT a.id, a.title, a.summary, a.source_url, a.source_name, a.image_url,
-            a.category, a.published_date, a.read_time, a.why_it_matters, a.importance_score,
+            a.category, a.published_date, a.from_search, a.read_time, a.why_it_matters, a.importance_score,
             a.context_primer, a.reading_levels, a.created_at
      FROM articles a
      JOIN bookmarks b ON b.article_id = a.id
@@ -682,7 +684,7 @@ export async function searchArticlesByEmbedding(
   const vectorStr = toVectorString(embedding);
   const result = await pool.query<DbArticle & { similarity: number }>(
     `SELECT id, title, summary, source_url, source_name, image_url,
-            category, published_date, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at,
+            category, published_date, from_search, read_time, why_it_matters, importance_score, context_primer, reading_levels, created_at,
             1 - (embedding <=> $1::vector) AS similarity
      FROM articles
      WHERE embedding IS NOT NULL
