@@ -1,6 +1,8 @@
 # Sift — STATUS
 
-**Updated:** 2026-10-25
+**Updated:** 2026-10-26
+
+**Reviewed reading and comparison update (2026-10-26):** complete expandable summaries for articles and story groups; a more compact mobile feed with optional help and filters; explicit content-type and publisher-age cues; a dated homepage example with real background context; source-accounted comparison previews; searchable sourced glossary definitions and optional civic-directory rosters. Coverage comparison remains a core feature alongside background context. The user reviewed the preview and authorized release. Existing visual identity and ranking formula are preserved. Validation passed 1,048 tests across 84 suites, lint, TypeScript, the production build, and independent browser review. Deployment and live verification are recorded separately with the release evidence. No production data or schema changes.
 **Tier:** v1.5 (civic-literacy pivot) — **feature work active** (un-paused 2026-08-05)
 **Velocity:** **27 PRs merged 2026-08-05** (24 `sift-api`, 3 `sift`) — the largest single day in the project's history, against a six-week gap that ended 2026-07-30. By month: Mar 44 · Apr 39 · May 51 · Jun 13 · Jul 3. This line has twice been wrong in the *optimistic* direction (it read "High (10+ PRs / week)" through eight weeks of near-zero — see [`docs/LAUNCH_DECISION_MEMO.md`](./docs/LAUNCH_DECISION_MEMO.md) §2.5); treat a single day as a day, not a baseline.
 

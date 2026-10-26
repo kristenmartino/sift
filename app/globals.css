@@ -1539,3 +1539,13 @@ html:has(.sift-landing) {
     font-size: 16px;
   }
 }
+
+/* Reader density: preserve the editorial lead without a viewport-tall image. */
+.feed-lead-image { height: 180px; min-height: 0; }
+@media (min-width: 1024px) { .feed-lead-image { height: 100%; min-height: 220px; } }
+
+/* Put the story before its photograph on phones; keep the desktop lead. */
+@media (max-width: 1023px) {
+  .feed-featured-card > .feed-lead-image { order: 2; height: 140px; }
+  .feed-featured-card > :not(.feed-lead-image) { order: 1; }
+}

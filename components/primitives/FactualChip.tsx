@@ -77,7 +77,7 @@ export default function FactualChip({
   const body = (
     <span
       title={`MBFC factual-reporting rating: ${label}${lastChecked ? `, verified ${lastChecked}` : ""}`}
-      className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-wide text-[var(--text-secondary)] whitespace-nowrap"
     >
       Factual Reporting: {label}
       {meter}

@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
       const childArticles: Article[] = mapArticleRows(childRows, {
         outletMap,
         entityLinksMap,
+        includeLabels: true,
         image: IMAGE_OPTIONS,
       });
 

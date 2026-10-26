@@ -18,7 +18,7 @@ export const revalidate = 86400;
 const TITLE = "The words the news assumes you already know";
 const TITLE_UNFURL = `${TITLE} — Sift`;
 const DESC =
-  "Civic terms defined from the primary record — statute, constitutional clause, regulation — and shown as they are actually being covered. Roughly one story in five turns on a term the coverage never names.";
+  "Look up civic terms, read plain-language definitions with primary-source citations, and explore related reporting.";
 
 export const metadata: Metadata = {
   title: TITLE,

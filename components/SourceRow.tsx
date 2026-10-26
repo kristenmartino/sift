@@ -2,6 +2,7 @@
 
 import { COPY } from "@/lib/copy";
 import { timeAgo } from "@/lib/utils";
+import { articleContentLabel } from "@/lib/articlePresentation";
 import { OutletChip } from "./primitives";
 import type { SourceUnit } from "@/lib/storySources";
 
@@ -36,6 +37,7 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
         outlet={unit.outlet}
         fallback={unit.sourceName}
         className="story-row__source"
+        compact
       />
 
       {/* How this outlet framed the story */}
@@ -47,7 +49,7 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
 
       {/* The outlet's actual headline → the original article */}
       {lead && (
-        <div className="flex items-baseline gap-2 text-meta">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2 text-[12px]">
           {lead.sourceUrl ? (
             <a
               href={lead.sourceUrl}
@@ -55,24 +57,25 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex items-baseline gap-1.5 flex-1 min-w-0 text-(--accent) no-underline hover:underline relative z-2"
+              className="flex items-baseline gap-1.5 basis-full min-w-0 text-(--accent) no-underline hover:underline relative z-2"
             >
               <span aria-hidden className="shrink-0">
                 &rarr;
               </span>
-              <span className="truncate">{lead.title}</span>
+              <span className="break-words">{lead.title}</span>
             </a>
           ) : (
-            <span className="flex items-baseline gap-1.5 flex-1 min-w-0 text-(--text-secondary)">
+            <span className="flex items-baseline gap-1.5 basis-full min-w-0 text-(--text-secondary)">
               <span aria-hidden className="shrink-0">
                 &rarr;
               </span>
-              <span className="truncate">{lead.title}</span>
+              <span className="break-words">{lead.title}</span>
             </span>
           )}
           <span className="shrink-0 text-(--text-tertiary)">
-            {timeAgo(lead.publishedDate)}
+            Published {timeAgo(lead.publishedDate)}
           </span>
+          {articleContentLabel(lead) && <span className="text-(--text-secondary)">{articleContentLabel(lead)}</span>}
           {onCompare && (
             <button
               onClick={(e) => {
@@ -107,12 +110,12 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="truncate text-(--text-secondary) no-underline hover:text-(--text-primary) hover:underline relative z-2"
+                  className="text-(--text-secondary) no-underline hover:text-(--text-primary) hover:underline relative z-2"
                 >
                   {a.title}
                 </a>
               ) : (
-                <span key={a.id} className="truncate text-(--text-secondary)">
+                <span key={a.id} className="text-(--text-secondary)">
                   {a.title}
                 </span>
               ),

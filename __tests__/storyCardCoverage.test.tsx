@@ -1,10 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import StoryCard from '@/components/StoryCard';
 import type { Story } from '@/lib/types';
 
 jest.mock('@/components/CardImage', () => ({ __esModule: true, default: () => null }));
 
-it('keeps both outlets visible when no distinct framing was found', () => {
+it('keeps both outlets discoverable and expands all original coverage when no distinct framing was found', () => {
   const story: Story = {
     id: 'same-report', headline: 'The committee voted on Tuesday.',
     summary: 'The measure passed by a vote of 10 to 2.', category: 'politics',
@@ -20,7 +20,12 @@ it('keeps both outlets visible when no distinct framing was found', () => {
     })),
   };
   render(<StoryCard story={story} featured={false} index={0} onCompare={jest.fn()} onBookmark={jest.fn()} bookmarks={new Set()} />);
-  expect(screen.getByText('2 sources')).toBeInTheDocument();
+  expect(screen.getByText('2 outlets')).toBeInTheDocument();
+  const toggle = screen.getByRole('button', { name: /View coverage from 2 outlets/ });
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('link', { name: 'Report from A' })).not.toBeInTheDocument();
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
   for (const name of ['A', 'B']) {
     const link = screen.getByRole('link', { name: `Report from ${name}` });
     expect(link).toBeVisible();
@@ -43,6 +48,7 @@ it('orders blank-note outlets by their rating alongside framed outlets', () => {
     articles: profiles.map((outlet) => ({ id: outlet.slug, title: `Report ${outlet.slug}`, summary: 'A vote was held.', sourceName: outlet.name, sourceUrl: `https://example.com/${outlet.slug}`, category: 'politics', imageUrl: null, readTime: 1, publishedDate: null, outlet })),
   };
   render(<StoryCard story={story} featured={false} index={0} onCompare={jest.fn()} onBookmark={jest.fn()} bookmarks={new Set()} />);
+  fireEvent.click(screen.getByRole('button', { name: /View coverage from 2 outlets/ }));
   const sources = screen.getAllByRole('link', { name: /Outlet dossier for/ });
   expect(sources.map((s) => s.getAttribute('aria-label'))).toEqual(['Outlet dossier for Left outlet', 'Outlet dossier for Right outlet']);
 });

@@ -37,30 +37,29 @@ export default function LandingMasthead() {
                 {darkMode ? "Newsprint" : "Late Edition"}
               </button>
             )}
-            <span className="text-(--text-tertiary) hidden sm:inline">·</span>
-            <Link
-              href="/civic"
-              className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline hidden sm:inline"
-            >
-              Civic ↗
-            </Link>
             <span className="text-(--text-tertiary)">·</span>
             <Link
               href="/news"
               className="font-body text-outlet uppercase tracking-wider text-(--text-secondary) hover:text-(--accent) transition-colors no-underline"
             >
-              Open Sift →
+              Read news →
             </Link>
           </div>
         </div>
       </div>
 
       {/* Wordmark */}
-      <div className="max-w-[1200px] mx-auto px-6 pt-7 pb-4 flex items-center justify-center">
+      <div className="max-w-[1200px] mx-auto px-6 pt-5 pb-3 flex items-center justify-center">
         <Link href="/" className="no-underline" aria-label="Sift — home">
           <SiftLogo variant="full" size={56} />
         </Link>
       </div>
+
+      <nav aria-label="Sift reading and reference" className="max-w-[1200px] mx-auto px-6 pb-4 flex flex-wrap justify-center gap-x-6 gap-y-2 font-body text-[13px]">
+        <Link href="/news" className="text-(--text-secondary) no-underline hover:text-(--accent)">Read news</Link>
+        <Link href="/civic" className="text-(--text-secondary) no-underline hover:text-(--accent)">Civic context</Link>
+        <Link href="/glossary" className="text-(--text-secondary) no-underline hover:text-(--accent)">Glossary</Link>
+      </nav>
 
       {/* Category nav */}
       <nav aria-label="Sections" className="border-t border-(--border-subtle)">

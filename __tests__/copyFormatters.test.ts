@@ -370,11 +370,12 @@ describe("termIndex formatters", () => {
     expect(c.eyebrow).toBe("Civic glossary");
   });
 
-  it("states the finding with real numbers and names the starkest term", () => {
+  it("describes dated term-article matches without claiming distinct stories", () => {
     const f = c.finding(1030, 4828, "Prior Restraint");
     expect(f).toContain("1,030");
     expect(f).toContain("4,828");
-    expect(f).toContain("21 in every 100");
+    expect(f).toContain("21%");
+    expect(f).toContain("not counts of distinct stories");
     expect(f).toContain("Prior Restraint");
   });
 
@@ -423,14 +424,10 @@ describe("termIndex.asOf", () => {
 });
 
 describe("civicIndex.termIndexCrossLink", () => {
-  it("states a floor, not a ratio", () => {
-    // This shipped as "one story in five" and was false within a day —
-    // adding 13 terms moved the corpus-wide share 21% -> 16%. A ratio drifts
-    // both ways as the table grows; a floor only becomes more true. The live
-    // figure is computed on /glossary; this string cannot be, so it must not
-    // carry anything that rots.
-    const s = COPY.civicIndex.termIndexCrossLink;
-    expect(s).toContain("over a thousand");
-    expect(s).not.toMatch(/one story in (five|six|seven)|\d+%/);
+  it("offers a lookup task without an undated empirical coverage claim", () => {
+    const label = COPY.civicIndex.termIndexCrossLink;
+    expect(label).toContain("Look up a term from the news");
+    expect(label).toContain("definitions with cited sources");
+    expect(label).not.toMatch(/thousand|stories turn|one story in|\d+%/);
   });
 });

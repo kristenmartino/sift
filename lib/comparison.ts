@@ -1,5 +1,5 @@
 import { COPY } from "./copy";
-import type { CompareClaim, CompareProvenance } from "./types";
+import type { CompareClaim, CompareProvenance, DailyCompareExample } from "./types";
 
 const key = (name: string) => name.trim().toLowerCase();
 
@@ -57,4 +57,18 @@ export function comparisonDate(value: string): string {
   return Number.isNaN(date.getTime()) ? "date unavailable" : date.toLocaleDateString("en-US", {
     month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
   });
+}
+
+/** Only recent, source-accounted output can demonstrate the current tool. */
+export function eligibleComparisonExample(example: DailyCompareExample | null | undefined, now = Date.now()): DailyCompareExample | null {
+  if (!example) return null;
+  const generated = Date.parse(example.generatedAt);
+  if (!Number.isFinite(generated) || generated > now || now - generated > 7 * 86_400_000) return null;
+  const record = comparisonProvenance(example);
+  if (!record || record.sources_analyzed.length < 2) return null;
+  const claims = example.claims.flatMap((claim) => {
+    const normalized = normalizeCompareClaim(claim, record);
+    return normalized ? [normalized] : [];
+  });
+  return claims.length >= 2 ? { ...example, claims } : null;
 }

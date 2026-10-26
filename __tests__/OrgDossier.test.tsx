@@ -63,6 +63,31 @@ const agency: OrgProfile = {
   annualBudgetKind: "ombOutlays",
 };
 
+describe("Agency reference context", () => {
+  it("separates the FDA's cited role from appointment information and labels its budget link", () => {
+    render(<OrgDossier org={{ ...baseOrg, type: "agency", slug: "food-and-drug-administration", name: "Food and Drug Administration",
+      externalLinks: { budget_source: "https://www.fda.gov/about-fda/reports/fda-budget-and-financial-data" } }} />);
+    expect(screen.getByRole("heading", { name: "What it does" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /FDA: What we do/ })).toHaveAttribute("href", "https://www.fda.gov/about-fda/what-we-do");
+    expect(screen.getByText("Budget and financial data")).toBeInTheDocument();
+    expect(screen.queryByText(/Funding data comes from IRS 990s/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Agency guide" })).toHaveAttribute("href", "/agencies");
+    expect(screen.getByRole("link", { name: "← Civic context" })).toHaveAttribute("href", "/civic");
+  });
+
+  it("does not infer a purpose for agencies without a curated overview", () => {
+    render(<OrgDossier org={agency} />);
+    expect(screen.queryByRole("heading", { name: "What it does" })).not.toBeInTheDocument();
+    expect(screen.getByText(/overview of its responsibilities has not yet been added/)).toBeInTheDocument();
+  });
+
+  it("preserves nonprofit funding context and uses readable unknown-source labels", () => {
+    render(<OrgDossier org={{ ...baseOrg, externalLinks: { annual_report: "https://example.org/report" } }} />);
+    expect(screen.getByText("Annual report")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Funding data comes from IRS 990s and FARA/ })).toBeInTheDocument();
+  });
+});
+
 describe("OrgDossier budget line", () => {
   it("calls a 990-sourced figure total expenses", () => {
     render(<OrgDossier org={nonprofit} />);

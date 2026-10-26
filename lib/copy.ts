@@ -9,7 +9,7 @@
 import type { BudgetSourceKind, StoryFraming } from "./types";
 
 export const SITE_DESCRIPTION =
-  "News summaries, background explanations, and source profiles, with links to original reporting and cited records.";
+  "Understand the news with concise summaries, background explanations, key terms, and links to the original reporting.";
 
 // ── Outlet-count phrasing (issue #153) ──────────────────
 // One source of truth for how the LIVE curated-outlet count reads, so it can't
@@ -87,7 +87,7 @@ export const COPY = {
   // don't discover on their own (the footnotes on story cards, compare in
   // the header). No tour, no spotlight — the reader is smart; one pointer.
   coach: {
-    body: "Open a story's footnotes for background and key terms. Use Compare to read coverage from different outlets side by side.",
+    body: "Read a summary, open its footnotes for background, or expand a story’s coverage to read the original reporting.",
     dismiss: "Got it",
     dismissAria: "Dismiss this note",
   },
@@ -642,47 +642,23 @@ export const COPY = {
   termIndex: {
     eyebrow: "Civic glossary",
     headline: "The words the news assumes you already know",
-    dek:
-      "Each one is defined from the primary record — the statute, the " +
-      "constitutional clause, the regulation — and then shown as it is " +
-      "actually being covered right now, and by whom.",
-    // Same job as agencies.contextNote: someone arriving cold sees a masthead
-    // saying "the news, with footnotes" and a Sports tab above this page, and
-    // has to reconcile that before reading a word.
-    contextNote:
-      "Reference, not news. Every definition here is Sift's summary of a " +
-      "cited source, never Sift's own authority on what a term means.",
-    // The finding, stated before the list — a reader who stops here should
-    // still leave with the fact that makes the page worth sending on. Both
-    // numbers are computed, never hardcoded: see listPublishedTerms.
-    findingHeading: "Most of this vocabulary is invisible",
-    finding: (unnamed: number, total: number, worstTerm: string) =>
-      `Across these terms, ${unnamed.toLocaleString()} of ${total.toLocaleString()} ` +
-      `stories in Sift's index turn on a term the coverage never names — ` +
-      `roughly ${Math.round((unnamed / total) * 100)} in every 100. For ${worstTerm} ` +
-      "it is every single story. That is the gap these pages exist to close: " +
-      "you cannot look up a word the article never used.",
+    dek: "Find a plain-language definition, open its cited source, and explore related reporting.",
+    contextNote: "Definitions are Sift’s summaries of cited statutes, constitutional provisions, and other primary records.",
+    findingHeading: "How these terms match the index",
+    finding: (unnamed: number, total: number, exampleTerm: string) =>
+      `${unnamed.toLocaleString()} of ${total.toLocaleString()} term–article matches ` +
+      `(${Math.round((unnamed / total) * 100)}%) came through a Sift primer rather than the article’s headline or summary. ` +
+      `An article can match several terms, so these are not counts of distinct stories. ` +
+      `Open a term such as ${exampleTerm} to inspect its matching coverage.`,
     countLabel: (terms: number) =>
       `${terms} ${terms === 1 ? "term" : "terms"}, each with its source and its coverage.`,
-    // The counts on this page are measured periodically rather than on every
-    // load (migration 034 — recomputing them across the corpus was 1.5s at 37
-    // terms and getting worse). So the page says when, instead of implying
-    // now. The per-term pages still compute live, which is why they can
-    // differ slightly and why that is worth saying out loud.
     asOf: (date: string) =>
-      `Counts measured ${date}. Each term's own page is computed live, so its ` +
-      "figures may be a little ahead of these.",
-    // Says out loud what is missing, rather than showing only the flattering
-    // subset. Mirrors agencies.contextNote's honesty about omissions.
+      `Counts measured ${date}. Each term’s own page is computed live and may show different figures.`,
     gapNote: (published: number, held: number) =>
       held > published
         ? `${held - published} further ${held - published === 1 ? "term is" : "terms are"} ` +
-          "defined but held back: below a handful of stories there is nothing " +
-          "to show about how a term is being covered, and a definition alone " +
-          "is something a law dictionary already does better."
+          "defined but held back until enough matching reporting is available."
         : "",
-    // Per-row. The share is the point, so it is spelled out rather than
-    // left as a bare number.
     rowCoverage: (articles: number, outlets: number) =>
       `${articles.toLocaleString()} ${articles === 1 ? "story" : "stories"} · ` +
       `${outlets.toLocaleString()} ${outlets === 1 ? "outlet" : "outlets"}`,
@@ -777,6 +753,7 @@ export const COPY = {
         { label: "What Sift adds", href: "#adds" },
         { label: "Compare", href: "#compare" },
         { label: "Sources", href: "#sources" },
+        { label: "Civic context", href: "/civic" },
       ],
       cta: "Open Sift",
       menuOpen: "Close",
@@ -786,10 +763,9 @@ export const COPY = {
       eyebrow: "News, background, and sources",
       headingLead: "The news, with ",
       headingAccent: "footnotes",
-      lede: (n: number): string =>
-        `Read news from ${n > 0 ? `${n} curated outlets` : "curated outlets"} across the political spectrum, with background explanations, key terms, and source profiles. Follow each story to the original reporting.`,
-      ctaPrimary: "Open Sift",
-      ctaSecondary: "See what Sift adds",
+      lede: "Understand what happened, the background you need, and how coverage differs. Read concise summaries, open the footnotes, and follow the original reporting.",
+      ctaPrimary: "Read the news",
+      ctaSecondary: "How the footnotes help",
       foot: (n: number): string => `${curatedOutlets(n)} · Left → Center → Right`,
     },
     card: {
@@ -827,26 +803,26 @@ export const COPY = {
       titleLead: "Footnotes for ",
       titleIt: "the news.",
       subtitle:
-        "Background, definitions, and source information alongside the news, where available.",
+        "Read the story. Understand the background. Explore its sources. Footnotes appear where relevant context is available.",
       cards: [
         {
           icon: "i",
-          title: "What you should know first",
+          title: "Understand the background",
           body: "A short explanation of a procedure, institution, or earlier event that helps explain the story.",
         },
         {
           icon: "A·z",
-          title: "Terms you may not know",
+          title: "Look up a term",
           body: "Definitions of legal, economic, and civic terms used in the reporting.",
         },
         {
           icon: "◈",
-          title: "Who's involved",
+          title: "Know who's involved",
           body: "Profiles of people and organizations mentioned in the story, with links to the cited records.",
         },
         {
           icon: "⇄",
-          title: "Sources & coverage",
+          title: "Explore the reporting",
           body: "Available AllSides and MBFC ratings, plus a comparison of what different outlets reported.",
         },
       ],
@@ -915,7 +891,7 @@ export const COPY = {
       titleEm: "with the footnotes.",
       body: (n: number): string =>
         `Browse ${n > 0 ? `${n} curated outlets` : "curated outlets"}, compare coverage, and open the original reporting.`,
-      ctaPrimary: "Open Sift",
+      ctaPrimary: "Read the news",
       ctaSecondary: "How it works",
     },
     footer: {
@@ -1038,7 +1014,7 @@ export const COPY = {
   civicIndex: {
     eyebrow: "Civic dossiers",
     headline: "Civic dossiers",
-    lede: "Curated context on the people, organizations, and bills that shape U.S. policy. Every dossier is sourced from public records \u2014 GovTrack, OpenSecrets, ProPublica's Nonprofit Explorer \u2014 with citations on every page.",
+    lede: "Look up a public figure, an organization, or a piece of legislation mentioned in the news. Profiles link to the public records and other sources behind them.",
     politiciansEyebrow: (count: number) => `Politicians \u00b7 ${count}`,
     politiciansHeading: "Political figures and public officials",
     officeHeadings: {
@@ -1084,20 +1060,9 @@ export const COPY = {
       "Who controls a federal agency \u2014 appointment, terms, and the party-balance limits written into statute \u2192",
     thinkTanksCrossLink:
       "How these organizations describe themselves \u2014 in their own words, quoted and linked \u2192",
-    // Third cross-link, same rule as the two above: state the payoff, not the
-    // destination. "See the glossary" gives nobody a reason to click; stories
-    // turning on a term nobody names does.
-    //
-    // Phrased as a floor ("over a thousand") rather than a ratio on purpose.
-    // This shipped as "one story in five" and was wrong within a day: adding
-    // 13 terms took the corpus-wide share from 21% to 16%, because the new
-    // ones are mostly named in headlines (IPO 1% unnamed, Medicaid 1%). A
-    // ratio moves in BOTH directions as the table grows; a floor only ever
-    // becomes more true, since both the term count and the corpus grow.
-    // /glossary itself computes the live figure -- this is the one place the
-    // number could not be computed without an extra query on /civic.
+    // A stable lookup task, without unqualified historical corpus counts.
     termIndexCrossLink:
-      "The words the news assumes you know \u2014 over a thousand stories turn on a term the coverage never names \u2192",
+      "Look up a term from the news — definitions with cited sources →",
     emptyBills: "No bills curated yet.",
     billsMoreSoon: "More bills as they're curated.",
     backLink: "Back to Sift",

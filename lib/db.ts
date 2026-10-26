@@ -1,5 +1,7 @@
 import { cache } from "react";
 import { comparisonProvenance } from "./comparison";
+import { selectLandingArticle } from "./landingStory";
+import { sanitizeLinkUrl, stripHtml } from "./sanitize";
 import { Pool } from "pg";
 
 import { isMissingColumn, isMissingSchemaObject } from "./dbErrors";
@@ -567,7 +569,7 @@ export async function getStoriesWithArticles(
  * and (c) rank high on importance × recency. Returns null if the DB has
  * nothing usable — caller renders a fallback layout.
  *
- * D48 tone preference: among the top 12 by rank, the best non-grim article
+ * D48 tone preference: among the top 48 by rank, the best non-grim article
  * wins if it scores at least half the overall best (≈ within one importance
  * point or ~17 hours) — so the landing page doesn't lead with a death story
  * every day, but a dominant story (a fresh importance-5 disaster) still
@@ -594,7 +596,7 @@ export async function getTopStoryForLanding(): Promise<DbArticle | null> {
            AND (published_date > NOW() - INTERVAL '30 days'
                 OR (published_date IS NULL AND created_at > NOW() - INTERVAL '30 days'))
          ORDER BY rank_score DESC
-         LIMIT 12
+         LIMIT 48
        )
        SELECT id, title, summary, source_url, source_name, image_url,
               category, published_date, read_time, why_it_matters, importance_score, tone, is_opinion, is_roundup, genre, context_primer, reading_levels, created_at
@@ -604,9 +606,9 @@ export async function getTopStoryForLanding(): Promise<DbArticle | null> {
                AND rank_score >= 0.5 * (SELECT MAX(rank_score) FROM ranked)
               THEN 0 ELSE 1 END,
          rank_score DESC
-       LIMIT 1`
+       LIMIT 48`
     );
-    return result.rows[0] ?? null;
+    return selectLandingArticle(result.rows);
   } catch (err) {
     // The landing hero degrades to the static illustration rather than 500ing,
     // but a silent degrade here means an empty homepage nobody is told about.
@@ -1659,7 +1661,8 @@ const TERM_ARTICLE_FILTER = `a.from_search = false
   AND LOWER(a.summary) NOT LIKE 'unable to provide%'`;
 
 /**
- * Every term that clears the publish floor, with its coverage counts.
+ * Every term that clears the publish floor, with sourced definitions and
+ * periodically measured coverage counts.
  *
  * Backs `/glossary`. Applies the same floor as `listSitemapEntries` — a
  * sourced definition and `TERM_MIN_ARTICLES` articles — because an index that
@@ -1667,15 +1670,9 @@ const TERM_ARTICLE_FILTER = `a.from_search = false
  * question. The precedent is `listCitedAgencies`, which has always refused to
  * list an agency whose governance text lacks its source.
  *
- * `unnamed` is the column the page is built around: articles matched *only*
- * by the primer, meaning the story turns on the term without ever printing
- * it. `bool_or` per (term, article) is what makes that computable — an
- * article can match several surface forms, and it counts as named if any one
- * of them appeared in the text.
- *
- * Measured at 785 ms over 24 terms against the prod corpus. That is heavy for
- * a page, and fine for this one: ISR holds it for 30 minutes, and the numbers
- * are the argument rather than decoration.
+ * `unnamed` counts term/article matches found only through a Sift primer.
+ * These stored measurements are historical and can count one article under
+ * several terms. The page labels their date and keeps them below lookup.
  */
 export async function listPublishedTerms(): Promise<TermListItem[]> {
   try {
@@ -1683,6 +1680,9 @@ export async function listPublishedTerms(): Promise<TermListItem[]> {
       slug: string;
       term: string;
       category: string | null;
+      definition: string | null;
+      definition_source: string | null;
+      aliases: unknown;
       article_count: number | null;
       outlet_count: number | null;
       unnamed_count: number | null;
@@ -1693,6 +1693,9 @@ export async function listPublishedTerms(): Promise<TermListItem[]> {
         slug: r.slug,
         term: r.term,
         category: r.category,
+        definition: sanitizeLinkUrl(r.definition_source) && r.definition ? stripHtml(r.definition) : null,
+        definitionSource: r.definition?.trim() ? sanitizeLinkUrl(r.definition_source) || null : null,
+        aliases: Array.isArray(r.aliases) ? r.aliases.filter((v): v is string => typeof v === "string").map(stripHtml) : [],
         articleCount: r.article_count ?? 0,
         outletCount: r.outlet_count ?? 0,
         unnamedCount: r.unnamed_count ?? 0,
@@ -1743,7 +1746,7 @@ export async function countDefinedTerms(): Promise<number> {
  * script.
  */
 const GLOSSARY_QUERY = `
-  SELECT slug, term, category,
+  SELECT slug, term, category, definition, definition_source, aliases,
          article_count, outlet_count, unnamed_count, coverage_computed_at
     FROM term_profiles
    WHERE definition IS NOT NULL

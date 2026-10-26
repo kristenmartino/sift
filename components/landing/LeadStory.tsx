@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { COPY } from "@/lib/copy";
-import { formatAllSidesLabel, formatMbfcLabel } from "@/lib/outlet";
+import ReadingSummary from "@/components/ReadingSummary";
+import { articleContentLabel } from "@/lib/articlePresentation";
 import SlDiamond from "./SlDiamond";
 import type { Article } from "@/lib/types";
 
@@ -24,14 +25,13 @@ export default function LeadStory({ article }: { article: Article | null }) {
   const background = primer?.background?.trim() || "";
   // Cap footnotes so the hero card stays a preview, not a wall of text.
   const terms = (primer?.terms ?? []).slice(0, 2);
-  const allSides = formatAllSidesLabel(article.outlet?.allSidesRating);
-  const mbfc = formatMbfcLabel(article.outlet?.mbfcFactual);
+  const typeLabel = articleContentLabel(article);
+  const published = article.publishedDate ? new Date(article.publishedDate) : null;
+  const publishedLabel = published && Number.isFinite(published.getTime()) ? published.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : null;
   const hasCivic = Boolean(background || terms.length);
 
   return (
     <div className="sl-card">
-      {hasCivic && <span className="sl-float-note">…with footnotes</span>}
-
       <div className="sl-card-bar">
         <SlDiamond />
         {CARD.barLabel}
@@ -41,13 +41,8 @@ export default function LeadStory({ article }: { article: Article | null }) {
       <div className="sl-card-body">
         <div className="sl-chip-row">
           <span className="sl-chip sl-src">{article.sourceName}</span>
-          {allSides && (
-            <span className="sl-chip">
-              <span className="sl-dot" aria-hidden />
-              AllSides: {allSides}
-            </span>
-          )}
-          {mbfc && <span className="sl-chip">MBFC: {mbfc}</span>}
+          {typeLabel && <span className="sl-chip">{typeLabel}</span>}
+          <span className="sl-chip">{publishedLabel ? `Published ${publishedLabel}` : "Publication date unavailable"}</span>
         </div>
 
         {article.sourceUrl ? (
@@ -65,16 +60,11 @@ export default function LeadStory({ article }: { article: Article | null }) {
           <h3 className="sl-lead">{article.title}</h3>
         )}
 
-        {background ? (
-          <div className="sl-primer">
-            <div className="sl-label">{CARD.primerLabel}</div>
-            <p>{background}</p>
-          </div>
-        ) : (
-          // No civic primer for this story yet — show the real summary rather
-          // than invent context.
-          <p className="sl-card-summary">{article.summary}</p>
-        )}
+        <ReadingSummary summary={article.summary} previewChars={200} className="my-4" />
+        {background && <details className="sl-primer" open>
+          <summary className="sl-label cursor-pointer">{CARD.primerLabel}</summary>
+          <p>{background}</p>
+        </details>}
 
         {terms.length > 0 && (
           <div className="sl-notes">
@@ -90,6 +80,10 @@ export default function LeadStory({ article }: { article: Article | null }) {
             ))}
           </div>
         )}
+        <div className="flex flex-wrap gap-x-5 gap-y-2 mt-4 text-[13px]">
+          {article.sourceUrl && <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" data-sift-source-id={article.id} className="text-(--accent) hover:underline">Read original ↗</a>}
+          {article.outlet && <Link href={`/outlet/${article.outlet.slug}`} className="text-(--accent) hover:underline">About {article.sourceName} →</Link>}
+        </div>
       </div>
     </div>
   );

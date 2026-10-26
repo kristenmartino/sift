@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import LandingMasthead from "@/components/landing/LandingMasthead";
+import CivicLookup from "@/components/civic/CivicLookup";
 import { COPY } from "@/lib/copy";
 import {
   groupByOffice,
@@ -77,10 +78,17 @@ export default function CivicIndex({
           </p>
         </header>
 
-        <hr className="border-0 border-t border-(--border) my-10" />
+        <CivicLookup politicians={politicians} orgs={orgs} bills={bills} />
+
+        <nav aria-label="Browse civic context" className="flex flex-wrap gap-x-5 gap-y-3 mb-10 font-body text-[14px]">
+          {[["People", "#people"], ["Organizations", "#organizations"], ["Legislation", "#legislation"],
+            ["Glossary", "/glossary"], ["Agency guide", "/agencies"]].map(([label, href]) => (
+            <Link key={href} href={href} className="text-(--accent) underline underline-offset-4 hover:text-(--text-primary)">{label}</Link>
+          ))}
+        </nav>
 
         {/* ─── Politicians ────────────────────────────────────── */}
-        <section className="mb-14" aria-labelledby="politicians-heading">
+        <section id="people" className="mb-14 scroll-mt-8" aria-labelledby="politicians-heading">
           <header className="mb-6">
             <p
               id="politicians-heading"
@@ -133,7 +141,9 @@ export default function CivicIndex({
             <div className="space-y-9">
               {officeGroups.map(({ office, groups }) => (
                 <section key={office} aria-label={c.officeHeadings[office]}>
-                  <h3 className="font-heading text-[21px] font-semibold mb-4">{c.officeHeadings[office]}</h3>
+                  <details open={chamberFilter !== null} className="border-y border-(--border-subtle) py-4">
+                  <summary className="font-heading text-[21px] font-semibold cursor-pointer focus-visible:outline-2 focus-visible:outline-(--accent)">{c.officeHeadings[office]} <span className="font-body text-[13px] text-(--text-secondary)">· {groups.reduce((count, [, members]) => count + members.length, 0)} profiles</span></summary>
+                  <div className="mt-4">
                   <ul className="space-y-6">
               {groups.map(([code, members]) => (
                 <li key={code}>
@@ -174,6 +184,7 @@ export default function CivicIndex({
                 </li>
               ))}
                   </ul>
+                  </div></details>
                 </section>
               ))}
             </div>
@@ -183,7 +194,7 @@ export default function CivicIndex({
         <hr className="border-0 border-t border-(--border) my-10" />
 
         {/* ─── Organizations ──────────────────────────────────── */}
-        <section className="mb-14" aria-labelledby="orgs-heading">
+        <section id="organizations" className="mb-14 scroll-mt-8" aria-labelledby="orgs-heading">
           <header className="mb-6">
             <p
               id="orgs-heading"
@@ -249,10 +260,9 @@ export default function CivicIndex({
             <ul className="space-y-6">
               {orgTypeGroups.map(([type, items]) => (
                 <li key={type}>
-                  <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-(--text-tertiary) mb-1.5">
-                    {orgTypeLabel(type === "other" ? null : type)}
-                  </p>
-                  <ul className="space-y-1.5">
+                  <details className="border-y border-(--border-subtle) py-4">
+                  <summary className="font-mono text-[12px] uppercase tracking-[0.1em] text-(--text-secondary) cursor-pointer focus-visible:outline-2 focus-visible:outline-(--accent)">{orgTypeLabel(type === "other" ? null : type)} · {items.length} profiles</summary>
+                  <ul className="space-y-1.5 mt-4">
                     {items.map((o) => (
                       <li
                         key={o.slug}
@@ -275,7 +285,7 @@ export default function CivicIndex({
                             organizations say about themselves instead. */}
                       </li>
                     ))}
-                  </ul>
+                  </ul></details>
                 </li>
               ))}
             </ul>
@@ -285,7 +295,7 @@ export default function CivicIndex({
         <hr className="border-0 border-t border-(--border) my-10" />
 
         {/* ─── Bills ──────────────────────────────────────────── */}
-        <section className="mb-14" aria-labelledby="bills-heading">
+        <section id="legislation" className="mb-14 scroll-mt-8" aria-labelledby="bills-heading">
           <header className="mb-6">
             <p
               id="bills-heading"
@@ -303,7 +313,9 @@ export default function CivicIndex({
               {c.emptyBills}
             </p>
           ) : (
-            <ul className="space-y-1.5">
+            <details className="border-y border-(--border-subtle) py-4">
+            <summary className="font-body text-[15px] text-(--text-secondary) cursor-pointer focus-visible:outline-2 focus-visible:outline-(--accent)">Browse {bills.length} pieces of legislation</summary>
+            <ul className="space-y-1.5 mt-4">
               {bills.map((b) => (
                 <li
                   key={b.billId}
@@ -327,7 +339,7 @@ export default function CivicIndex({
                   )}
                 </li>
               ))}
-            </ul>
+            </ul></details>
           )}
 
           {bills.length > 0 && bills.length < 5 && (

@@ -6,7 +6,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
-import { comparisonDate, comparisonProvenance } from "@/lib/comparison";
+import { comparisonDate, comparisonProvenance, eligibleComparisonExample } from "@/lib/comparison";
+import { compareDraftReturnTo, compareDraftSignInHref, type CompareDraft } from "@/lib/compareDraft";
 import { civicBoost, weightedCivicLinks } from "@/lib/civicWeight";
 import { reportError } from "@/lib/observability";
 import { timeAgo } from "@/lib/utils";
@@ -19,6 +20,9 @@ import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
 import SiftLogo from "./SiftLogo";
+import CoveragePreview from "./CoveragePreview";
+import FeedControls from "./FeedControls";
+import { selectLoadedFeed, type FeedOrder, type FeedWindow, type FeedFormat } from "@/lib/feedView";
 import type { Article, CustomTopic, DailyCompareExample, FeedItem, CategoryId } from "@/lib/types";
 
 // Code-split: these surfaces only render on user intent (Cmd+K search,
@@ -92,11 +96,15 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
   );
   const [searchMode, setSearchMode] = useState(false);
   const [compareMode, setCompareMode] = useState(compareSeed !== null);
-  const [compareInputValue, setCompareInputValue] = useState("");
+  const [compareInputValue, setCompareInputValue] = useState(compareSeed?.topic ?? "");
   const [selectedSources, setSelectedSources] = useState<string[]>(
     compareSeed?.sources ?? [...DEFAULT_COMPARE_SOURCES],
   );
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const [viewStartedAt, setViewStartedAt] = useState(Date.now);
+  const [feedOrder, setFeedOrder] = useState<FeedOrder>("recommended");
+  const [feedWindow, setFeedWindow] = useState<FeedWindow>("all");
+  const [feedFormat, setFeedFormat] = useState<FeedFormat>("all");
 
   const [activeCustomTopic, setActiveCustomTopic] = useState<CustomTopic | null>(null);
   const [showTopicModal, setShowTopicModal] = useState(false);
@@ -152,7 +160,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     dailyFetchedRef.current = true;
     fetch("/api/compare/daily")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: DailyCompareExample | null) => setDailyExample(data))
+      .then((data: DailyCompareExample | null) => setDailyExample(eligibleComparisonExample(data)))
       .catch((err) => {
         // No example is a quiet degrade — the sign-in empty state stands in —
         // but the fetch failing is still worth a warning.
@@ -174,10 +182,10 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
   // network call, which is what an effect is actually for.
   const compareFromUrlRan = useRef(false);
   useEffect(() => {
-    if (compareFromUrlRan.current || !compareSeed) return;
+    if (compareFromUrlRan.current || !compareSeed || !userId) return;
     compareFromUrlRan.current = true;
     runCompare(compareSeed.topic, compareSeed.sources);
-  }, [compareSeed, runCompare]);
+  }, [compareSeed, runCompare, userId]);
 
   // Sync state to URL (shallow replace, no scroll). Compare wins the address
   // bar while active so the result screen is linkable — the single most
@@ -293,6 +301,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
   const loadingBookmarks = bookmarksKey !== null && bookmarkFetch?.key !== bookmarksKey;
 
   const handleRefresh = async () => {
+    setViewStartedAt(Date.now());
     if (activeCustomTopic) {
       searchTopic(activeCustomTopic.searchQueries[0]);
     } else {
@@ -319,7 +328,8 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     setShowBookmarks(false);
     setSearchMode(false);
     clearTopicSearch();
-    runCompare(topic, sources);
+    setCompareInputValue(topic);
+    if (userId) runCompare(topic, sources);
   };
 
   const handleCompareFromArticle = (topic: string, sourceName?: string) => {
@@ -481,6 +491,12 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     return items;
   }, [currentArticles, stories, activeCategory, searchMode, showBookmarks, customTopicMode, lastUpdated]);
 
+  const categoryMode = !searchMode && !showBookmarks && !customTopicMode;
+  const visibleFeedItems = useMemo(() => categoryMode
+    ? selectLoadedFeed(feedItems, feedOrder, feedWindow, Math.max(viewStartedAt, lastUpdated?.getTime() ?? 0), feedFormat)
+    : feedItems, [categoryMode, feedItems, feedOrder, feedWindow, feedFormat, lastUpdated, viewStartedAt]);
+  const compareDraft = { topic: compareInputValue, sources: selectedSources };
+  const draftReturnTo = compareDraftReturnTo(compareDraft);
   const hasData = feedItems.length > 0;
   const activeCatLabel = CATEGORIES.find((c) => c.id === activeCategory)?.label;
 
@@ -494,14 +510,14 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     >
       {/* ── Header ──────────────────────────────────── */}
       <header
-        className="sticky top-0 z-50 border-b border-(--border)"
+        className="md:sticky top-0 z-50 border-b border-(--border)"
         style={{
           background: "var(--surface-overlay)",
           backdropFilter: "blur(20px) saturate(180%)",
           WebkitBackdropFilter: "blur(20px) saturate(180%)",
         }}
       >
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-3.5 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-3.5 flex flex-wrap items-center justify-between gap-y-2">
           <div
             className="flex items-baseline gap-3 cursor-pointer"
             onClick={() => { setShowBookmarks(false); setSearchMode(false); clearTopicSearch(); exitCompareMode(); setActiveCustomTopic(null); setActiveCategory("top"); }}
@@ -513,7 +529,8 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex w-full min-[375px]:w-auto items-center justify-between min-[375px]:justify-start gap-1.5 sm:gap-2">
+            <Link href="/civic" className="hidden md:inline text-sm text-(--text-secondary) no-underline hover:text-(--accent) mr-2">Civic context</Link>
             <button
               onClick={() => { setShowBookmarks(!showBookmarks); setSearchMode(false); clearTopicSearch(); exitCompareMode(); }}
               aria-label={bookmarkCount > 0 ? `Bookmarks (${bookmarkCount})` : "Bookmarks"}
@@ -741,13 +758,18 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         {compareMode && !compareComparison && !compareLoading && (
           <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pb-3">
             <form
+              action={!userId ? "/sign-in" : undefined}
+              method="get"
               onSubmit={(e) => {
-                e.preventDefault();
-                const trimmed = compareInputValue.trim();
-                if (trimmed.length >= 3 && selectedSources.length >= 2) startCompare(trimmed, selectedSources);
+                if (!draftReturnTo) { e.preventDefault(); return; }
+                if (userId) {
+                  e.preventDefault();
+                  startCompare(compareInputValue.trim(), selectedSources);
+                }
               }}
               className="flex items-center gap-2"
             >
+              {!userId && draftReturnTo && <input type="hidden" name="redirect_url" value={draftReturnTo} />}
               <button
                 type="button"
                 onClick={exitCompareMode}
@@ -773,8 +795,9 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 />
                 <button
                   type="submit"
-                  disabled={compareInputValue.trim().length < 3}
-                  aria-label="Compare"
+                  disabled={!draftReturnTo}
+                  aria-label={userId ? "Compare" : "Sign in to compare your topic"}
+                  title={userId ? "Compare coverage" : "Sign in to compare your topic"}
                   className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-full text-sm cursor-pointer transition-all duration-200"
                   style={{
                     background: compareInputValue.trim().length >= 3 ? "var(--accent)" : "transparent",
@@ -838,11 +861,11 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         {error && `Error: ${error}`}
         {topicError && `Search error: ${topicError}`}
         {compareError && `Comparison error: ${compareError}`}
-        {!loading && !topicLoading && hasData && `${feedItems.length} items loaded`}
+        {!loading && !topicLoading && hasData && `${visibleFeedItems.length} stories in this view`}
       </div>
 
       {/* ── Main ────────────────────────────────────── */}
-      <main id="main-content" className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-7 pb-20">
+      <main id="main-content" className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-4 sm:pt-7 pb-20">
         {/* First-run pointer — browse mode only, self-dismissing. */}
         {!compareMode && !searchMode && !showBookmarks && <CoachStrip />}
 
@@ -907,13 +930,9 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                     onClose={exitCompareMode}
                     selectedSources={selectedSources}
                     onToggleSource={toggleSource}
+                    draft={compareDraft}
                   />
-                ) : (
-                  <EmptyState
-                    title={COPY.compare.signInTitle}
-                    body={COPY.compare.signInBody}
-                  />
-                )
+                ) : <CoveragePreview stories={stories[activeCategory] || []} draft={compareDraft} />
               ) : (
                 <ErrorState
                   message={compareError}
@@ -943,15 +962,16 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 visitors get the daily example up front instead of typing a
                 topic just to hit the sign-in wall. */}
             {!compareLoading && !compareError && !compareComparison && (
-              !userId && dailyExample ? (
+              !userId ? (dailyExample ? (
                 <DailyExampleBlock
                   example={dailyExample}
                   onCompareAnother={startCompare}
                   onClose={exitCompareMode}
                   selectedSources={selectedSources}
                   onToggleSource={toggleSource}
+                  draft={compareDraft}
                 />
-              ) : (
+              ) : <CoveragePreview stories={stories[activeCategory] || []} draft={compareDraft} />) : (
                 <EmptyState
                   title={COPY.compare.emptyTitle}
                   body={COPY.compare.emptyBody}
@@ -962,7 +982,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
         ) : (
           <>
             {/* Section header */}
-            <div className="flex justify-between items-baseline mb-7">
+            <div className="flex flex-wrap justify-between items-end gap-x-4 gap-y-3 mb-3">
               <div>
                 <h2 className="font-heading text-[22px] font-bold text-(--text-primary) tracking-tight">
                   {searchMode
@@ -980,16 +1000,16 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 )}
                 {lastUpdated && !showBookmarks && !searchMode && !customTopicMode && (
                   <p className="text-xs mt-1" style={{ color: refreshed ? "var(--accent)" : "var(--text-tertiary)" }}>
-                    {refreshed ? COPY.articles.updated : `Updated ${timeAgo(lastUpdated.toISOString())}`}
+                    {refreshed ? "Feed checked just now" : `Feed checked ${timeAgo(lastUpdated.toISOString()).toLowerCase()}`}
                   </p>
                 )}
               </div>
-              {hasData && (
-                <span className="text-xs text-(--text-tertiary) font-medium">
-                  {feedItems.length} item{feedItems.length !== 1 ? "s" : ""}
-                </span>
-              )}
+              {!categoryMode && hasData && <span className="text-xs text-(--text-secondary)">{feedItems.length} items</span>}
             </div>
+            {categoryMode && <FeedControls order={feedOrder} window={feedWindow} format={feedFormat}
+              total={feedItems.length} visible={visibleFeedItems.length}
+              onOrder={setFeedOrder} onWindow={setFeedWindow} onFormat={setFeedFormat} />}
+            {categoryMode && hasData && visibleFeedItems.length === 0 && <EmptyState title="No stories match these filters" body="Try another format or show all publication dates in this view." action={{ label: "Reset filters", onClick: () => { setFeedOrder("recommended"); setFeedWindow("all"); setFeedFormat("all"); } }} />}
 
             {/* Loading skeleton */}
             {(((searchMode || customTopicMode) ? topicLoading : loading) && !hasData && !((searchMode || customTopicMode) ? topicError : error)) && (
@@ -1063,14 +1083,14 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
               <UsageView name="feed_viewed" viewKey={`${activeCategory}:${showBookmarks}:${searchMode}:${activeCustomTopic?.id ?? ""}`}
                 properties={{ surface: showBookmarks ? "bookmarks" : searchMode ? "search" : customTopicMode ? "custom_topic" : "feed" }}>
               <div
-                className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4 sm:gap-5"
+                className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] items-start gap-4 sm:gap-5"
                 style={{
                   transition: "opacity 0.12s ease-out, transform 0.12s ease-out",
                   opacity: categoryFading ? 0 : 1,
                   transform: categoryFading ? "translateY(4px)" : "translateY(0)",
                 }}
               >
-                {feedItems.map((item, i) =>
+                {visibleFeedItems.map((item, i) =>
                   item.type === "story" ? (
                     <StoryCard
                       key={`story-${item.data.id}`}
@@ -1181,13 +1201,16 @@ function DailyExampleBlock({
   onClose,
   selectedSources,
   onToggleSource,
+  draft,
 }: {
   example: DailyCompareExample;
+  draft: CompareDraft;
   onCompareAnother: (topic: string, sources: string[]) => void;
   onClose: () => void;
   selectedSources: string[];
   onToggleSource: (key: string) => void;
 }) {
+  const signInHref = compareDraftSignInHref(draft.topic.trim() ? draft : { topic: example.topic, sources: selectedSources });
   return (
     <div className="animate-fade-slide-in">
       <div className="mb-5 rounded-[12px] border border-(--border) bg-(--surface-raised) px-4 py-3 text-sm">
@@ -1197,12 +1220,12 @@ function DailyExampleBlock({
         <span className="text-(--text-secondary)">
           {COPY.compare.dailyBody(`${comparisonDate(example.generatedAt)} (UTC)`)}
         </span>{" "}
-        <Link
-          href="/sign-in"
+        {signInHref ? <Link
+          href={signInHref}
           className="text-(--accent) no-underline hover:underline whitespace-nowrap"
         >
           {COPY.compare.dailySignIn} &rarr;
-        </Link>
+        </Link> : <span className="text-(--text-secondary)">Enter a topic of 3–200 characters and select two to five outlets above to continue.</span>}
       </div>
       <CompareView
         analyticsContentId={`daily:${example.generatedAt}`}
