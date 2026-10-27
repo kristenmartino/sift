@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import NewsAggregator from "@/components/NewsAggregator";
 import AuthButtons from "@/components/AuthButtons";
+import { getOutletProfilesMap } from "@/lib/db";
+import { compareSourcesFromMap } from "@/lib/compareSources";
 
 export const metadata: Metadata = {
   title: "News",
@@ -50,10 +52,11 @@ function NewsLoading() {
 
 export default async function NewsPage() {
   const userId = clerkEnabled ? (await auth()).userId ?? null : null;
+  const compareSources = compareSourcesFromMap(await getOutletProfilesMap());
 
   return (
     <Suspense fallback={<NewsLoading />}>
-      <NewsAggregator userId={userId} authSlot={<AuthButtons />} />
+      <NewsAggregator userId={userId} authSlot={<AuthButtons />} compareSources={compareSources} />
     </Suspense>
   );
 }

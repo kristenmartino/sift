@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ShareButton } from "@/components/ShareActions";
-import { COMPARE_SOURCES } from "@/lib/constants";
+import { useCompareSources } from "./CompareSources";
 import UsageView from "./analytics/UsageView";
 import CompareOutletRatings from "./CompareOutletRatings";
 import { COPY } from "@/lib/copy";
@@ -83,6 +83,7 @@ export default function CompareView({
   selectedSources,
   onToggleSource,
 }: CompareViewProps) {
+  const compareSources = useCompareSources();
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [expandedClaim, setExpandedClaim] = useState<number | null>(null);
@@ -93,7 +94,7 @@ export default function CompareView({
   }, []);
 
   const selectedLabels = selectedSources
-    .map((key) => COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key)
+    .map((key) => compareSources.find((s) => s.key === key)?.label ?? key)
     .join(", ");
 
   const record = comparisonProvenance(provenance ?? {});
@@ -361,8 +362,8 @@ export default function CompareView({
             {COPY.compare.comparing(selectedLabels)} {sourcesExpanded ? "▴" : "▾"}
           </button>
           {sourcesExpanded && (
-            <div className="flex flex-wrap gap-1.5 mt-2 animate-fade-slide-in">
-              {COMPARE_SOURCES.map((source) => {
+            <div role="group" aria-label="Choose up to five outlets" className="flex max-h-[50vh] overflow-y-auto flex-wrap gap-1.5 mt-2 py-1 animate-fade-slide-in">
+              {compareSources.map((source) => {
                 const isSelected = selectedSources.includes(source.key);
                 const atMax = selectedSources.length >= MAX_SOURCES;
                 const disabled = !isSelected && atMax;
@@ -371,6 +372,7 @@ export default function CompareView({
                     key={source.key}
                     type="button"
                     onClick={() => !disabled && onToggleSource(source.key)}
+                    aria-pressed={isSelected}
                     aria-disabled={disabled || undefined}
                     tabIndex={disabled ? -1 : undefined}
                     className="px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-all duration-200 border"

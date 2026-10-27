@@ -1167,3 +1167,19 @@ When a matched outlet has only one curated rating, label the other field
 “Unavailable” rather than silently omitting it or inferring a value.
 Unmatched outlets show both fields as unavailable. Compare keeps its loading
 state separate until the curated lookup finishes.
+
+### 2026-10-26 — Share the Compare publisher registry and prefer original evidence
+
+The Compare picker uses the same curated outlet profiles and aliases as backend
+validation, with one choice per publisher and all curated political-lean groups
+available. Existing shared-link aliases remain supported. Remove unsupported
+standalone-preview choices; include right-leaning publishers in the fallback and
+top/politics defaults. Retain five selected outlets, the $15 daily cap, and the
+existing visual tokens and chip controls.
+
+For exact indexed events, retained original publisher excerpts can replace paid
+search. Old records without publisher text supply URL hints only. Live searches
+use provider streaming to reduce interruption failures and retain existing
+reservation/final-usage accounting; unknown costs remain held. No generated
+summary is reused as source evidence and no unavailable outlet is counted as
+analyzed.

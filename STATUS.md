@@ -166,7 +166,9 @@ it refuted Y, here is why we did not do Z — and architecture-level decisions p
 [`docs/DECISIONS.md`](docs/DECISIONS.md). An entry below describes what was true on its date and is never edited
 to stay current.
 
-## Recent decisions (last 7 days)
+## Recent decisions
+
+2026-10-26: Compare uses the shared curated publisher registry, including right-leaning outlets, with original-evidence retrieval and the existing five-outlet limit/daily cap. Existing visual styling is preserved. (last 7 days)
 
 - **2026-10-26** — Show bias and factual-reporting ratings by default with each rated outlet on desktop and mobile. Keep explanations behind “About these ratings” and preserve the existing neutral styling.
 

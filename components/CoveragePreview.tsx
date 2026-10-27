@@ -3,22 +3,25 @@
 import Link from "next/link";
 import { buildSourceUnits } from "@/lib/storySources";
 import { timeAgo } from "@/lib/utils";
-import { COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS } from "@/lib/constants";
+import { compareDefaults, resolveCompareSource } from "@/lib/compareSources";
+import { useCompareSources } from "./CompareSources";
 import { compareDraftSignInHref, type CompareDraft } from "@/lib/compareDraft";
 import type { Story } from "@/lib/types";
 import { OutletChip } from "./primitives";
 
 /** An evidence-backed reading preview, never a substitute for claim analysis. */
 export default function CoveragePreview({ stories, draft }: { stories: Story[]; draft?: CompareDraft }) {
+  const compareSources = useCompareSources();
   const candidate = stories.map((story) => ({ story, units: buildSourceUnits(story.framings, story.articles).filter((unit) => unit.articles.some((article) => article.sourceUrl)) }))
     .find(({ units }) => units.length >= 2);
-  const matchingSources = candidate?.units.map((unit) => COMPARE_SOURCES.find((source) =>
-    source.key === unit.sourceName.toLowerCase() || source.label.toLowerCase() === unit.sourceName.toLowerCase()
-    || source.key === unit.outlet?.name.toLowerCase())?.key).filter((key): key is NonNullable<typeof key> => Boolean(key)) ?? [];
-  const selectedSources = matchingSources.length >= 2 ? matchingSources.slice(0, 5) : candidate ? CATEGORY_COMPARE_DEFAULTS[candidate.story.category] : [];
+  const matchingSources = candidate?.units.flatMap((unit) => {
+    const source = resolveCompareSource(unit.sourceName, compareSources) ?? resolveCompareSource(unit.outlet?.name ?? "", compareSources);
+    return source ? [source.key] : [];
+  }) ?? [];
+  const selectedSources = matchingSources.length >= 2 ? matchingSources.slice(0, 5) : candidate ? compareDefaults(candidate.story.category, compareSources) : [];
   const hasDraft = Boolean(draft?.topic.trim());
-  const signInHref = hasDraft ? compareDraftSignInHref(draft!) : candidate
-    ? compareDraftSignInHref({ topic: candidate.story.headline, sources: selectedSources })
+  const signInHref = hasDraft ? compareDraftSignInHref(draft!, compareSources) : candidate
+    ? compareDraftSignInHref({ topic: candidate.story.headline, sources: selectedSources }, compareSources)
     : "/sign-in?redirect_url=%2Fnews";
   return <section className="max-w-[900px] mx-auto py-4">
     <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
