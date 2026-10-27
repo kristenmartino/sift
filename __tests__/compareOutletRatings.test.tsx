@@ -14,6 +14,8 @@ beforeEach(() => { mockFetch.mockReset(); global.fetch = mockFetch; window.scrol
 it("loads curated ratings once per outlet, visibly with citations and methodology", async () => {
   mockFetch.mockResolvedValue(response({ axios: AXIOS, "the hill": HILL }));
   render(<CompareOutletRatings sources={["axios", "Axios", "the hill"]} />);
+  expect(screen.getAllByText("Loading ratings…")).toHaveLength(2);
+  expect(screen.queryByText("Bias rating: Unavailable")).not.toBeInTheDocument();
   expect(await screen.findByRole("link", { name: "Outlet dossier for Axios" })).toBeVisible();
   const region = screen.getByRole("region", { name: "Compared outlet ratings" });
   expect(within(region).getAllByRole("listitem")).toHaveLength(2);
@@ -29,8 +31,9 @@ it.each([null, "failure"])("keeps missing ratings explicit without inventing a s
   if (result === "failure") mockFetch.mockResolvedValue({ ok: false });
   else mockFetch.mockResolvedValue(response({ unknown: null }));
   render(<CompareOutletRatings sources={["unknown"]} />);
-  expect(await screen.findByText("Ratings unavailable")).toBeVisible();
-  expect(screen.queryByText(/Factual Reporting:/)).not.toBeInTheDocument();
+  expect(await screen.findByText("Bias rating: Unavailable")).toBeVisible();
+  expect(screen.getByText("Factual Reporting: Unavailable")).toBeVisible();
+  expect(screen.queryByRole("link", { name: /AllSides bias rating:|MBFC factual reporting:/ })).not.toBeInTheDocument();
 });
 
 it("does not reuse an earlier comparison's rating response after sources change", async () => {
