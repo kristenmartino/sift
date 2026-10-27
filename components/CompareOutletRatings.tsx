@@ -37,8 +37,10 @@ export default function CompareOutletRatings({ sources }: { sources: string[] })
         {names.map((source) => {
           const outlet = ready ? loaded.outlets[source.toLowerCase()] : null;
           return <li key={source.toLowerCase()} className="min-w-0 rounded-[12px] border border-(--border) bg-(--surface-raised) p-4">
-            <OutletChip outlet={outlet} fallback={source} />
-            {(!outlet || (!outlet.allSidesRating && !outlet.mbfcFactual)) && <p className="mt-1 text-xs text-(--text-tertiary)">{ready ? "Ratings unavailable" : "Loading ratings…"}</p>}
+            {ready ? <OutletChip outlet={outlet} fallback={source} /> : <>
+              <span className="font-bold text-(--text-secondary)">{source}</span>
+              <p className="mt-1 text-xs text-(--text-tertiary)">Loading ratings…</p>
+            </>}
           </li>;
         })}
       </ul>

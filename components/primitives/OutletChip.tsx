@@ -30,9 +30,12 @@ export default function OutletChip({
 }: OutletChipProps) {
   if (!outlet) {
     return (
-      <span className={`font-bold text-[var(--text-secondary)] ${className}`}>
-        {fallback}
-      </span>
+      <div className={`inline-flex max-w-full min-w-0 flex-col items-start gap-1 ${className}`}>
+        <span className="font-bold text-[var(--text-secondary)]">{fallback}</span>
+        <span className="font-mono text-[11px] tracking-wide text-[var(--text-secondary)]">Bias rating: Unavailable</span>
+        <span className="font-mono text-[11px] tracking-wide text-[var(--text-secondary)]">Factual Reporting: Unavailable</span>
+        <a href="/methodology#outlet-ratings" onClick={(e) => e.stopPropagation()} className="text-xs text-(--text-secondary) hover:underline">About these ratings →</a>
+      </div>
     );
   }
 
@@ -56,6 +59,7 @@ export default function OutletChip({
           <LeanGlyph rating={outlet.allSidesRating} />
         </a>
       )}
+      {!allSides && <span className="font-mono text-[11px] tracking-wide text-[var(--text-secondary)]">Bias rating: Unavailable</span>}
 
       {/* Line 3 — factual-reporting rating, on its own line. */}
       <FactualChip
@@ -63,6 +67,7 @@ export default function OutletChip({
         url={outlet.mbfcUrl}
         lastChecked={outlet.mbfcLastChecked}
       />
+      {!outlet.mbfcFactual && <span className="font-mono text-[11px] tracking-wide text-[var(--text-secondary)]">Factual Reporting: Unavailable</span>}
 
       {showVerified && (outlet.allSidesLastChecked || outlet.mbfcLastChecked) && (
         <span className="font-mono text-[9.5px] uppercase tracking-wider text-[var(--text-tertiary)] w-full">

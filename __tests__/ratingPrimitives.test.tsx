@@ -112,6 +112,9 @@ describe("rating primitives — §3 neutrality", () => {
       <OutletChip outlet={null} fallback="Some Blog" />,
     );
     expect(fb.textContent).toContain("Some Blog");
+    expect(within(fb).getByText("Bias rating: Unavailable")).toBeVisible();
+    expect(within(fb).getByText("Factual Reporting: Unavailable")).toBeVisible();
+    expect(within(fb).queryByRole("link", { name: /AllSides bias rating:|MBFC factual reporting:/ })).toBeNull();
   });
 
   it("shows both outlet ratings by default with the methodology one link away", () => {
@@ -127,6 +130,22 @@ describe("rating primitives — §3 neutrality", () => {
     expect(within(container).getByRole("link", { name: "About these ratings →" }))
       .toHaveAttribute("href", "/methodology#outlet-ratings");
     expect(container).not.toHaveTextContent("These assess the outlet, not this article.");
+  });
+
+  it.each(["bias", "factual"])("labels a missing %s rating without inferring it from the other rating", (missing) => {
+    const outlet = { ...REUTERS, ...(missing === "bias" ? { allSidesRating: null } : { mbfcFactual: null }) };
+    const { container } = render(<OutletChip outlet={outlet} fallback="Reuters" />);
+    const view = within(container);
+    if (missing === "bias") {
+      expect(view.getByText("Bias rating: Unavailable")).toBeVisible();
+      expect(view.queryByRole("link", { name: /AllSides bias rating:/ })).toBeNull();
+      expect(view.getByRole("link", { name: /MBFC factual reporting: High/ })).toHaveAttribute("href", REUTERS.mbfcUrl);
+    } else {
+      expect(view.getByText("Factual Reporting: Unavailable")).toBeVisible();
+      expect(view.queryByRole("link", { name: /MBFC factual reporting:/ })).toBeNull();
+      expect(view.getByRole("link", { name: /AllSides bias rating: Center/ })).toHaveAttribute("href", REUTERS.allSidesUrl);
+    }
+    expect(view.getByRole("link", { name: "About these ratings →" })).toBeVisible();
   });
 
   it("LeanSpread is a neutral position cue — filled cells encode coverage, never hue", () => {
