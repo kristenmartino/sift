@@ -30,3 +30,15 @@ export function compareDefaults(category: CategoryId, sources: readonly CompareS
   }))];
   return (defaults.length >= 2 ? defaults : sources.map((source) => source.key)).slice(0, 5);
 }
+
+/** Known story outlets first; add suggestions only for a single reporting outlet. */
+export function compareStorySources(category: CategoryId, names: string[], choices: readonly CompareSource[]) {
+  const reporting = [...new Set(names.flatMap((name) => {
+    const source = resolveCompareSource(name, choices);
+    return source ? [source.key] : [];
+  }))];
+  const unavailable = [...new Set(names.filter((name) => !resolveCompareSource(name, choices)))];
+  const selected = reporting.length >= 2 ? reporting.slice(0, 5)
+    : [...new Set([...reporting, ...compareDefaults(category, choices), ...choices.map((source) => source.key)])].slice(0, 5);
+  return { reporting, unavailable, selected };
+}

@@ -1,6 +1,8 @@
 # Sift — STATUS
 
-**Updated:** 2026-10-26
+**Updated:** 2026-10-27
+
+**Reviewed Compare entry flow (2026-10-27):** one Compare action per grouped story, using the story headline and its reporting outlets up to five. Single-outlet stories preselect the publisher plus four category suggestions. Both open an editable draft before explicit submission. User reviewed the local desktop/mobile preview and authorized deployment. The five-outlet limit, daily cap, outlet ratings, and visual style are preserved. Local verification: 1,092 tests across 91 suites, lint, TypeScript, and a Webpack production build against the empty CI schema. Live deployment verification is recorded with the release evidence.
 
 **Reviewed reading and comparison update (2026-10-26):** complete expandable summaries for articles and story groups; a more compact mobile feed with optional help and filters; explicit content-type and publisher-age cues; a dated homepage example with real background context; source-accounted comparison previews; searchable sourced glossary definitions and optional civic-directory rosters. Coverage comparison remains a core feature alongside background context. The user reviewed the preview and authorized release. Existing visual identity and ranking formula are preserved. Validation passed 1,048 tests across 84 suites, lint, TypeScript, the production build, and independent browser review. Deployment and live verification are recorded separately with the release evidence. No production data or schema changes.
 **Tier:** v1.5 (civic-literacy pivot) — **feature work active** (un-paused 2026-08-05)

@@ -220,7 +220,7 @@ export default function ArticleCard({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onCompare(article.title, article.sourceName);
+                    onCompare(article.title, [article.outlet?.name ?? article.sourceName], article.category);
                   }}
                   className="bg-transparent border-none p-0 cursor-pointer text-xs font-medium transition-colors duration-200 relative z-2"
                   style={{ color: "var(--accent)" }}

@@ -33,7 +33,7 @@ const TopicModal = dynamic(() => import("./TopicModal"), { ssr: false });
 const CompareView = dynamic(() => import("./CompareView"), { ssr: false });
 
 import { CompareSourcesProvider, useCompareSources } from "./CompareSources";
-import { compareDefaults, resolveCompareSource, type CompareSource } from "@/lib/compareSources";
+import { compareDefaults, compareStorySources, resolveCompareSource, type CompareSource } from "@/lib/compareSources";
 import { compareSessionRefreshTarget } from "@/lib/compareSession";
 
 // Stable empty list — keeps the derived bookmarked-articles value referentially
@@ -111,6 +111,7 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
     compareSeed?.sources ?? compareDefaults("top", compareSources),
   );
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const [compareEntry, setCompareEntry] = useState<ReturnType<typeof compareStorySources> | null>(null);
   const [viewStartedAt, setViewStartedAt] = useState(Date.now);
   const [feedOrder, setFeedOrder] = useState<FeedOrder>("recommended");
   const [feedWindow, setFeedWindow] = useState<FeedWindow>("all");
@@ -344,6 +345,7 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
     .join(", ");
 
   const startCompare = (topic: string, sources: string[]) => {
+    setCompareEntry(null);
     setCompareMode(true);
     setShowBookmarks(false);
     setSearchMode(false);
@@ -352,17 +354,17 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
     if (userId) runCompare(topic, sources);
   };
 
-  const handleCompareFromArticle = (topic: string, sourceName?: string) => {
-    // Start with category-aware defaults
-    const categoryDefaults = compareDefaults(activeCategory, compareSources);
-    let sources = [...categoryDefaults];
-
-    // Resolve exact aliases so a source action cannot submit an unsupported name.
-    const match = sourceName ? resolveCompareSource(sourceName, compareSources) : undefined;
-    if (match && !sources.includes(match.key)) sources = [match.key, ...sources].slice(0, 5);
-
-    setSelectedSources(sources);
-    startCompare(topic, sources);
+  const prepareCompare = (topic: string, sourceNames: string[], category: CategoryId) => {
+    const entry = compareStorySources(category, sourceNames, compareSources);
+    clearCompare();
+    setCompareEntry(entry);
+    setSelectedSources(entry.selected);
+    setCompareInputValue(topic);
+    setCompareMode(true);
+    setShowBookmarks(false);
+    setSearchMode(false);
+    clearTopicSearch();
+    setSourcesExpanded(true);
   };
 
   const customTopicMode = !!activeCustomTopic;
@@ -583,6 +585,7 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
                   setShowBookmarks(false);
                   setSearchMode(false);
                   clearTopicSearch();
+                  setCompareEntry(null);
                   setSelectedSources([...(compareDefaults(activeCategory, compareSources))]);
                 }
               }}
@@ -793,8 +796,8 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
                   onChange={(e) => setCompareInputValue(e.target.value)}
                   placeholder={COPY.compare.placeholder}
                   maxLength={200}
-                  autoFocus
-                  className="w-full px-4 py-2 pr-12 rounded-full text-sm font-body transition-all duration-200 outline-hidden"
+                  autoFocus={!compareEntry}
+                  className={`w-full px-4 py-2 ${compareEntry ? "pr-28" : "pr-12"} rounded-full text-sm font-body transition-all duration-200 outline-hidden`}
                   style={{
                     background: "var(--surface-raised)",
                     border: "1px solid var(--border)",
@@ -806,16 +809,25 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
                   disabled={!draftReturnTo}
                   aria-label={userId ? "Compare" : "Sign in to compare your topic"}
                   title={userId ? "Compare coverage" : "Sign in to compare your topic"}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-full text-sm cursor-pointer transition-all duration-200"
+                  className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center ${compareEntry ? "px-3" : "w-8"} h-8 rounded-full text-sm cursor-pointer transition-all duration-200`}
                   style={{
                     background: compareInputValue.trim().length >= 3 ? "var(--accent)" : "transparent",
                     color: compareInputValue.trim().length >= 3 ? "#fff" : "var(--text-tertiary)",
                   }}
                 >
-                  &rarr;
+                  {compareEntry ? (userId ? "Compare" : "Sign in") : "→"}
                 </button>
               </div>
             </form>
+            {compareEntry && <div role="status" className="mt-3 ml-11 text-xs text-(--text-secondary)">
+              <p className="font-semibold text-(--text-primary)">Review outlets before comparing</p>
+              <p className="mt-1">{compareEntry.reporting.length >= 2
+                ? `${compareEntry.reporting.length} outlets report on this story.${compareEntry.reporting.length > 5 ? " Five are selected; you can swap them below." : " They are preselected below."}`
+                : compareEntry.reporting.length === 1
+                  ? "The reporting outlet is preselected with suggestions for this story’s category. Suggested coverage will be checked when you run Compare."
+                  : "Choose outlets to search. Suggestions use this story’s category; their coverage will be checked when you run Compare."}</p>
+              {compareEntry.unavailable.length > 0 && <p className="mt-1">Not available in Compare: {compareEntry.unavailable.join(", ")}.</p>}
+            </div>}
             <div className="mt-2 ml-11">
               <button
                 type="button"
@@ -1109,7 +1121,7 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
                       onBookmark={toggleBookmark}
                       bookmarks={bookmarks}
                       index={i}
-                      onCompare={handleCompareFromArticle}
+                      onCompare={prepareCompare}
                     />
                   ) : (
                     <ArticleCard
@@ -1119,7 +1131,7 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
                       onBookmark={toggleBookmark}
                       isBookmarked={bookmarks.has(item.data.id)}
                       index={i}
-                      onCompare={handleCompareFromArticle}
+                      onCompare={prepareCompare}
                     />
                   )
                 )}

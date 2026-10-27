@@ -943,7 +943,7 @@ export interface ArticleCardProps {
   onBookmark: (id: string) => void;
   isBookmarked: boolean;
   index: number;
-  onCompare?: (topic: string, sourceName?: string) => void;
+  onCompare?: (topic: string, sourceNames: string[], category: CategoryId) => void;
 }
 
 export interface StoryCardProps {
@@ -952,7 +952,7 @@ export interface StoryCardProps {
   onBookmark: (id: string) => void;
   bookmarks: Set<string>;
   index: number;
-  onCompare?: (topic: string, sourceName?: string) => void;
+  onCompare?: (topic: string, sourceNames: string[], category: CategoryId) => void;
 }
 
 export interface CardImageProps {
