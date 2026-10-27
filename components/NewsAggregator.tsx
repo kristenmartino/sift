@@ -34,6 +34,7 @@ const CompareView = dynamic(() => import("./CompareView"), { ssr: false });
 
 import { CompareSourcesProvider, useCompareSources } from "./CompareSources";
 import { compareDefaults, resolveCompareSource, type CompareSource } from "@/lib/compareSources";
+import { compareSessionRefreshTarget } from "@/lib/compareSession";
 
 // Stable empty list — keeps the derived bookmarked-articles value referentially
 // equal across renders while the bookmarks view is closed.
@@ -140,6 +141,16 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
     clear: clearTopicSearch,
   } = useTopicSearch();
 
+  const refreshCompareSession = useCallback((topic: string, sources?: string[]) => {
+    if (!sources) return false;
+    try {
+      const target = compareSessionRefreshTarget(userId, { topic, sources }, compareSources, window.sessionStorage);
+      if (!target) return false;
+      window.location.replace(target);
+      return true;
+    } catch { return false; }
+  }, [userId, compareSources]);
+
   const {
     requestId: compareRequestId,
     topic: compareTopic,
@@ -155,7 +166,7 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
     sourcesDone: compareSourcesDone,
     compare: runCompare,
     clear: clearCompare,
-  } = useCompare();
+  } = useCompare(refreshCompareSession);
 
   // The anonymous daily example — fetched once, when a signed-out visitor
   // opens compare mode (or anyone hits the 401 wall). One cached Postgres

@@ -1183,3 +1183,13 @@ use provider streaming to reduce interruption failures and retain existing
 reservation/final-usage accounting; unknown costs remain held. No generated
 summary is reused as source evidence and no unavailable outlet is counted as
 analyzed.
+
+### 2026-10-26 — Recover expired Compare API sessions without changing reader UI
+
+An authenticated page can outlive Clerk's short-lived API cookie. On a 401,
+refresh navigation preserves the exact submitted topic and registered outlets
+and lets existing Clerk middleware renew authentication before comparison is
+requested again. Bound recovery to one navigation per minute and retain the
+sign-in fallback for signed-out or repeatedly rejected requests. No provider
+call is made by the rejected API request, no authentication check is bypassed,
+and budget/provider errors do not trigger this path.
