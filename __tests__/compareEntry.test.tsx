@@ -49,6 +49,8 @@ it('has one grouped-story action, keeps its headline and outlets, and waits for 
   expect(compare).not.toHaveBeenCalled();
   expect(screen.getByRole('textbox')).toHaveValue(story.headline);
   expect(screen.getByRole('textbox')).not.toHaveFocus();
+  expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
+  (window.scrollTo as jest.Mock).mockClear();
   for (const key of ['reuters', 'fox news', 'the guardian']) {
     expect(screen.getByRole('button', { name: key })).toHaveAttribute('aria-pressed', 'true');
   }
@@ -56,6 +58,7 @@ it('has one grouped-story action, keeps its headline and outlets, and waits for 
   fireEvent.click(screen.getByRole('button', { name: 'the guardian' }));
   fireEvent.click(screen.getByRole('button', { name: 'npr' }));
   expect(compare).not.toHaveBeenCalled();
+  expect(window.scrollTo).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
   expect(compare).toHaveBeenCalledTimes(1);
   expect(compare).toHaveBeenCalledWith(story.headline, ['reuters', 'fox news', 'npr']);
