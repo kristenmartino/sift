@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { ShareButton } from "@/components/ShareActions";
 import { COMPARE_SOURCES } from "@/lib/constants";
 import UsageView from "./analytics/UsageView";
+import CompareOutletRatings from "./CompareOutletRatings";
 import { COPY } from "@/lib/copy";
 import type { CompareClaim, CompareProvenance } from "@/lib/types";
 import { comparisonProvenance, normalizeCompareClaim, comparisonClaimLabel, comparisonDate } from "@/lib/comparison";
@@ -191,6 +192,8 @@ export default function CompareView({
           </span>
         ))}
       </div>}
+
+      <CompareOutletRatings sources={record ? record.sources_requested : sourcesChecked} />
 
       {/* Summary card */}
       {record && <div
