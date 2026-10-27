@@ -53,3 +53,11 @@ it.each([undefined, "2026-10-26T00:00:00Z"])("includes outlet ratings in a live 
   expect(screen.getByText("Unavailable (1)")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Outlet dossier for The Hill" })).toBeVisible();
 });
+
+it("adds ratings to a legacy saved example without inventing source availability", async () => {
+  mockFetch.mockResolvedValue(response({ axios: AXIOS }));
+  render(<CompareView topic="Saved example" comparison="Earlier comparison." sourcesChecked={["Axios"]} generatedAt="2026-08-11T00:30:00Z" claims={[]} durationMs={1000} selectedSources={["axios", "the hill"]} onToggleSource={jest.fn()} onCompareAnother={jest.fn()} onClose={jest.fn()} />);
+  expect(await screen.findByRole("link", { name: /MBFC factual reporting: High/ })).toBeVisible();
+  expect(screen.getByText(/Source availability was not recorded/)).toBeVisible();
+  expect(screen.queryByText(/Coverage found/)).not.toBeInTheDocument();
+});
