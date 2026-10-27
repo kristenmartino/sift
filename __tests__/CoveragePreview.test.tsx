@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import CoveragePreview from '@/components/CoveragePreview';
-import type { Story } from '@/lib/types';
+import type { Story, OutletProfile } from '@/lib/types';
 
 const story: Story = {
   id: 'vote', headline: 'The committee approved a measure', summary: 'A committee vote took place.', category: 'politics', framings: [], entities: [], articleCount: 3, outletCount: 3, imageUrl: null, publishedDate: '2026-10-26T12:00:00Z',
@@ -10,6 +10,23 @@ const story: Story = {
     { id: 'c', sourceName: 'C', title: 'A headline without an original', sourceUrl: '' },
   ].map((a) => ({ ...a, summary: 'The committee voted.', category: 'politics', publishedDate: '2026-10-26T12:00:00Z', imageUrl: null, readTime: 1 })),
 };
+it('shows cited outlet ratings in the signed-out Compare preview before any interaction', () => {
+  const ratedStory = { ...story, articles: story.articles.map((article) => ({ ...article,
+    outlet: { slug: article.sourceName.toLowerCase(), name: article.sourceName,
+      allSidesRating: 'center', allSidesUrl: `https://www.allsides.com/news-source/${article.sourceName}`,
+      mbfcFactual: 'mostly-factual', mbfcUrl: `https://mediabiasfactcheck.com/${article.sourceName}/`,
+    } as OutletProfile,
+  })) };
+  render(<CoveragePreview stories={[ratedStory]} />);
+  expect(screen.getAllByRole('link', { name: /AllSides bias rating: Center/ })).toHaveLength(2);
+  const factual = screen.getAllByRole('link', { name: /MBFC factual reporting: Mostly Factual/ });
+  expect(factual).toHaveLength(2);
+  expect(factual[0]).toBeVisible();
+  expect(factual[0]).toHaveAttribute('href', 'https://mediabiasfactcheck.com/A/');
+  expect(screen.getAllByRole('link', { name: 'About these ratings →' })).toHaveLength(2);
+  expect(screen.queryByRole('link', { name: 'Outlet dossier for C' })).not.toBeInTheDocument();
+  expect(screen.getByText(/not a generated comparison or a finding of agreement/)).toBeVisible();
+});
 it('shows original source headlines without inventing claim agreement', () => {
   render(<CoveragePreview stories={[story]} />);
   expect(screen.getByRole('heading', { name: story.headline })).toBeInTheDocument();

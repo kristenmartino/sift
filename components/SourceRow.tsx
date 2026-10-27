@@ -8,6 +8,8 @@ import type { SourceUnit } from "@/lib/storySources";
 
 interface SourceRowProps {
   unit: SourceUnit;
+  /** Keep outlet ratings visible while the story's reporting is collapsed. */
+  showCoverage?: boolean;
   /** Wire the per-row "See angles" compare CTA. */
   onCompare?: (topic: string, sourceName?: string) => void;
 }
@@ -24,7 +26,7 @@ interface SourceRowProps {
  * identical here and on /news (SIFT_THEME_MIGRATION.md §3 — position/fill, never
  * hue). Used by both the flat framings list and the cross-spectrum columns.
  */
-export default function SourceRow({ unit, onCompare }: SourceRowProps) {
+export default function SourceRow({ unit, onCompare, showCoverage = true }: SourceRowProps) {
   const lead = unit.articles[0];
   const extras = unit.articles.slice(1);
 
@@ -39,6 +41,7 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
         className="story-row__source"
       />
 
+      {showCoverage && <>
       {/* How this outlet framed the story */}
       {unit.framing && (
         <p className="text-body text-(--text-secondary) leading-snug">
@@ -122,6 +125,7 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
           </div>
         </details>
       )}
+      </>}
     </div>
   );
 }

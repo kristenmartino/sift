@@ -47,9 +47,6 @@ export default function StoryCard({ story, featured, index, onCompare }: StoryCa
           </div>
           <h3 className={`font-heading font-bold text-(--text-primary) ${featured ? "text-headline-lg" : "text-headline"}`}>{story.headline}</h3>
           <ReadingSummary summary={story.summary} previewChars={featured ? 240 : 180} featured={featured} />
-          <p className="text-xs text-(--text-secondary) leading-relaxed">
-            Coverage from {sortedSources.slice(0, 3).map((u) => u.outlet?.name ?? u.sourceName).join(", ")}{count > 3 ? ` and ${count - 3} more` : ""}.
-          </p>
           {story.articles.length > 0 && <button type="button" aria-expanded={expanded} aria-controls={coverageId}
             onClick={() => setExpanded(!expanded)} className="self-start text-sm text-(--accent) font-semibold cursor-pointer bg-transparent border-none p-0 py-1 hover:underline">
             {expanded ? "Hide source coverage" : `View coverage from ${count} outlet${count !== 1 ? "s" : ""}`} <span aria-hidden>{expanded ? "−" : "+"}</span>
@@ -60,12 +57,13 @@ export default function StoryCard({ story, featured, index, onCompare }: StoryCa
           </p>
         </div>
       </div>
-      {/* The complete source list is mounted only on request. Every outlet,
-          including blank-framing contributors, remains available. */}
-      {expanded && <section id={coverageId} aria-label="Source coverage" className="px-5 md:px-6 py-4 border-t border-(--border)">
-        <p className="text-sm font-semibold text-(--text-primary)">{COPY.stories.framing(count)}</p>
-        <p className="text-xs text-(--text-secondary) mt-1 mb-2">Publisher headlines link to the original reporting. Outlet ratings describe publishers, not the truth of individual articles.</p>
-        {sortedSources.map((unit) => <SourceRow key={unit.sourceName} unit={unit} onCompare={onCompare} />)}
+      {/* Ratings stay visible; only framing and original reporting expand. */}
+      {count > 0 && <section aria-label="Source coverage" className="px-5 md:px-6 py-4 border-t border-(--border)">
+        <p className="text-sm font-semibold text-(--text-primary)">Outlet ratings</p>
+        <div id={coverageId}>
+          {expanded && <p className="text-sm font-semibold text-(--text-primary) mt-2">{COPY.stories.framing(count)}</p>}
+          {sortedSources.map((unit) => <SourceRow key={unit.sourceName} unit={unit} showCoverage={expanded} onCompare={onCompare} />)}
+        </div>
       </section>}
     </article>
   );
