@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS, DEFAULT_COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
+import { CATEGORIES, VALID_CATEGORIES, COMPARE_SOURCES, CUSTOM_TOPIC_COLORS } from "@/lib/constants";
 import { COPY } from "@/lib/copy";
 import { comparisonDate, comparisonProvenance, eligibleComparisonExample } from "@/lib/comparison";
 import { compareDraftReturnTo, compareDraftSignInHref, type CompareDraft } from "@/lib/compareDraft";
@@ -31,6 +31,9 @@ import type { Article, CustomTopic, DailyCompareExample, FeedItem, CategoryId } 
 const TopicSearch = dynamic(() => import("./TopicSearch"), { ssr: false });
 const TopicModal = dynamic(() => import("./TopicModal"), { ssr: false });
 const CompareView = dynamic(() => import("./CompareView"), { ssr: false });
+
+import { CompareSourcesProvider, useCompareSources } from "./CompareSources";
+import { compareDefaults, resolveCompareSource, type CompareSource } from "@/lib/compareSources";
 
 // Stable empty list — keeps the derived bookmarked-articles value referentially
 // equal across renders while the bookmarks view is closed.
@@ -67,28 +70,34 @@ function useInitialParams() {
 function compareSeedFrom(params: {
   compare: string | null;
   compareSources: string | null;
-}): { topic: string; sources: string[] } | null {
+}, sources: readonly CompareSource[]): { topic: string; sources: string[] } | null {
   const topic = params.compare?.trim();
   if (!topic || topic.length < 3) return null;
   const validKeys = (params.compareSources ?? "")
     .split(",")
-    .filter((key) => COMPARE_SOURCES.some((s) => s.key === key));
+    .flatMap((key) => { const match = resolveCompareSource(key, sources); return match ? [match.key] : []; });
   return {
     topic,
-    sources: validKeys.length >= 2 ? validKeys.slice(0, 5) : [...DEFAULT_COMPARE_SOURCES],
+    sources: new Set(validKeys).size >= 2 ? [...new Set(validKeys)].slice(0, 5) : compareDefaults("top", sources),
   };
 }
 
 interface NewsAggregatorProps {
   userId: string | null;
   authSlot: React.ReactNode;
+  compareSources?: readonly CompareSource[];
 }
 
-export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps) {
+export default function NewsAggregator(props: NewsAggregatorProps) {
+  return <CompareSourcesProvider value={props.compareSources ?? COMPARE_SOURCES}><NewsAggregatorContent {...props} /></CompareSourcesProvider>;
+}
+
+function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
+  const compareSources = useCompareSources();
   const initialParams = useInitialParams();
   // A shared compare link wins the first render over ?view=bookmarks, which is
   // the precedence the effect below used to establish one render late.
-  const [compareSeed] = useState(() => compareSeedFrom(initialParams));
+  const [compareSeed] = useState(() => compareSeedFrom(initialParams, compareSources));
 
   const [activeCategory, setActiveCategory] = useState<CategoryId>(initialParams.category);
   const [showBookmarks, setShowBookmarks] = useState(
@@ -98,7 +107,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
   const [compareMode, setCompareMode] = useState(compareSeed !== null);
   const [compareInputValue, setCompareInputValue] = useState(compareSeed?.topic ?? "");
   const [selectedSources, setSelectedSources] = useState<string[]>(
-    compareSeed?.sources ?? [...DEFAULT_COMPARE_SOURCES],
+    compareSeed?.sources ?? compareDefaults("top", compareSources),
   );
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const [viewStartedAt, setViewStartedAt] = useState(Date.now);
@@ -135,7 +144,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     requestId: compareRequestId,
     topic: compareTopic,
     comparison: compareComparison,
-    sourcesChecked: compareSources,
+    sourcesChecked: compareAnalyzedSources,
     provenance: compareProvenance,
     claims: compareClaims,
     durationMs: compareDuration,
@@ -320,7 +329,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
   };
 
   const selectedLabels = selectedSources
-    .map((key) => COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key)
+    .map((key) => compareSources.find((s) => s.key === key)?.label ?? key)
     .join(", ");
 
   const startCompare = (topic: string, sources: string[]) => {
@@ -334,24 +343,12 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
 
   const handleCompareFromArticle = (topic: string, sourceName?: string) => {
     // Start with category-aware defaults
-    const categoryDefaults = CATEGORY_COMPARE_DEFAULTS[activeCategory] || DEFAULT_COMPARE_SOURCES;
+    const categoryDefaults = compareDefaults(activeCategory, compareSources);
     let sources = [...categoryDefaults];
 
-    // Ensure the article's own source is included
-    if (sourceName) {
-      const nameLower = sourceName.toLowerCase();
-      const alreadyIncluded = sources.some((key) => {
-        const cs = COMPARE_SOURCES.find((s) => s.key === key);
-        if (cs) return nameLower.includes(cs.key) || cs.key.includes(nameLower) || nameLower === cs.label.toLowerCase();
-        return key === nameLower;
-      });
-      if (!alreadyIncluded) {
-        const match = COMPARE_SOURCES.find(
-          (s) => nameLower.includes(s.key) || s.key.includes(nameLower) || nameLower === s.label.toLowerCase()
-        );
-        sources = [match?.key || nameLower, ...sources].slice(0, 5);
-      }
-    }
+    // Resolve exact aliases so a source action cannot submit an unsupported name.
+    const match = sourceName ? resolveCompareSource(sourceName, compareSources) : undefined;
+    if (match && !sources.includes(match.key)) sources = [match.key, ...sources].slice(0, 5);
 
     setSelectedSources(sources);
     startCompare(topic, sources);
@@ -496,7 +493,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
     ? selectLoadedFeed(feedItems, feedOrder, feedWindow, Math.max(viewStartedAt, lastUpdated?.getTime() ?? 0), feedFormat)
     : feedItems, [categoryMode, feedItems, feedOrder, feedWindow, feedFormat, lastUpdated, viewStartedAt]);
   const compareDraft = { topic: compareInputValue, sources: selectedSources };
-  const draftReturnTo = compareDraftReturnTo(compareDraft);
+  const draftReturnTo = compareDraftReturnTo(compareDraft, compareSources);
   const hasData = feedItems.length > 0;
   const activeCatLabel = CATEGORIES.find((c) => c.id === activeCategory)?.label;
 
@@ -575,7 +572,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                   setShowBookmarks(false);
                   setSearchMode(false);
                   clearTopicSearch();
-                  setSelectedSources([...(CATEGORY_COMPARE_DEFAULTS[activeCategory] || DEFAULT_COMPARE_SOURCES)]);
+                  setSelectedSources([...(compareDefaults(activeCategory, compareSources))]);
                 }
               }}
               aria-label="Compare coverage"
@@ -818,8 +815,8 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 {COPY.compare.comparing(selectedLabels)} {sourcesExpanded ? "▴" : "▾"}
               </button>
               {sourcesExpanded && (
-                <div className="flex flex-wrap gap-1.5 mt-2 animate-fade-slide-in">
-                  {COMPARE_SOURCES.map((source) => {
+                <div role="group" aria-label="Choose up to five outlets" className="flex max-h-[50vh] overflow-y-auto flex-wrap gap-1.5 mt-2 py-1 animate-fade-slide-in">
+                  {compareSources.map((source) => {
                     const isSelected = selectedSources.includes(source.key);
                     const atMax = selectedSources.length >= 5;
                     const disabled = !isSelected && atMax;
@@ -828,6 +825,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                         key={source.key}
                         type="button"
                         onClick={() => !disabled && toggleSource(source.key)}
+                        aria-pressed={isSelected}
                         aria-disabled={disabled || undefined}
                         tabIndex={disabled ? -1 : undefined}
                         className="px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-all duration-200 border"
@@ -888,7 +886,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 </p>
                 <div className="flex flex-wrap justify-center gap-1.5 mt-5 max-w-[560px] mx-auto">
                   {selectedSources.map((key) => {
-                    const label = COMPARE_SOURCES.find((s) => s.key === key)?.label ?? key;
+                    const label = compareSources.find((s) => s.key === key)?.label ?? key;
                     // On the SSE path each chip settles the moment its outlet
                     // finishes — real progress, not simulated. On the JSON
                     // fallback sourcesDone stays empty and all chips shimmer.
@@ -948,7 +946,7 @@ export default function NewsAggregator({ userId, authSlot }: NewsAggregatorProps
                 analyticsRequestId={compareRequestId ?? undefined}
                 topic={compareTopic!}
                 comparison={compareComparison}
-                sourcesChecked={compareSources}
+                sourcesChecked={compareAnalyzedSources}
                 provenance={compareProvenance}
                 claims={compareClaims}
                 durationMs={compareDuration!}
@@ -1211,7 +1209,8 @@ function DailyExampleBlock({
   selectedSources: string[];
   onToggleSource: (key: string) => void;
 }) {
-  const signInHref = compareDraftSignInHref(draft.topic.trim() ? draft : { topic: example.topic, sources: selectedSources });
+  const compareSources = useCompareSources();
+  const signInHref = compareDraftSignInHref(draft.topic.trim() ? draft : { topic: example.topic, sources: selectedSources }, compareSources);
   return (
     <div className="animate-fade-slide-in">
       <div className="mb-5 rounded-[12px] border border-(--border) bg-(--surface-raised) px-4 py-3 text-sm">

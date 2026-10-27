@@ -162,8 +162,12 @@ background capacity. All paid boundaries reserve against the shared PostgreSQL
 policy and outstanding work; background topic generation, search fallback and
 embeddings use the 80% admission ceiling. The cap is not increased. The protected
 backend `GET /analyze/budget` exposes allocation and hold totals with a pipeline key.
-Guarded Compare uses one targeted search per selected outlet and retains the
-existing provenance and claim-comparison response. See sift-api README for
+Guarded Compare uses an original publisher excerpt for an exact indexed event
+when retained text is available, otherwise at most one targeted live search per
+selected outlet. Known matching article URLs guide retrieval, but metadata and
+generated summaries do not count as source coverage. Provider search responses
+stream through the same budget reservation and final-usage settlement. Compare
+retains the existing provenance and claim-comparison response. See sift-api README for
 settlement, uncertain holds and billing-model limits.
 
 **Request:**
@@ -307,6 +311,14 @@ If `matchQuality` is `"weak"` (< 3 results above similarity threshold), the endp
 Proxies to the Python service's `/v1/analyze/compare` endpoint. Accepts up to 5 sources (matching the backend).
 
 **Request/Response:** Same as Python service contract above.
+
+The `/news` picker is rendered from the curated outlet map (one choice per
+publisher), including Right and Lean Right outlets. Names and RSS aliases resolve
+to stable choice keys; shared links and sign-in drafts use that same registry.
+The standalone preview fallback contains only supported curated choices. Both
+pickers retain the existing chip style, scroll within a bounded panel, and
+enforce five selected outlets. Adding choices does not add paid searches unless
+the user selects those outlets.
 
 ---
 
