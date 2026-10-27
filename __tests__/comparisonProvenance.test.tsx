@@ -26,7 +26,7 @@ it("does not turn an old saved source list into verified availability or agreeme
   expect(screen.queryByText(props.comparison)).not.toBeInTheDocument();
   expect(screen.getByText(/Agreement unverified/)).toBeInTheDocument();
   expect(screen.getByText(/Saved example generated August 11, 2026 \(UTC\)/)).toBeInTheDocument();
-  expect(screen.queryByText(/Generated live/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Recent results may be reused for up to five minutes/)).not.toBeInTheDocument();
   expect(screen.queryByText(/3 sources checked|claims analyzed/)).not.toBeInTheDocument();
 });
 
@@ -36,7 +36,7 @@ it("shows requested, found, analyzed and unavailable sources separately", () => 
     expect(screen.getByText(label)).toBeInTheDocument();
   expect(screen.getByText(/Reported by 2 of 2 analyzed sources/)).toBeInTheDocument();
   expect(screen.queryByText(/Invented Outlet/)).not.toBeInTheDocument();
-  expect(screen.getByText(/Generated live/)).toBeInTheDocument();
+  expect(screen.getByText(/Recent results may be reused for up to five minutes/)).toBeInTheDocument();
 });
 
 it("does not call minority or single-source coverage unanimous", () => {

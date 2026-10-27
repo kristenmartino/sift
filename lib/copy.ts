@@ -177,8 +177,8 @@ export const COPY = {
     metaClaims: (n: number) => `${n} claim${n !== 1 ? "s" : ""} analyzed`,
     metaSavedClaims: (n: number) => `${n} saved claim${n !== 1 ? "s" : ""}`,
     metaAnalyzedSources: (n: number) => `${n} source${n !== 1 ? "s" : ""} analyzed`,
-    // Honesty caption for shared links \u2014 a ?compare= URL reruns the
-    // comparison live rather than replaying a stored result.
+    // Live comparisons use retrieved evidence; the backend may briefly reuse
+    // a completed result for the same topic and outlet set.
     liveNote: "Generated from retrieved coverage. Recent results may be reused for up to five minutes.",
     signInTitle: "Sign in to compare",
     signInBody:
