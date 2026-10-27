@@ -3,6 +3,7 @@ import CompareView from "@/components/CompareView";
 import { comparisonProvenance, normalizeCompareClaim } from "@/lib/comparison";
 import type { CompareProvenance } from "@/lib/types";
 
+jest.mock("@/components/CompareOutletRatings", () => ({ __esModule: true, default: () => null }));
 jest.mock("@/components/analytics/UsageView", () => ({ __esModule: true, default: ({ children }: { children: React.ReactNode }) => children }));
 jest.mock("@/components/ShareActions", () => ({ ShareButton: () => <button>Share</button> }));
 const record: CompareProvenance = {

@@ -1146,3 +1146,11 @@ the existing neutral labels, meters and direct citations; the explanation stays
 behind “About these ratings” linking to the methodology. This supersedes the
 reader disclosure introduced during feed simplification. Coverage comparison
 and publisher context remain core features.
+
+### 2026-10-26 — Include cited outlet ratings in Compare
+
+Live results and saved examples show the existing neutral bias/factual-reporting
+ratings once per requested outlet, with direct citations and “About these ratings.”
+Ratings come from the curated outlet map independently of the currently loaded
+feed. Requested/retrieved/analyzed/unavailable status stays separate; an outlet’s
+rating never implies its reporting was retrieved or its claims verified.

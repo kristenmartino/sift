@@ -580,3 +580,13 @@ httpx>=0.28.0
 ### Background refresh
 
 Pipeline refresh runs via Railway's asyncio background scheduler (every 30 minutes in production). A Vercel cron route (`/api/cron/refresh`) exists as a manual fallback but is not actively scheduled (avoids Vercel Pro requirement). `vercel.json` is empty (`{}`).
+
+### GET /api/compare/outlets
+
+Public read-only lookup for Compare’s outlet ratings. Accepts one to five repeated
+`source` query parameters (1–200 characters each). Returns `{ outlets: { [normalizedSourceName]: OutletProfile | null } }`
+using the same curated alias/name map as the feed. Responses are publicly cached
+for one hour; an unavailable rating map returns 503 without caching. No AI call
+or new rating is generated. Live and saved comparisons
+show one rating block per requested outlet; retrieval/analyzed status remains in
+the separate provenance summary. Missing ratings remain explicitly unavailable.
