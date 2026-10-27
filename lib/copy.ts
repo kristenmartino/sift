@@ -179,7 +179,7 @@ export const COPY = {
     metaAnalyzedSources: (n: number) => `${n} source${n !== 1 ? "s" : ""} analyzed`,
     // Honesty caption for shared links \u2014 a ?compare= URL reruns the
     // comparison live rather than replaying a stored result.
-    liveNote: "Generated live \u2014 opening a shared link runs the comparison fresh, so results can differ slightly.",
+    liveNote: "Generated from retrieved coverage. Recent results may be reused for up to five minutes.",
     signInTitle: "Sign in to compare",
     signInBody:
       "Source comparison uses AI to cross-reference multiple outlets. Sign in to run your own.",
