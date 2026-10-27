@@ -112,6 +112,9 @@ function NewsAggregatorContent({ userId, authSlot }: NewsAggregatorProps) {
   );
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const [compareEntry, setCompareEntry] = useState<ReturnType<typeof compareStorySources> | null>(null);
+  useEffect(() => {
+    if (compareEntry) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [compareEntry]);
   const [viewStartedAt, setViewStartedAt] = useState(Date.now);
   const [feedOrder, setFeedOrder] = useState<FeedOrder>("recommended");
   const [feedWindow, setFeedWindow] = useState<FeedWindow>("all");
