@@ -47,10 +47,17 @@ export default function StoryCard({ story, featured, index, onCompare }: StoryCa
           </div>
           <h3 className={`font-heading font-bold text-(--text-primary) ${featured ? "text-headline-lg" : "text-headline"}`}>{story.headline}</h3>
           <ReadingSummary summary={story.summary} previewChars={featured ? 240 : 180} featured={featured} />
-          {story.articles.length > 0 && <button type="button" aria-expanded={expanded} aria-controls={coverageId}
-            onClick={() => setExpanded(!expanded)} className="self-start text-sm text-(--accent) font-semibold cursor-pointer bg-transparent border-none p-0 py-1 hover:underline">
-            {expanded ? "Hide source coverage" : `View coverage from ${count} outlet${count !== 1 ? "s" : ""}`} <span aria-hidden>{expanded ? "−" : "+"}</span>
-          </button>}
+          {(story.articles.length > 0 || onCompare) && <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {story.articles.length > 0 && <button type="button" aria-expanded={expanded} aria-controls={coverageId}
+              onClick={() => setExpanded(!expanded)} className="text-sm text-(--accent) font-semibold cursor-pointer bg-transparent border-none p-0 py-1 hover:underline">
+              {expanded ? "Hide source coverage" : `View coverage from ${count} outlet${count !== 1 ? "s" : ""}`} <span aria-hidden>{expanded ? "−" : "+"}</span>
+            </button>}
+            {onCompare && <button type="button"
+              onClick={() => onCompare(story.headline, sourceUnits.map((unit) => unit.outlet?.name ?? unit.sourceName), story.category)}
+              className="text-sm text-(--accent) font-semibold cursor-pointer bg-transparent border-none p-0 py-1 hover:underline">
+              {COPY.compare.button} <span aria-hidden>→</span>
+            </button>}
+          </div>}
           <p className="text-xs text-(--text-secondary) mt-auto pt-1" title={story.publishedDate ? new Date(story.publishedDate).toUTCString() : undefined}>
             {isEarlierPublication(story.publishedDate) && <span className="block mb-1 text-(--text-secondary)">Earlier publication</span>}
             Latest source published {timeAgo(story.publishedDate)} · {story.articleCount} article{story.articleCount !== 1 ? "s" : ""}
@@ -62,7 +69,7 @@ export default function StoryCard({ story, featured, index, onCompare }: StoryCa
         <p className="text-sm font-semibold text-(--text-primary)">Outlet ratings</p>
         <div id={coverageId}>
           {expanded && <p className="text-sm font-semibold text-(--text-primary) mt-2">{COPY.stories.framing(count)}</p>}
-          {sortedSources.map((unit) => <SourceRow key={unit.sourceName} unit={unit} showCoverage={expanded} onCompare={onCompare} />)}
+          {sortedSources.map((unit) => <SourceRow key={unit.sourceName} unit={unit} showCoverage={expanded} />)}
         </div>
       </section>}
     </article>

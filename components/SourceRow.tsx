@@ -10,8 +10,6 @@ interface SourceRowProps {
   unit: SourceUnit;
   /** Keep outlet ratings visible while the story's reporting is collapsed. */
   showCoverage?: boolean;
-  /** Wire the per-row "See angles" compare CTA. */
-  onCompare?: (topic: string, sourceName?: string) => void;
 }
 
 /**
@@ -26,7 +24,7 @@ interface SourceRowProps {
  * identical here and on /news (SIFT_THEME_MIGRATION.md §3 — position/fill, never
  * hue). Used by both the flat framings list and the cross-spectrum columns.
  */
-export default function SourceRow({ unit, onCompare, showCoverage = true }: SourceRowProps) {
+export default function SourceRow({ unit, showCoverage = true }: SourceRowProps) {
   const lead = unit.articles[0];
   const extras = unit.articles.slice(1);
 
@@ -78,18 +76,6 @@ export default function SourceRow({ unit, onCompare, showCoverage = true }: Sour
             Published {timeAgo(lead.publishedDate)}
           </span>
           {articleContentLabel(lead) && <span className="text-(--text-secondary)">{articleContentLabel(lead)}</span>}
-          {onCompare && (
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onCompare(lead.title, unit.sourceName);
-              }}
-              className="story-row__cta shrink-0 bg-transparent border-none p-0 cursor-pointer font-medium text-(--accent)"
-            >
-              {COPY.stories.compareRow}
-            </button>
-          )}
         </div>
       )}
 
