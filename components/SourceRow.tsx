@@ -37,7 +37,6 @@ export default function SourceRow({ unit, onCompare }: SourceRowProps) {
         outlet={unit.outlet}
         fallback={unit.sourceName}
         className="story-row__source"
-        compact
       />
 
       {/* How this outlet framed the story */}

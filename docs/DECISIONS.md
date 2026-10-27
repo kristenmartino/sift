@@ -1137,3 +1137,12 @@ concurrent and delayed work from reusing capacity. Uncertain provider costs stay
 held for reconciliation. The production cap remains $15; this does not erase or
 reclassify earlier spend. Replace repeated outlet-rating prose with a methodology
 link while keeping source citations and the shared publisher-level caveat.
+
+### 2026-10-26 — Keep outlet ratings visible in the reading flow
+
+Bias and factual-reporting ratings are visible by default next to each rated
+outlet in article cards and expanded story coverage, including on mobile. Keep
+the existing neutral labels, meters and direct citations; the explanation stays
+behind “About these ratings” linking to the methodology. This supersedes the
+reader disclosure introduced during feed simplification. Coverage comparison
+and publisher context remain core features.

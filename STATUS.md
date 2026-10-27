@@ -168,6 +168,8 @@ to stay current.
 
 ## Recent decisions (last 7 days)
 
+- **2026-10-26** — Show bias and factual-reporting ratings by default with each rated outlet on desktop and mobile. Keep explanations behind “About these ratings” and preserve the existing neutral styling.
+
 **Entries before 2026-08-13 are archived** in [`docs/STATUS_ARCHIVE.md`](docs/STATUS_ARCHIVE.md). This section
 held 37 entries going back to 2026-05-20.
 

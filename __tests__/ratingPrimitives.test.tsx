@@ -114,6 +114,21 @@ describe("rating primitives — §3 neutrality", () => {
     expect(fb.textContent).toContain("Some Blog");
   });
 
+  it("shows both outlet ratings by default with the methodology one link away", () => {
+    const { container } = render(<OutletChip outlet={REUTERS} fallback="Reuters" />);
+    const bias = within(container).getByRole("link", { name: /AllSides bias rating: Center/ });
+    const factual = within(container).getByRole("link", { name: /MBFC factual reporting: High/ });
+    expect(bias).toBeVisible();
+    expect(factual).toBeVisible();
+    expect(bias.closest("details")).toBeNull();
+    expect(factual.closest("details")).toBeNull();
+    expect(bias).toHaveAttribute("href", REUTERS.allSidesUrl);
+    expect(factual).toHaveAttribute("href", REUTERS.mbfcUrl);
+    expect(within(container).getByRole("link", { name: "About these ratings →" }))
+      .toHaveAttribute("href", "/methodology#outlet-ratings");
+    expect(container).not.toHaveTextContent("These assess the outlet, not this article.");
+  });
+
   it("LeanSpread is a neutral position cue — filled cells encode coverage, never hue", () => {
     const { container } = render(
       <LeanSpread spread={leanSpreadFromRatings(["center", "right"])} />,
