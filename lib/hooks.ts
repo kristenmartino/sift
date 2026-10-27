@@ -674,7 +674,7 @@ interface CompareState {
   sourcesDone: CompareSourceDone[];
 }
 
-export function useCompare() {
+export function useCompare(onUnauthorized?: (topic: string, sources?: string[]) => boolean) {
   const [state, setState] = useState<CompareState>({
     requestId: null,
     topic: null,
@@ -697,6 +697,7 @@ export function useCompare() {
     const controller = new AbortController();
     controllerRef.current = controller;
 
+    const requestedSources = sources ? [...sources] : undefined;
     const analytics = captureAnalyticsContext();
     const requestId = analytics ? crypto.randomUUID() : undefined;
     const startedAt = Date.now();
@@ -763,12 +764,16 @@ export function useCompare() {
           Accept: "text/event-stream",
           ...analyticsHeaders(analytics),
         },
-        body: JSON.stringify({ topic, sources }),
+        body: JSON.stringify({ topic, sources: requestedSources }),
         signal: controller.signal,
       });
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        if (res.status === 401 && onUnauthorized?.(topic, requestedSources)) {
+          outcome = "cancelled";
+          return;
+        }
         throw new Error(body.error || `HTTP ${res.status}`);
       }
 
@@ -835,7 +840,7 @@ export function useCompare() {
       // run's controller must not be nulled by the run it replaced.
       if (controllerRef.current === controller) controllerRef.current = null;
     }
-  }, []);
+  }, [onUnauthorized]);
 
   const clear = useCallback(() => {
     controllerRef.current?.abort();

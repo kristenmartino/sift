@@ -312,6 +312,13 @@ Proxies to the Python service's `/v1/analyze/compare` endpoint. Accepts up to 5 
 
 **Request/Response:** Same as Python service contract above.
 
+A 401 received by a reader whose page was authenticated triggers at most one
+full navigation per minute to the validated submitted comparison draft. This
+lets Clerk renew its short-lived API cookie without adding its client SDK to
+the reader. Authentication still runs on the destination page and API. Signed-out
+readers, invalid drafts, storage failures and repeated 401s keep the sign-in
+fallback; budget/provider errors never trigger this recovery.
+
 The `/news` picker is rendered from the curated outlet map (one choice per
 publisher), including Right and Lean Right outlets. Names and RSS aliases resolve
 to stable choice keys; shared links and sign-in drafts use that same registry.
