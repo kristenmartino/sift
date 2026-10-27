@@ -20,8 +20,6 @@ interface OutletChipProps {
   /** Show the last-verified date captions (dossier context). Default: false. */
   showVerified?: boolean;
   className?: string;
-  /** Compact reader treatment: ratings remain one explicit step away. */
-  compact?: boolean;
 }
 
 export default function OutletChip({
@@ -29,7 +27,6 @@ export default function OutletChip({
   fallback,
   showVerified = false,
   className = "",
-  compact = false,
 }: OutletChipProps) {
   if (!outlet) {
     return (
@@ -78,8 +75,7 @@ export default function OutletChip({
         </span>
       )}
   </>);
-  const Container = compact ? "div" : "span";
-  return <Container className={`inline-flex flex-col items-start gap-1 ${className}`}>
+  return <div className={`inline-flex flex-col items-start gap-1 ${className}`}>
       {/* Line 1 — outlet name (the identity). */}
       <a
         href={`/outlet/${outlet.slug}`}
@@ -90,10 +86,12 @@ export default function OutletChip({
         {outlet.name}
       </a>
 
-    {compact ? <details className="relative z-2 text-xs" onClick={(e) => e.stopPropagation()}>
-      <summary className="cursor-pointer text-(--text-secondary) hover:text-(--text-primary)">Outlet ratings</summary>
-      <span className="flex flex-col gap-1.5 py-2">{ratings}</span>
-      <a href="/methodology#outlet-ratings" className="text-xs text-(--text-secondary) hover:underline">About these ratings →</a>
-    </details> : ratings}
-  </Container>;
+    {ratings}
+    <a
+      href="/methodology#outlet-ratings"
+      onClick={(e) => e.stopPropagation()}
+      className="text-xs text-(--text-secondary) hover:underline"
+    >About these ratings →</a>
+  </div>;
+
 }

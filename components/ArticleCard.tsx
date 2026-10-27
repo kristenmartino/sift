@@ -207,7 +207,7 @@ export default function ArticleCard({
 
         {/* Meta */}
         <div className="flex flex-col gap-1.5 mt-auto pt-2">
-          <OutletChip outlet={article.outlet} fallback={article.sourceName} compact />
+          <OutletChip outlet={article.outlet} fallback={article.sourceName} />
           <div className="flex items-center gap-3 text-xs text-(--text-tertiary) font-medium flex-wrap">
             {isEarlierPublication(article.publishedDate) && <span className="text-(--text-secondary) border-l-2 border-(--border) pl-2">Earlier publication</span>}
             <span title={article.publishedDate ? new Date(article.publishedDate).toUTCString() : undefined}>Published {timeAgo(article.publishedDate)}</span>
