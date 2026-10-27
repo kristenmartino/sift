@@ -6,6 +6,7 @@ import { timeAgo } from "@/lib/utils";
 import { COMPARE_SOURCES, CATEGORY_COMPARE_DEFAULTS } from "@/lib/constants";
 import { compareDraftSignInHref, type CompareDraft } from "@/lib/compareDraft";
 import type { Story } from "@/lib/types";
+import { OutletChip } from "./primitives";
 
 /** An evidence-backed reading preview, never a substitute for claim analysis. */
 export default function CoveragePreview({ stories, draft }: { stories: Story[]; draft?: CompareDraft }) {
@@ -38,7 +39,7 @@ export default function CoveragePreview({ stories, draft }: { stories: Story[]; 
       <ul className="list-none m-0 p-0">{candidate.units.slice(0, 5).map((unit) => {
         const article = unit.articles.find((a) => a.sourceUrl)!;
         return <li key={unit.sourceName} className="p-5 border-b border-(--border-subtle) last:border-0">
-          <p className="font-semibold text-sm text-(--text-primary)">{unit.outlet?.name ?? unit.sourceName}</p>
+          <OutletChip outlet={unit.outlet} fallback={unit.sourceName} />
           <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" data-sift-source-id={article.id} className="text-sm text-(--accent) hover:underline block mt-1">{article.title} ↗</a>
           <p className="text-xs text-(--text-secondary) mt-1">Published {timeAgo(article.publishedDate)}</p>
         </li>;

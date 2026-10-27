@@ -77,9 +77,9 @@ export default function FactualChip({
   const body = (
     <span
       title={`MBFC factual-reporting rating: ${label}${lastChecked ? `, verified ${lastChecked}` : ""}`}
-      className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-wide text-[var(--text-secondary)] whitespace-nowrap"
+      className="inline-flex max-w-full flex-wrap items-center gap-1.5 font-mono text-[11px] tracking-wide text-[var(--text-secondary)]"
     >
-      Factual Reporting: {label}
+      <span>Factual Reporting: {label}</span>
       {meter}
     </span>
   );
@@ -93,7 +93,7 @@ export default function FactualChip({
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
       aria-label={`MBFC factual reporting: ${label}${lastChecked ? `, verified ${lastChecked}` : ""} (opens MBFC in a new tab)`}
-      className={`no-underline hover:text-[var(--text-secondary)] relative z-[2] ${className}`}
+      className={`max-w-full no-underline hover:text-[var(--text-secondary)] relative z-[2] ${className}`}
     >
       {body}
     </a>

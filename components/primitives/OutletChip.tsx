@@ -75,7 +75,7 @@ export default function OutletChip({
         </span>
       )}
   </>);
-  return <div className={`inline-flex flex-col items-start gap-1 ${className}`}>
+  return <div className={`inline-flex max-w-full min-w-0 flex-col items-start gap-1 ${className}`}>
       {/* Line 1 — outlet name (the identity). */}
       <a
         href={`/outlet/${outlet.slug}`}

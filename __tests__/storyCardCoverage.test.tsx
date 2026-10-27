@@ -37,7 +37,7 @@ it('orders blank-note outlets by their rating alongside framed outlets', () => {
   const profiles = [
     { slug: 'left', name: 'Left outlet', allSidesRating: 'left' },
     { slug: 'right', name: 'Right outlet', allSidesRating: 'right' },
-  ].map((p) => ({ ...p, allSidesUrl: null, mbfcFactual: null, mbfcUrl: null }) as NonNullable<Story['articles'][number]['outlet']>);
+  ].map((p) => ({ ...p, allSidesUrl: `https://www.allsides.com/news-source/${p.slug}`, mbfcFactual: 'mostly-factual', mbfcUrl: `https://mediabiasfactcheck.com/${p.slug}/` }) as NonNullable<Story['articles'][number]['outlet']>);
   const story: Story = {
     id: 'spectrum-order', headline: 'A vote was held.', summary: 'The measure passed.', category: 'politics',
     framings: [
@@ -48,7 +48,21 @@ it('orders blank-note outlets by their rating alongside framed outlets', () => {
     articles: profiles.map((outlet) => ({ id: outlet.slug, title: `Report ${outlet.slug}`, summary: 'A vote was held.', sourceName: outlet.name, sourceUrl: `https://example.com/${outlet.slug}`, category: 'politics', imageUrl: null, readTime: 1, publishedDate: null, outlet })),
   };
   render(<StoryCard story={story} featured={false} index={0} onCompare={jest.fn()} onBookmark={jest.fn()} bookmarks={new Set()} />);
-  fireEvent.click(screen.getByRole('button', { name: /View coverage from 2 outlets/ }));
+  // Both framed and blank-note contributors have ratings before any disclosure.
+  for (const label of ['Left', 'Right']) {
+    expect(screen.getByRole('link', { name: new RegExp(`AllSides bias rating: ${label}`) })).toBeVisible();
+  }
+  expect(screen.getAllByRole('link', { name: /MBFC factual reporting: Mostly Factual/ })).toHaveLength(2);
+  expect(screen.getAllByRole('link', { name: 'About these ratings →' })).toHaveLength(2);
+  expect(screen.queryByText('Cites the vote count.')).not.toBeInTheDocument();
+  const toggle = screen.getByRole('button', { name: /View coverage from 2 outlets/ });
+  fireEvent.click(toggle);
+  expect(screen.getByText('Cites the vote count.')).toBeVisible();
   const sources = screen.getAllByRole('link', { name: /Outlet dossier for/ });
   expect(sources.map((s) => s.getAttribute('aria-label'))).toEqual(['Outlet dossier for Left outlet', 'Outlet dossier for Right outlet']);
+  // Expanding does not duplicate the rating blocks, and collapsing preserves them.
+  expect(screen.getAllByRole('link', { name: /MBFC factual reporting:/ })).toHaveLength(2);
+  fireEvent.click(toggle);
+  expect(screen.getAllByRole('link', { name: /MBFC factual reporting:/ })).toHaveLength(2);
+  expect(screen.queryByRole('link', { name: 'Report left' })).not.toBeInTheDocument();
 });
